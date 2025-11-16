@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { CreativeBrief } from '@/types/chat.types';
 
 /**
  * Global application state store using Zustand.
@@ -9,9 +11,9 @@ interface AppState {
   currentStep: 1 | 2 | 3 | 4 | 5;
   setCurrentStep: (step: number) => void;
 
-  // Step 1: Vision & Creative Brief
-  creativeBrief: any | null; // Will be properly typed in Task 2
-  setCreativeBrief: (brief: any) => void;
+    // Step 1: Vision & Creative Brief
+    creativeBrief: CreativeBrief | null;
+    setCreativeBrief: (brief: CreativeBrief | null) => void;
 
   // Step 2: Moods
   moods: any[]; // Will be properly typed in Task 3
@@ -43,54 +45,75 @@ interface AppState {
   reset: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  // Navigation
-  currentStep: 1,
-  setCurrentStep: (step) => set({ currentStep: step as 1 | 2 | 3 | 4 | 5 }),
+const STORAGE_KEY = 'jant-vid-pipe-app-state';
 
-  // Step 1: Vision
-  creativeBrief: null,
-  setCreativeBrief: (brief) => set({ creativeBrief: brief }),
-
-  // Step 2: Moods
-  moods: [],
-  selectedMoodId: null,
-  setMoods: (moods) => set({ moods }),
-  selectMood: (moodId) => set({ selectedMoodId: moodId }),
-
-  // Step 3: Scenes
-  scenePlan: null,
-  setScenePlan: (plan) => set({ scenePlan: plan }),
-
-  // Step 4: Video Clips
-  generatedClips: [],
-  clipGenerationProgress: 0,
-  setGeneratedClips: (clips) => set({ generatedClips: clips }),
-  updateClipProgress: (progress) => set({ clipGenerationProgress: progress }),
-
-  // Step 5: Final Video
-  finalVideo: null,
-  compositionProgress: 0,
-  setFinalVideo: (video) => set({ finalVideo: video }),
-  updateCompositionProgress: (progress) => set({ compositionProgress: progress }),
-
-  // Error Handling
-  error: null,
-  setError: (error) => set({ error }),
-
-  // Reset
-  reset: () =>
-    set({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      // Navigation
       currentStep: 1,
+      setCurrentStep: (step) => set({ currentStep: step as 1 | 2 | 3 | 4 | 5 }),
+
+      // Step 1: Vision
       creativeBrief: null,
+      setCreativeBrief: (brief) => set({ creativeBrief: brief }),
+
+      // Step 2: Moods
       moods: [],
       selectedMoodId: null,
+      setMoods: (moods) => set({ moods }),
+      selectMood: (moodId) => set({ selectedMoodId: moodId }),
+
+      // Step 3: Scenes
       scenePlan: null,
+      setScenePlan: (plan) => set({ scenePlan: plan }),
+
+      // Step 4: Video Clips
       generatedClips: [],
       clipGenerationProgress: 0,
+      setGeneratedClips: (clips) => set({ generatedClips: clips }),
+      updateClipProgress: (progress) => set({ clipGenerationProgress: progress }),
+
+      // Step 5: Final Video
       finalVideo: null,
       compositionProgress: 0,
+      setFinalVideo: (video) => set({ finalVideo: video }),
+      updateCompositionProgress: (progress) => set({ compositionProgress: progress }),
+
+      // Error Handling
       error: null,
+      setError: (error) => set({ error }),
+
+      // Reset
+      reset: () =>
+        set({
+          currentStep: 1,
+          creativeBrief: null,
+          moods: [],
+          selectedMoodId: null,
+          scenePlan: null,
+          generatedClips: [],
+          clipGenerationProgress: 0,
+          finalVideo: null,
+          compositionProgress: 0,
+          error: null,
+        }),
     }),
-}));
+    {
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+      // Only persist certain fields (exclude error state and temporary progress)
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        creativeBrief: state.creativeBrief,
+        moods: state.moods,
+        selectedMoodId: state.selectedMoodId,
+        scenePlan: state.scenePlan,
+        generatedClips: state.generatedClips,
+        finalVideo: state.finalVideo,
+        // Don't persist: error, clipGenerationProgress, compositionProgress
+      }),
+    }
+  )
+);
 
