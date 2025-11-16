@@ -2,6 +2,7 @@
  * Hook for managing video generation with polling and progress tracking.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { pipelineLogger } from '@/lib/logger';
 import type {
   VideoGenerationRequest,
   VideoGenerationResponse,
@@ -14,9 +15,11 @@ interface UseVideoGenerationReturn {
   isGenerating: boolean;
   error: string | null;
   startGeneration: (request: VideoGenerationRequest) => Promise<string | null>;
+  retryFailedClips: (jobId: string) => Promise<boolean>;
   stopPolling: () => void;
   clearError: () => void;
   retryGeneration: () => Promise<void>;
+  failedClips: number[];
 }
 
 const POLLING_INTERVAL = 3000; // 3 seconds
@@ -27,6 +30,7 @@ export function useVideoGeneration(): UseVideoGenerationReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRequest, setLastRequest] = useState<VideoGenerationRequest | null>(null);
+  const [failedClips, setFailedClips] = useState<number[]>([]);
 
   // Refs for cleanup and polling control
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,6 +97,30 @@ export function useVideoGeneration(): UseVideoGenerationReturn {
         error: data.job_status.error,
         created_at: data.job_status.created_at,
         updated_at: data.job_status.updated_at,
+      });
+      
+      // Track failed clips for partial retry
+      const failed = data.job_status.clips
+        .filter(clip => clip.status === 'failed')
+        .map(clip => clip.scene_number);
+      setFailedClips(failed);
+      
+      // Log progress
+      pipelineLogger.video.progress(
+        data.job_status.progress_percent,
+        data.job_status.completed_scenes,
+        data.job_status.total_scenes
+      );
+      
+      // Log individual clip progress/status
+      data.job_status.clips.forEach(clip => {
+        if (clip.status === 'completed') {
+          pipelineLogger.video.clipSuccess(clip.scene_number);
+        } else if (clip.status === 'failed') {
+          pipelineLogger.video.clipError(clip.scene_number, clip.error || 'Unknown error');
+        } else {
+          pipelineLogger.video.clipProgress(clip.scene_number, clip.progress_percent);
+        }
       });
       
       console.log('✅ State updated - React should re-render now');
@@ -219,6 +247,55 @@ export function useVideoGeneration(): UseVideoGenerationReturn {
     await startGeneration(lastRequest);
   }, [lastRequest, startGeneration]);
 
+  const retryFailedClips = useCallback(
+    async (jobId: string): Promise<boolean> => {
+      if (failedClips.length === 0) {
+        console.log('⚠️ No failed clips to retry');
+        return false;
+      }
+
+      try {
+        pipelineLogger.video.retry(failedClips);
+        console.log(`🔄 Retrying ${failedClips.length} failed clips for job ${jobId}`);
+        
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/video/retry/${jobId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ failed_scene_numbers: failedClips }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('✅ Retry initiated successfully');
+          // Continue polling with existing job
+          startPolling(jobId);
+          return true;
+        }
+
+        throw new Error(data.message || 'Failed to retry clips');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error during retry';
+        setError(errorMessage);
+        pipelineLogger.video.error(err);
+        console.error('❌ Retry failed:', err);
+        return false;
+      }
+    },
+    [failedClips, startPolling]
+  );
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -245,8 +322,10 @@ export function useVideoGeneration(): UseVideoGenerationReturn {
     isGenerating,
     error,
     startGeneration,
+    retryFailedClips,
     stopPolling,
     clearError,
     retryGeneration,
+    failedClips,
   };
 }

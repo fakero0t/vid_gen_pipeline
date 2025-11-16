@@ -6,6 +6,8 @@ import { useVideoGeneration } from '@/hooks/useVideoGeneration';
 import { useAudioGeneration } from '@/hooks/useAudioGeneration';
 import { VideoGenerationProgress } from '@/components/video';
 import { Button } from '@/components/ui/button';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { VideoGenerationError, ERROR_CODES } from '@/lib/errors';
 import type { VideoGenerationRequest } from '@/types/video.types';
 import type { AudioGenerationRequest } from '@/types/audio.types';
 
@@ -31,7 +33,9 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
     isGenerating,
     error: videoError,
     startGeneration,
+    retryFailedClips,
     clearError: clearVideoError,
+    failedClips,
   } = useVideoGeneration();
   
   // Debug: Log whenever videoStatus changes
@@ -449,14 +453,32 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
         </div>
       )}
 
-      {/* Error Display */}
+      {/* Error Display with Retry */}
       {videoError && (
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-900 dark:text-red-100">{videoError}</p>
-          <Button variant="outline" size="sm" onClick={clearVideoError} className="mt-2">
-            Dismiss
-          </Button>
-        </div>
+        <ErrorAlert
+          error={
+            new VideoGenerationError(
+              videoError,
+              failedClips.length > 0 ? ERROR_CODES.VIDEO_GENERATION_PARTIAL : ERROR_CODES.VIDEO_GENERATION_FAILED,
+              true,
+              failedClips
+            )
+          }
+          onRetry={async () => {
+            if (failedClips.length > 0 && videoStatus?.job_id) {
+              // Retry only failed clips
+              const success = await retryFailedClips(videoStatus.job_id);
+              if (success) {
+                clearVideoError();
+              }
+            } else {
+              // Retry entire generation
+              clearVideoError();
+              handleStartGeneration();
+            }
+          }}
+          onDismiss={clearVideoError}
+        />
       )}
 
       {/* Continue Button */}
