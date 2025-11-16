@@ -43,5 +43,5 @@ ENV/
 .venv
 
 # Task files
-# tasks.json
-# tasks/ 
+tasks.json
+tasks/ 
