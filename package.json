@@ -1,0 +1,17 @@
+{
+  "name": "jant-vid-pipe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Video Generation Pipeline - Monorepo",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000",
+    "build": "cd frontend && pnpm build",
+    "start": "cd frontend && pnpm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+

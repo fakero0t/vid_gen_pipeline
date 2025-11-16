@@ -1,0 +1,696 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Project Setup and Infrastructure",
+        "description": "Initialize the monorepo with Next.js frontend and FastAPI backend, including all necessary dependencies and configuration files.",
+        "details": "Create the complete project structure as defined in the architecture: 1) Initialize Next.js 16 app with App Router in /frontend directory with TypeScript, Tailwind CSS v4, shadcn/ui components. 2) Set up FastAPI backend in /backend directory with Python 3.11+, async support, CORS middleware, and proper project structure (routers/, services/, models/, utils/). 3) Create package.json, requirements.txt, environment variable templates, and development scripts. 4) Configure Zustand store structure, shared TypeScript types, and API client foundations. 5) Set up concurrent development scripts to run both frontend and backend simultaneously.",
+        "testStrategy": "Verify both servers start correctly (localhost:3000 and localhost:8000), CORS is configured properly, and all dependencies install without errors. Test basic API connectivity between frontend and backend.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Vision Chat Interface and Creative Brief Synthesis",
+        "description": "Implement Step 1 of the pipeline: AI chat interface for vision refinement and creative brief generation using OpenAI GPT-4o via Vercel AI SDK.",
+        "details": "Build the complete vision chat system: 1) Create chat UI components (ChatInterface.tsx, VisionPrompt.tsx, CreativeBriefSummary.tsx) with proper streaming support. 2) Implement Next.js API route /api/chat/route.ts using Vercel AI SDK with OpenAI GPT-4o integration. 3) Design conversation flow to extract product_name, target_audience, emotional_tone, visual_style_keywords, and key_messages. 4) Create useVisionChat hook for state management and API communication. 5) Implement creative brief synthesis logic that converts conversation history into structured CreativeBrief object. 6) Add proper TypeScript types and error handling. 7) Integrate with Zustand store for state persistence across steps.",
+        "testStrategy": "Test with various user inputs (detailed vs vague prompts), verify conversation flow guides users to provide sufficient detail, confirm creative brief is properly structured and stored in Zustand. Test streaming responses and error states.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Mood Generation and Selection System",
+        "description": "Implement Step 2: Generate 3 distinct mood boards with 4 images each using Replicate API, and create UI for mood selection.",
+        "details": "Build the mood generation system: 1) Create mood generation algorithm that extracts 3 different style directions from creative brief. 2) Implement FastAPI endpoint POST /api/moods/generate that generates 12 images in parallel (3 moods × 4 images) using Replicate API. 3) Build mood board UI components (MoodBoard.tsx, MoodCard.tsx, MoodGallery.tsx) with responsive gallery layout. 4) Create useMoodGeneration hook for API communication and state management. 5) Implement mood selection logic with visual feedback (highlight/expand selected mood). 6) Add proper error handling, loading states, and retry logic for failed image generations. 7) Store mood data and selected mood ID in Zustand store. 8) Optimize for parallel image generation using asyncio.gather() in backend.",
+        "testStrategy": "Test mood generation with different creative briefs, verify all 12 images generate correctly in parallel, confirm mood selection updates state properly. Test error handling for failed image generations and API timeouts.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design mood generation algorithm for style extraction",
+            "description": "Create algorithm that analyzes creative brief and extracts 3 distinct visual style directions for mood board generation.",
+            "dependencies": [],
+            "details": "Implement natural language processing logic to parse creative brief text and identify visual style keywords, emotional tones, and aesthetic preferences. Create categorization system for different mood types (minimalist, bold, elegant, etc.) and ensure each generated mood represents a distinct style direction that aligns with the target audience and brand requirements.",
+            "status": "pending",
+            "testStrategy": "Test with various creative brief inputs to verify algorithm generates 3 distinct and relevant style directions"
+          },
+          {
+            "id": 2,
+            "title": "Integrate Replicate API for parallel image generation",
+            "description": "Set up Replicate API integration with proper authentication and implement parallel image generation functionality.",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure Replicate API credentials and create service module for API communication. Implement image generation functions that can process multiple prompts simultaneously using asyncio.gather() for optimal performance. Set up proper prompt formatting and parameter configuration for consistent image quality across all mood boards.",
+            "status": "pending",
+            "testStrategy": "Test API connectivity and verify parallel generation of 12 images completes successfully with proper error handling"
+          },
+          {
+            "id": 3,
+            "title": "Implement FastAPI endpoint for mood generation",
+            "description": "Create POST /api/moods/generate endpoint with async processing and proper request/response handling.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Build FastAPI endpoint that accepts creative brief data, processes it through mood generation algorithm, and coordinates parallel image generation. Implement proper async processing with job queuing, request validation, and structured response format including mood metadata and image URLs. Add comprehensive error handling for API failures and timeout scenarios.",
+            "status": "pending",
+            "testStrategy": "Test endpoint with various creative brief payloads and verify async processing completes with proper response structure"
+          },
+          {
+            "id": 4,
+            "title": "Build mood board UI components",
+            "description": "Create React components MoodBoard.tsx, MoodCard.tsx, and MoodGallery.tsx with responsive gallery layout.",
+            "dependencies": [],
+            "details": "Develop reusable React components for displaying mood boards in an intuitive gallery format. Implement responsive grid layout that adapts to different screen sizes, with proper image loading and lazy loading optimization. Create component hierarchy that supports individual mood selection, hover effects, and visual feedback for user interactions.",
+            "status": "pending",
+            "testStrategy": "Test components render correctly across different devices and screen sizes with proper responsive behavior"
+          },
+          {
+            "id": 5,
+            "title": "Create useMoodGeneration hook for state management",
+            "description": "Implement React hook for API communication, loading states, and mood generation state management.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Build custom React hook that manages mood generation flow, including API calls to backend endpoint, loading state management, and error handling. Integrate with Zustand store for persistent state management and implement proper cleanup and cancellation logic for ongoing requests. Include retry mechanisms for failed requests.",
+            "status": "pending",
+            "testStrategy": "Test hook handles API calls correctly with proper loading states and error recovery mechanisms"
+          },
+          {
+            "id": 6,
+            "title": "Implement mood selection logic with visual feedback",
+            "description": "Create mood selection functionality with highlight effects, expand animations, and selection state persistence.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Develop interactive mood selection system that provides clear visual feedback when users select a mood board. Implement highlight effects, expansion animations, and selection indicators. Ensure selected mood data is properly stored in Zustand store and persists across component re-renders. Add deselection capability and proper state cleanup.",
+            "status": "pending",
+            "testStrategy": "Test mood selection updates state correctly with proper visual feedback and state persistence"
+          },
+          {
+            "id": 7,
+            "title": "Add error handling and retry logic for failed generations",
+            "description": "Implement comprehensive error handling, loading states, and retry mechanisms for failed image generations.",
+            "dependencies": [
+              2,
+              3,
+              5
+            ],
+            "details": "Create robust error handling system that gracefully manages API failures, network timeouts, and partial generation failures. Implement intelligent retry logic with exponential backoff for failed image generations. Add user-friendly error messages and recovery options, including manual retry buttons and fallback content display.",
+            "status": "pending",
+            "testStrategy": "Test error scenarios including API timeouts, partial failures, and network issues to verify proper error handling and recovery"
+          },
+          {
+            "id": 8,
+            "title": "Implement loading states and progress indicators",
+            "description": "Create progress tracking system with visual indicators for mood generation and image loading processes.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Build comprehensive loading state management with progress indicators that show individual image generation progress and overall completion percentage. Implement skeleton loading states, progress bars, and status messages that keep users informed during the generation process. Add estimated time completion and cancel functionality for long-running operations.",
+            "status": "pending",
+            "testStrategy": "Test loading states display correctly with accurate progress tracking and proper completion indicators"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Scene Planning and Storyboarding",
+        "description": "Implement Step 3: Generate scene breakdown and seed images for 30-second video timeline using GPT-4o and Replicate.",
+        "details": "Build the scene planning system: 1) Create scene breakdown algorithm that analyzes creative brief + selected mood to generate 5-7 scenes totaling exactly 30 seconds. 2) Implement FastAPI endpoints: POST /api/scenes/plan (uses GPT-4o for scene descriptions and timing) and POST /api/scenes/seeds (generates seed images). 3) Build storyboard UI components (Storyboard.tsx, SceneCard.tsx, SceneTimeline.tsx) showing scene progression with images, descriptions, and durations. 4) Create useScenePlanning hook for orchestrating the two-step process. 5) Implement timing allocation logic ensuring total duration equals 30 seconds with logical narrative beats (opening hook, product intro, features, closing). 6) Generate seed images in parallel for each scene using selected mood's style as reference. 7) Store complete scene plan with seed images in Zustand store.",
+        "testStrategy": "Verify scene breakdown produces logical 30-second timeline, seed images match selected mood aesthetic, timing adds up correctly. Test with various mood selections to ensure style consistency in seed images.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Scene breakdown algorithm using GPT-4o",
+            "description": "Create intelligent scene breakdown algorithm that analyzes creative brief and selected mood to generate 5-7 scenes with descriptions and timing",
+            "dependencies": [],
+            "details": "Implement scene breakdown logic that takes creative brief content and selected mood data as inputs. Use GPT-4o to analyze narrative structure and generate logical scene progression with appropriate descriptions, ensuring scenes follow storytelling best practices (hook, introduction, features, conclusion). Algorithm should output structured scene data with descriptions and suggested timings.",
+            "status": "pending",
+            "testStrategy": "Test with various creative briefs and mood combinations, verify scene descriptions are coherent and follow logical narrative flow"
+          },
+          {
+            "id": 2,
+            "title": "Timing allocation logic (ensure 30-second total)",
+            "description": "Implement precise timing allocation system that distributes scenes across exactly 30 seconds with logical narrative beats",
+            "dependencies": [
+              1
+            ],
+            "details": "Create timing calculation logic that takes scene count and narrative importance into account. Implement algorithms for distributing 30 seconds across 5-7 scenes with proper weighting (opening hook: 3-5s, product intro: 6-8s, features: 12-15s, closing: 4-6s). Include validation to ensure total duration equals exactly 30.0 seconds and scenes have minimum/maximum duration constraints.",
+            "status": "pending",
+            "testStrategy": "Verify timing always sums to exactly 30 seconds, test edge cases with different scene counts, confirm logical duration distribution"
+          },
+          {
+            "id": 3,
+            "title": "FastAPI endpoints for scene planning and seed generation",
+            "description": "Implement POST /api/scenes/plan and POST /api/scenes/seeds endpoints with proper request/response handling",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create FastAPI endpoints: POST /api/scenes/plan accepting creative brief and mood ID, returning structured scene breakdown with timing. POST /api/scenes/seeds accepting scene descriptions and mood style, triggering parallel seed image generation. Implement proper error handling, request validation, and response formatting. Add async processing for seed generation endpoint.",
+            "status": "pending",
+            "testStrategy": "Test endpoints with various payloads, verify proper error responses, confirm async seed generation completes successfully"
+          },
+          {
+            "id": 4,
+            "title": "Seed image generation with style consistency",
+            "description": "Implement parallel seed image generation for each scene using Replicate API with consistent mood styling",
+            "dependencies": [
+              3
+            ],
+            "details": "Build seed image generation system using Replicate API that creates visual representations for each scene. Implement style consistency by incorporating selected mood's visual characteristics into prompts. Generate images in parallel for all scenes, ensuring visual coherence across the storyboard. Handle image generation failures gracefully with retry logic.",
+            "status": "pending",
+            "testStrategy": "Test parallel generation performance, verify style consistency across all scene images, confirm error handling for failed generations"
+          },
+          {
+            "id": 5,
+            "title": "Storyboard UI components and timeline",
+            "description": "Build React components for storyboard visualization including Storyboard.tsx, SceneCard.tsx, and SceneTimeline.tsx",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Create comprehensive storyboard UI components: Storyboard.tsx as main container, SceneCard.tsx for individual scene display with image, description, and timing, SceneTimeline.tsx showing linear progression with duration markers. Implement responsive design, loading states, and smooth animations. Add interactive features like scene reordering and timing adjustments.",
+            "status": "pending",
+            "testStrategy": "Test component rendering with various scene counts, verify responsive behavior, confirm loading states display correctly"
+          },
+          {
+            "id": 6,
+            "title": "Scene validation and narrative flow logic",
+            "description": "Implement validation system to ensure scene quality, narrative coherence, and proper storytelling structure",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create validation logic that checks scene progression makes narrative sense, timing allocation is appropriate for content type, and overall story structure follows best practices. Implement checks for scene transitions, content appropriateness, and narrative beats. Add automated quality scoring and suggestions for improvement.",
+            "status": "pending",
+            "testStrategy": "Test validation with edge case scenarios, verify narrative flow scoring accuracy, confirm inappropriate content detection"
+          },
+          {
+            "id": 7,
+            "title": "Integration with mood selection data",
+            "description": "Implement seamless integration between selected mood data and scene planning system for style consistency",
+            "dependencies": [
+              4
+            ],
+            "details": "Build integration layer that properly passes selected mood data (visual style, color palette, aesthetic direction) to scene planning algorithm. Ensure mood characteristics influence both scene descriptions and seed image generation prompts. Implement data flow validation and error handling for missing or invalid mood data.",
+            "status": "pending",
+            "testStrategy": "Test integration with different mood selections, verify style consistency is maintained, confirm error handling for invalid mood data"
+          },
+          {
+            "id": 8,
+            "title": "Error handling for scene generation failures",
+            "description": "Implement comprehensive error handling for all scene generation processes including API failures and validation errors",
+            "dependencies": [
+              3,
+              4,
+              6
+            ],
+            "details": "Create robust error handling system covering GPT-4o API failures, Replicate image generation errors, timing validation failures, and network issues. Implement retry mechanisms, fallback strategies, and user-friendly error messages. Add logging and monitoring for debugging failed generations.",
+            "status": "pending",
+            "testStrategy": "Test error scenarios including API timeouts, invalid responses, network failures, verify graceful degradation and user feedback"
+          },
+          {
+            "id": 9,
+            "title": "Testing scene quality and timing accuracy",
+            "description": "Implement comprehensive testing suite for scene generation quality, timing precision, and overall system integration",
+            "dependencies": [
+              5,
+              6,
+              7,
+              8
+            ],
+            "details": "Create automated testing suite covering scene generation quality metrics, timing accuracy validation, style consistency checks, and end-to-end integration tests. Implement performance benchmarks, quality scoring algorithms, and regression testing for scene planning pipeline. Add manual testing protocols for subjective quality assessment.",
+            "status": "pending",
+            "testStrategy": "Run comprehensive test suite covering all scene generation aspects, perform load testing, validate timing accuracy across multiple generations"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Video Clip Generation System",
+        "description": "Implement Step 4: Generate video clips for all scenes using Replicate's img2vid models with progress tracking and polling.",
+        "details": "Build the video generation system: 1) Implement FastAPI endpoints: POST /api/video/generate (starts async clip generation) and GET /api/video/status/{job_id} (polling endpoint). 2) Create in-memory job tracking system to monitor parallel video generation across all scenes. 3) Build progress UI components (ClipProgress.tsx, ProgressIndicator.tsx) with individual scene progress and overall completion percentage. 4) Implement useVideoGeneration hook with polling logic (3-second intervals) and proper cleanup. 5) Generate video clips in parallel using Replicate's img2vid models with seed images from scene plan. 6) Ensure clips maintain 9:16 aspect ratio, 1080p resolution, and variable duration per scene. 7) Store generated clips (with temporary URLs) in Zustand store. 8) Add comprehensive error handling and retry logic for failed generations.",
+        "testStrategy": "Test parallel video generation with polling system, verify progress updates correctly, confirm all clips generate with proper specifications (9:16, 1080p). Test error handling and recovery from failed clip generations.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "FastAPI Video Generation Endpoints with Job Tracking",
+            "description": "Create the FastAPI endpoints for video generation including POST /api/video/generate to start async clip generation and GET /api/video/status/{job_id} for polling status updates.",
+            "dependencies": [],
+            "details": "Implement POST /api/video/generate endpoint that accepts scene plan data and initiates parallel video generation jobs. Create GET /api/video/status/{job_id} endpoint for polling job progress. Include proper request/response models, error handling, and validation for required parameters.",
+            "status": "pending",
+            "testStrategy": "Test endpoint creation with valid scene data, verify job ID generation, confirm polling endpoint returns correct status information"
+          },
+          {
+            "id": 2,
+            "title": "Async Video Generation Orchestration using Replicate img2vid",
+            "description": "Implement the core video generation logic that orchestrates parallel calls to Replicate's img2vid models for each scene in the plan.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create async video generation service that processes all scenes in parallel using Replicate's img2vid models. Implement proper async/await patterns, handle Replicate API authentication, and manage concurrent requests. Include seed image processing and parameter configuration for each scene type.",
+            "status": "pending",
+            "testStrategy": "Test parallel video generation with multiple scenes, verify Replicate API integration works correctly, confirm all videos generate simultaneously"
+          },
+          {
+            "id": 3,
+            "title": "In-memory Job Tracking System for Parallel Operations",
+            "description": "Build an in-memory job tracking system to monitor and manage the status of parallel video generation operations across all scenes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create job tracking data structures to store job metadata, progress per scene, and overall completion status. Implement thread-safe operations for updating job status across concurrent video generations. Include job cleanup mechanisms and status persistence during processing.",
+            "status": "pending",
+            "testStrategy": "Test job creation and tracking with multiple parallel operations, verify thread-safety of status updates, confirm accurate progress reporting"
+          },
+          {
+            "id": 4,
+            "title": "Progress UI Components with Real-time Updates",
+            "description": "Create React components ClipProgress.tsx and ProgressIndicator.tsx that display individual scene progress and overall completion percentage with real-time updates.",
+            "dependencies": [
+              3
+            ],
+            "details": "Build ClipProgress component to show progress for individual scenes with visual indicators. Create ProgressIndicator component for overall completion percentage. Implement real-time UI updates that reflect current generation status. Include loading states, success/error indicators, and responsive design.",
+            "status": "pending",
+            "testStrategy": "Test UI components update correctly with progress changes, verify responsive design works on different screen sizes, confirm visual indicators display proper states"
+          },
+          {
+            "id": 5,
+            "title": "Polling Mechanism with Proper Cleanup",
+            "description": "Implement useVideoGeneration hook with polling logic at 3-second intervals and proper cleanup mechanisms to prevent memory leaks.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Create useVideoGeneration React hook with polling functionality using 3-second intervals. Implement proper cleanup on component unmount and when generation completes. Include automatic retry logic and exponential backoff for failed polling requests. Handle edge cases like network interruptions.",
+            "status": "pending",
+            "testStrategy": "Test polling starts and stops correctly, verify cleanup prevents memory leaks, confirm retry logic works with network issues"
+          },
+          {
+            "id": 6,
+            "title": "Error Handling and Retry Logic for Failed Generations",
+            "description": "Implement comprehensive error handling and retry mechanisms for failed video generations with proper user feedback and recovery options.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create robust error handling for Replicate API failures, network timeouts, and generation errors. Implement retry logic with exponential backoff for transient failures. Include user-friendly error messages and recovery options. Add logging for debugging failed generations.",
+            "status": "pending",
+            "testStrategy": "Test error handling with simulated API failures, verify retry logic works with different error types, confirm user sees appropriate error messages"
+          },
+          {
+            "id": 7,
+            "title": "Video Specification Validation (9:16, 1080p)",
+            "description": "Ensure all generated video clips maintain the required 9:16 aspect ratio, 1080p resolution, and variable duration per scene specifications.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement validation logic to ensure video outputs meet specifications: 9:16 aspect ratio, 1080p resolution (1080x1920), and appropriate duration per scene type. Include parameter configuration for Replicate API calls to enforce these specifications. Add post-generation validation to verify output meets requirements.",
+            "status": "pending",
+            "testStrategy": "Test video outputs meet exact specifications, verify aspect ratio and resolution are correct, confirm duration matches scene requirements"
+          },
+          {
+            "id": 8,
+            "title": "Parallel Processing Optimization",
+            "description": "Optimize the parallel video generation system for performance, including proper resource management and concurrent request handling.",
+            "dependencies": [
+              2,
+              3,
+              6
+            ],
+            "details": "Optimize parallel processing by implementing proper concurrency limits, resource pooling, and efficient job queue management. Include performance monitoring and optimization for memory usage during parallel operations. Implement batch processing strategies to maximize throughput while respecting API rate limits.",
+            "status": "pending",
+            "testStrategy": "Test system performance with large numbers of concurrent generations, verify memory usage stays within acceptable limits, confirm API rate limits are respected"
+          },
+          {
+            "id": 9,
+            "title": "Testing with Various Scene Types and Error Scenarios",
+            "description": "Comprehensive testing of the video generation system with different scene types, edge cases, and error scenarios to ensure robust operation.",
+            "dependencies": [
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "details": "Create comprehensive test suite covering different scene types (intro, main content, outro), edge cases like very short/long scenes, and error scenarios including API failures, network issues, and invalid inputs. Include integration tests for the complete generation pipeline and stress tests for concurrent operations.",
+            "status": "pending",
+            "testStrategy": "Test with various scene configurations, verify error scenarios are handled gracefully, confirm system remains stable under stress conditions"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Audio Generation Integration",
+        "description": "Implement background music generation based on mood and creative brief using Replicate's audio models.",
+        "details": "Build the audio generation system: 1) Research and integrate appropriate Replicate audio generation models for instrumental background music. 2) Create audio generation logic that matches emotional tone from creative brief and selected mood style. 3) Implement FastAPI endpoint for audio generation that produces exactly 30 seconds of instrumental music. 4) Add audio processing to ensure proper format (MP3 or WAV) and normalization for video composition. 5) Create audio service module (audio_service.py) with error handling and retry logic. 6) Integrate audio generation into video composition workflow. 7) Store generated audio URL in final video state structure.",
+        "testStrategy": "Test audio generation with different mood/tone combinations, verify audio is exactly 30 seconds, confirm format compatibility with FFmpeg. Test audio quality and ensure no lyrical content (instrumental only).",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "FFmpeg Video Composition Pipeline",
+        "description": "Implement Step 5: Video and audio stitching using FFmpeg to create final 30-second vertical video with transitions.",
+        "details": "Build the composition system: 1) Create FFmpeg service module (ffmpeg_service.py) with Python ffmpeg-python wrapper. 2) Implement video concatenation with 0.5-second crossfade transitions between clips. 3) Add audio-visual synchronization ensuring no drift over 30 seconds. 4) Implement final rendering pipeline: MP4 output, 1080p resolution, 30fps, 9:16 aspect ratio, <50MB target file size. 5) Create FastAPI endpoints: POST /api/video/compose (starts composition) and GET /api/video/compose/status/{job_id} (polling). 6) Build composition UI components (CompositionProgress.tsx, VideoPlayer.tsx, DownloadButton.tsx). 7) Implement useVideoComposition hook with polling and cleanup. 8) Add temporary file cleanup after successful composition. 9) Ensure proper metadata inclusion (title from creative brief).",
+        "testStrategy": "Test complete composition pipeline with various clip combinations, verify audio-visual sync, confirm output specifications (1080p, 30fps, 9:16, <50MB). Test crossfade transitions and final video playback quality.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "FFmpeg Service Module Setup with Python Wrapper",
+            "description": "Create the core FFmpeg service module using ffmpeg-python wrapper for video processing operations.",
+            "dependencies": [],
+            "details": "Create ffmpeg_service.py with Python ffmpeg-python wrapper installation and basic FFmpeg operations setup. Include error handling for FFmpeg not found, version compatibility checks, and basic video/audio processing functions. Implement logging for FFmpeg operations and create utility functions for common video manipulations.",
+            "status": "pending",
+            "testStrategy": "Test FFmpeg installation detection, basic video operations, and error handling for missing dependencies."
+          },
+          {
+            "id": 2,
+            "title": "Video Concatenation with Crossfade Transitions",
+            "description": "Implement video concatenation functionality with 0.5-second crossfade transitions between clips.",
+            "dependencies": [
+              1
+            ],
+            "details": "Build video concatenation logic using FFmpeg's complex filter graphs to create smooth 0.5-second crossfade transitions between video clips. Handle different video formats, resolutions, and frame rates. Ensure temporal accuracy and smooth visual transitions without frame drops or artifacts.",
+            "status": "pending",
+            "testStrategy": "Test concatenation with various clip combinations, verify transition timing accuracy, and check for visual artifacts."
+          },
+          {
+            "id": 3,
+            "title": "Audio-Visual Synchronization Implementation",
+            "description": "Implement precise audio-visual synchronization ensuring no drift over the 30-second duration.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create audio-visual sync system to prevent drift over 30 seconds. Implement audio resampling, video frame rate normalization, and sync point validation. Add drift detection and correction mechanisms using timecode synchronization and ensure audio tracks remain perfectly aligned with video content.",
+            "status": "pending",
+            "testStrategy": "Test sync accuracy across different input formats, measure drift over 30 seconds, verify audio alignment with visual content."
+          },
+          {
+            "id": 4,
+            "title": "Final Rendering Pipeline Configuration",
+            "description": "Implement the final rendering pipeline with MP4 output, 1080p resolution, 30fps, and 9:16 aspect ratio specifications.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Configure FFmpeg rendering pipeline for final output specifications: MP4 container, H.264 codec, 1080x1920 resolution (9:16 aspect ratio), 30fps frame rate, AAC audio codec. Implement proper encoding parameters for quality and compression balance, including bitrate calculations and quality presets.",
+            "status": "pending",
+            "testStrategy": "Verify output meets exact specifications (1080p, 30fps, 9:16, MP4), test playback compatibility across devices."
+          },
+          {
+            "id": 5,
+            "title": "FastAPI Composition Endpoints with Job Tracking",
+            "description": "Create FastAPI endpoints for video composition with asynchronous job tracking and status polling.",
+            "dependencies": [
+              4
+            ],
+            "details": "Build POST /api/video/compose endpoint for starting composition jobs and GET /api/video/compose/status/{job_id} for polling status. Implement background task processing using Celery or similar, job queue management, progress tracking, and result storage with unique job IDs for each composition request.",
+            "status": "pending",
+            "testStrategy": "Test endpoint functionality, job creation and tracking, concurrent job handling, and status reporting accuracy."
+          },
+          {
+            "id": 6,
+            "title": "File Size Optimization for 50MB Target",
+            "description": "Implement video compression and optimization strategies to achieve target file size under 50MB.",
+            "dependencies": [
+              4
+            ],
+            "details": "Develop file size optimization algorithms using dynamic bitrate adjustment, quality scaling, and compression parameter tuning. Implement iterative encoding with size validation, quality metrics monitoring, and fallback strategies if initial encoding exceeds 50MB limit. Include preset configurations for different content types.",
+            "status": "pending",
+            "testStrategy": "Test file size targets with various content types, verify quality retention within size constraints, measure compression efficiency."
+          },
+          {
+            "id": 7,
+            "title": "Temporary File Management and Cleanup",
+            "description": "Implement comprehensive temporary file management system with automatic cleanup after successful composition.",
+            "dependencies": [
+              5
+            ],
+            "details": "Create temporary file management system for intermediate processing files, failed job cleanup, and automatic removal after successful composition. Implement file lifecycle tracking, disk space monitoring, and cleanup scheduling. Include error recovery for interrupted processes and orphaned file detection.",
+            "status": "pending",
+            "testStrategy": "Test file cleanup after successful/failed jobs, verify disk space management, test cleanup on system restart."
+          },
+          {
+            "id": 8,
+            "title": "Composition Progress Tracking UI Components",
+            "description": "Build React components for composition progress tracking, video player, and download functionality.",
+            "dependencies": [
+              5
+            ],
+            "details": "Create CompositionProgress.tsx for real-time progress display, VideoPlayer.tsx for preview and final playback, and DownloadButton.tsx for file delivery. Implement useVideoComposition hook with polling logic, cleanup functions, and state management. Include progress bars, status messages, and error state handling.",
+            "status": "pending",
+            "testStrategy": "Test UI responsiveness during composition, progress accuracy, video player functionality, and download mechanism."
+          },
+          {
+            "id": 9,
+            "title": "Error Handling for FFmpeg Operations",
+            "description": "Implement comprehensive error handling system specifically for FFmpeg operations and video processing failures.",
+            "dependencies": [
+              1,
+              5
+            ],
+            "details": "Build robust error handling for FFmpeg command failures, codec issues, format incompatibilities, and resource limitations. Implement error categorization, user-friendly error messages, automatic retry mechanisms for transient failures, and fallback processing options for corrupted inputs.",
+            "status": "pending",
+            "testStrategy": "Test various FFmpeg failure scenarios, verify error reporting accuracy, test retry mechanisms and recovery strategies."
+          },
+          {
+            "id": 10,
+            "title": "Complete Pipeline Testing with Various Inputs",
+            "description": "Perform comprehensive end-to-end testing of the complete composition pipeline with diverse input combinations.",
+            "dependencies": [
+              6,
+              7,
+              8,
+              9
+            ],
+            "details": "Execute comprehensive testing with various video clip combinations, different moods and themes, edge cases with unusual input formats, stress testing with maximum clip counts, and validation of all pipeline specifications. Include metadata inclusion testing, quality assurance checks, and performance benchmarking.",
+            "status": "pending",
+            "testStrategy": "Test complete pipeline with diverse inputs, validate all specifications, measure performance under load, verify output quality consistency."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "State Management and Navigation System",
+        "description": "Implement complete Zustand store structure and step-by-step navigation flow connecting all pipeline steps.",
+        "details": "Build the complete state management system: 1) Finalize Zustand store structure (appStore.ts) with all state sections: currentStep, creativeBrief, moods, selectedMoodId, scenePlan, generatedClips, finalVideo, error handling. 2) Implement navigation logic with proper step validation (can't proceed without completing previous step). 3) Create shared state selectors and actions for each engineer's components. 4) Build step indicator/progress component showing current position in pipeline. 5) Add global error handling and reset functionality. 6) Implement state persistence validation (ensure data flows correctly between steps). 7) Add loading states for each step transition. 8) Create shared types (shared.types.ts) and ensure type safety across all components.",
+        "testStrategy": "Test complete flow from Step 1 to Step 5, verify state persists correctly across step transitions, confirm error states are handled properly. Test navigation restrictions and step validation logic.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3,
+          4,
+          5,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Error Handling and Retry Logic",
+        "description": "Implement comprehensive error handling, retry mechanisms, and user feedback across all pipeline steps.",
+        "details": "Build robust error handling system: 1) Implement exponential backoff retry logic for all external API calls (OpenAI, Replicate). 2) Add specific error handling for common failures: API rate limits, generation timeouts, network issues, invalid responses. 3) Create user-friendly error messages and recovery suggestions for each step. 4) Implement partial failure recovery (e.g., regenerate only failed clips, not all clips). 5) Add error state UI components with retry buttons and alternative actions. 6) Create error logging system for debugging and monitoring. 7) Implement timeout handling for long-running operations. 8) Add validation for all user inputs and API responses. 9) Create fallback mechanisms where possible (alternative models, simplified outputs).",
+        "testStrategy": "Test various failure scenarios: network disconnection, API errors, timeouts, invalid inputs. Verify retry logic works correctly and user feedback is clear. Test partial failure recovery and system resilience.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "UI/UX Polish and Performance Optimization",
+        "description": "Implement final UI polish, responsive design, performance optimizations, and end-to-end testing of the complete pipeline.",
+        "details": "Final polish and optimization: 1) Implement responsive design ensuring proper display on mobile, tablet, and desktop. 2) Add smooth animations and transitions between steps and component states. 3) Optimize component loading with React.lazy() and code splitting for each step. 4) Implement proper image optimization for mood boards and seed images. 5) Add keyboard navigation and accessibility features. 6) Optimize API calls with proper caching and request deduplication. 7) Implement performance monitoring and loading optimizations. 8) Add comprehensive end-to-end testing covering full user workflow. 9) Create demo content and example generated videos. 10) Implement final quality assurance checks for visual consistency, audio-visual sync, and output specifications. 11) Add user feedback collection and analytics hooks.",
+        "testStrategy": "Comprehensive end-to-end testing of complete pipeline, performance testing under various conditions, accessibility testing, responsive design validation across devices. Generate multiple test videos to validate quality and consistency.",
+        "priority": "medium",
+        "dependencies": [
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Responsive Design Implementation",
+            "description": "Implement responsive design ensuring proper display across mobile, tablet, and desktop devices with appropriate breakpoints and layout adjustments.",
+            "dependencies": [],
+            "details": "Create responsive CSS/styled-components for all UI components including creative brief form, mood boards, scene timeline, and video player. Implement mobile-first design approach with breakpoints at 768px (tablet) and 1024px (desktop). Ensure touch-friendly interactions on mobile devices and proper spacing/sizing across all screen sizes.",
+            "status": "pending",
+            "testStrategy": "Test on actual devices and browser dev tools across iPhone, iPad, and various desktop resolutions. Verify touch interactions and layout integrity."
+          },
+          {
+            "id": 2,
+            "title": "Animation and Transition System",
+            "description": "Add smooth animations and transitions between steps and component states to enhance user experience.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement CSS transitions and animations for step navigation, mood board selection, scene timeline interactions, and progress indicators. Create consistent animation timing (300ms standard, 150ms micro-interactions) and easing functions. Add loading animations for API calls and smooth state changes between pipeline steps.",
+            "status": "pending",
+            "testStrategy": "Verify animations are smooth across devices, test performance impact on mobile devices, ensure animations don't interfere with accessibility features."
+          },
+          {
+            "id": 3,
+            "title": "Component Lazy Loading and Code Splitting",
+            "description": "Optimize component loading with React.lazy() and implement code splitting for each pipeline step to improve initial load time.",
+            "dependencies": [],
+            "details": "Implement React.lazy() for major components (MoodGeneration, SceneEditor, VideoGeneration, FinalComposition). Set up route-based code splitting for each pipeline step. Configure webpack/Vite bundle splitting to create separate chunks for external libraries (ffmpeg.wasm, react-player). Add loading fallbacks and error boundaries for lazy components.",
+            "status": "pending",
+            "testStrategy": "Analyze bundle sizes before/after optimization, test loading performance on slow networks, verify lazy loading doesn't break user experience."
+          },
+          {
+            "id": 4,
+            "title": "Image Optimization for Mood Boards",
+            "description": "Implement proper image optimization for mood boards and seed images including compression, lazy loading, and progressive loading.",
+            "dependencies": [],
+            "details": "Add image compression for uploaded seed images and generated mood board images. Implement lazy loading for mood board galleries with intersection observer. Add progressive image loading with blur-up technique. Optimize image formats (WebP with JPEG fallback) and implement responsive images with srcset for different screen densities.",
+            "status": "pending",
+            "testStrategy": "Test image loading performance on various network speeds, verify image quality after compression, test lazy loading behavior in mood board galleries."
+          },
+          {
+            "id": 5,
+            "title": "Accessibility Features and Keyboard Navigation",
+            "description": "Add keyboard navigation and accessibility features including screen reader support, focus management, and ARIA labels.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement complete keyboard navigation for all interactive elements. Add ARIA labels, roles, and descriptions for complex UI components. Ensure proper focus management during step transitions and modal interactions. Add screen reader announcements for dynamic content updates (progress, generation status). Implement high contrast mode support and ensure minimum color contrast ratios.",
+            "status": "pending",
+            "testStrategy": "Test with screen readers (NVDA, JAWS), verify keyboard-only navigation, run automated accessibility tests with axe-core, test with users who rely on assistive technologies."
+          },
+          {
+            "id": 6,
+            "title": "API Call Optimization and Caching",
+            "description": "Optimize API calls with proper caching, request deduplication, and intelligent retry mechanisms for external services.",
+            "dependencies": [],
+            "details": "Implement request caching for repeated API calls (mood generation, video status polling). Add request deduplication to prevent multiple identical calls. Optimize polling intervals based on generation type (shorter for quick operations, longer for video generation). Implement request queuing to respect rate limits and reduce server load.",
+            "status": "pending",
+            "testStrategy": "Test API performance under load, verify caching reduces redundant calls, test rate limit handling and request queuing behavior."
+          },
+          {
+            "id": 7,
+            "title": "Performance Monitoring Setup",
+            "description": "Implement performance monitoring and loading optimizations including metrics collection and performance tracking.",
+            "dependencies": [
+              3,
+              6
+            ],
+            "details": "Set up performance monitoring with Web Vitals tracking (LCP, FID, CLS). Implement custom performance metrics for pipeline step completion times. Add browser performance API integration to track component render times and API call durations. Create performance dashboard for monitoring user experience and identifying bottlenecks.",
+            "status": "pending",
+            "testStrategy": "Verify performance metrics are collected accurately, test monitoring across different devices and network conditions, validate performance improvements after optimizations."
+          },
+          {
+            "id": 8,
+            "title": "End-to-End Testing Implementation",
+            "description": "Implement comprehensive end-to-end testing covering the complete user workflow from creative brief to final video generation.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "details": "Create E2E test suite using Cypress or Playwright covering full pipeline workflow. Test user journey from creative brief submission through mood selection, scene editing, and final video generation. Include tests for error scenarios, retry mechanisms, and edge cases. Add visual regression testing for UI components and responsive layouts.",
+            "status": "pending",
+            "testStrategy": "Run E2E tests in CI/CD pipeline, test across multiple browsers and devices, verify tests catch real user issues and don't produce false positives."
+          },
+          {
+            "id": 9,
+            "title": "Demo Content Creation",
+            "description": "Create demo content and example generated videos to showcase the application capabilities and provide user examples.",
+            "dependencies": [
+              8
+            ],
+            "details": "Create sample creative briefs covering different industries and use cases. Generate high-quality example videos demonstrating various mood styles and scene compositions. Create onboarding content including tutorial videos and guided examples. Prepare sample assets (logos, brand colors, sample images) for demo purposes.",
+            "status": "pending",
+            "testStrategy": "Verify demo content works across all pipeline steps, test example videos play correctly on all devices, validate tutorial content is clear and helpful for new users."
+          },
+          {
+            "id": 10,
+            "title": "Quality Assurance Testing",
+            "description": "Implement final quality assurance checks for visual consistency, audio-visual sync, and output specifications across the entire application.",
+            "dependencies": [
+              8,
+              9
+            ],
+            "details": "Create comprehensive QA checklist covering visual consistency, audio-visual synchronization, and output specifications (resolution, format, duration). Implement automated quality checks for generated videos including frame rate consistency and audio levels. Test cross-browser compatibility and ensure consistent behavior across different environments.",
+            "status": "pending",
+            "testStrategy": "Execute manual QA testing across all supported browsers and devices, validate generated video quality meets specifications, test edge cases and boundary conditions."
+          },
+          {
+            "id": 11,
+            "title": "User Feedback Collection Integration",
+            "description": "Add user feedback collection and analytics hooks to gather user experience data and improve the application based on usage patterns.",
+            "dependencies": [
+              7,
+              10
+            ],
+            "details": "Implement feedback collection system with rating components for each pipeline step. Add analytics tracking for user behavior, completion rates, and drop-off points. Create feedback submission API endpoints and data storage. Implement non-intrusive feedback prompts and optional survey integration for detailed user insights.",
+            "status": "pending",
+            "testStrategy": "Test feedback collection doesn't impact performance, verify analytics data is collected accurately, test feedback submission and storage functionality."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-11-16T00:43:03.888Z",
+      "updated": "2025-11-16T00:43:03.888Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
