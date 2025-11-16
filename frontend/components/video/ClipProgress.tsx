@@ -9,6 +9,15 @@ interface ClipProgressProps {
 }
 
 export function ClipProgress({ clip, sceneDescription }: ClipProgressProps) {
+  // Debug: Log when progress changes
+  React.useEffect(() => {
+    console.log(`📊 Scene ${clip.scene_number} progress update:`, {
+      status: clip.status,
+      progress: clip.progress_percent,
+      hasVideo: !!clip.video_url
+    });
+  }, [clip.scene_number, clip.status, clip.progress_percent, clip.video_url]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':

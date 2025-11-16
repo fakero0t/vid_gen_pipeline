@@ -4,11 +4,41 @@ import React from 'react';
 import type { VideoJobStatus } from '@/types/video.types';
 
 interface ProgressIndicatorProps {
-  jobStatus: VideoJobStatus;
+  jobStatus: VideoJobStatus | null;
   showDetails?: boolean;
 }
 
 export function ProgressIndicator({ jobStatus, showDetails = true }: ProgressIndicatorProps) {
+  // Show a starting state if no job status yet
+  if (!jobStatus) {
+    return (
+      <div className="rounded-xl border-2 p-6 transition-all duration-300 text-blue-600 bg-blue-50 border-blue-200">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-shrink-0">
+            <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg">Starting video generation...</h3>
+            <p className="text-sm opacity-75 mt-1">Initializing job and preparing scenes</p>
+          </div>
+          <div className="text-3xl font-bold">0%</div>
+        </div>
+        <div className="mb-4">
+          <div className="h-3 bg-current/10 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 rounded-full w-0 transition-all duration-500" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':

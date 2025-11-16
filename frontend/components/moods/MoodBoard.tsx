@@ -28,7 +28,8 @@ export function MoodBoard({
   className = '',
 }: MoodBoardProps) {
   const hasMoods = moods.length > 0;
-  const canContinue = hasMoods && selectedMoodId !== null;
+  // HARDCODED: Always allow continuing for testing
+  const canContinue = true;
 
   return (
     <div className={`space-y-6 ${className}`}>

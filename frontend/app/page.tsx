@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { ChatInterface, CreativeBriefSummary } from '@/components/vision';
 import { MoodBoard } from '@/components/moods';
 import { Storyboard } from '@/components/scenes';
@@ -25,6 +26,7 @@ export default function Home() {
     selectedMoodId,
     scenePlan,
     setScenePlan,
+    audioUrl,
   } = useAppStore();
 
   // Step 1: Vision Chat
@@ -60,49 +62,121 @@ export default function Home() {
   // Use creativeBrief from store (persisted) or from chat hook
   const activeBrief = creativeBrief || chatBrief;
 
-  const handleContinueToMoods = () => {
-    if (canProceed && activeBrief) {
-      setCurrentStep(2);
+  // HARDCODED: Auto-set audio URL when entering step 4
+  useEffect(() => {
+    if (currentStep === 4 && !audioUrl) {
+      const hardcodedAudioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+      useAppStore.getState().setAudioUrl(hardcodedAudioUrl);
     }
+  }, [currentStep, audioUrl]);
+
+  // HARDCODED: Auto-generate moods when entering step 2
+  useEffect(() => {
+    if (currentStep === 2 && moods.length === 0 && !isMoodLoading) {
+      const request: MoodGenerationRequest = {
+        product_name: activeBrief?.product_name || 'Test Product',
+        target_audience: activeBrief?.target_audience || 'Test Audience',
+        emotional_tone: activeBrief?.emotional_tone || [],
+        visual_style_keywords: activeBrief?.visual_style_keywords || [],
+        key_messages: activeBrief?.key_messages || [],
+      };
+      generateMoodsFromBrief(request);
+    }
+  }, [currentStep, moods.length, isMoodLoading, activeBrief, generateMoodsFromBrief]);
+
+  // HARDCODED: Auto-select first mood after moods are generated
+  useEffect(() => {
+    if (moods.length > 0 && !selectedMoodId) {
+      console.log('Auto-selecting first mood:', moods[0].id);
+      useAppStore.getState().selectMood(moods[0].id);
+    }
+  }, [moods, selectedMoodId]);
+
+  // HARDCODED: Auto-generate scene plan when entering step 3
+  useEffect(() => {
+    // Wait for moods to be available before generating scene plan
+    if (currentStep === 3 && !scenePlan && !isSceneLoading && moods.length > 0) {
+      const selectedMood = selectedMoodId 
+        ? moods.find((m) => m.id === selectedMoodId)
+        : moods[0];
+
+      if (selectedMood) {
+        const request: ScenePlanRequest = {
+          product_name: activeBrief?.product_name || 'Test Product',
+          target_audience: activeBrief?.target_audience || 'Test Audience',
+          emotional_tone: activeBrief?.emotional_tone || [],
+          visual_style_keywords: activeBrief?.visual_style_keywords || [],
+          key_messages: activeBrief?.key_messages || [],
+          mood_id: selectedMood.id,
+          mood_name: selectedMood.name,
+          mood_style_keywords: selectedMood.style_keywords,
+          mood_color_palette: selectedMood.color_palette,
+          mood_aesthetic_direction: selectedMood.aesthetic_direction,
+        };
+
+        generateScenePlan(request).then((plan) => {
+          if (plan) {
+            setScenePlan(plan);
+            generateSeedImages(
+              plan.scenes,
+              selectedMood.style_keywords,
+              selectedMood.color_palette,
+              selectedMood.aesthetic_direction
+            ).then((scenesWithImages) => {
+              if (scenesWithImages) {
+                setScenePlan({
+                  ...plan,
+                  scenes: scenesWithImages,
+                });
+              }
+            });
+          }
+        });
+      }
+    }
+  }, [currentStep, scenePlan, isSceneLoading, selectedMoodId, moods, activeBrief, generateScenePlan, generateSeedImages, setScenePlan]);
+
+  const handleContinueToMoods = () => {
+    // HARDCODED: Skip validation for testing
+    setCurrentStep(2);
   };
 
   const handleGenerateMoods = async () => {
-    if (!activeBrief) return;
-    
+    // HARDCODED: Skip validation for testing
     const request: MoodGenerationRequest = {
-      product_name: activeBrief.product_name,
-      target_audience: activeBrief.target_audience,
-      emotional_tone: activeBrief.emotional_tone,
-      visual_style_keywords: activeBrief.visual_style_keywords,
-      key_messages: activeBrief.key_messages,
+      product_name: activeBrief?.product_name || 'Test Product',
+      target_audience: activeBrief?.target_audience || 'Test Audience',
+      emotional_tone: activeBrief?.emotional_tone || [],
+      visual_style_keywords: activeBrief?.visual_style_keywords || [],
+      key_messages: activeBrief?.key_messages || [],
     };
     
     await generateMoodsFromBrief(request);
   };
 
   const handleContinueFromMoods = () => {
-    if (selectedMoodId) {
-      setCurrentStep(3);
-    }
+    // HARDCODED: Skip validation for testing
+    setCurrentStep(3);
   };
 
   const handleGenerateScenePlan = async () => {
-    if (!activeBrief || !selectedMoodId) return;
-
-    // Find selected mood from store
-    const selectedMood = moods.find((m) => m.id === selectedMoodId);
+    // HARDCODED: Skip validation for testing
+    // Use first mood if none selected
+    const selectedMood = selectedMoodId 
+      ? moods.find((m) => m.id === selectedMoodId)
+      : moods[0];
 
     if (!selectedMood) {
-      console.error('Selected mood not found');
+      console.error('No moods available');
       return;
     }
 
     const request: ScenePlanRequest = {
-      product_name: activeBrief.product_name,
-      target_audience: activeBrief.target_audience,
-      emotional_tone: activeBrief.emotional_tone,
-      visual_style_keywords: activeBrief.visual_style_keywords,
-      key_messages: activeBrief.key_messages,
+      product_name: activeBrief?.product_name || 'Test Product',
+      target_audience: activeBrief?.target_audience || 'Test Audience',
+      emotional_tone: activeBrief?.emotional_tone || [],
+      visual_style_keywords: activeBrief?.visual_style_keywords || [],
+      key_messages: activeBrief?.key_messages || [],
       mood_id: selectedMood.id,
       mood_name: selectedMood.name,
       mood_style_keywords: selectedMood.style_keywords,
@@ -154,7 +228,7 @@ export default function Home() {
           {activeBrief && (
             <CreativeBriefSummary
               brief={activeBrief}
-              onContinue={canProceed ? handleContinueToMoods : undefined}
+              onContinue={handleContinueToMoods}
             />
           )}
 

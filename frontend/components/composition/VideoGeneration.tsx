@@ -23,6 +23,7 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
     generatedClips,
     audioUrl,
     setGeneratedClips,
+    setVideoJobId,
   } = useAppStore();
 
   const {
@@ -32,6 +33,16 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
     startGeneration,
     clearError: clearVideoError,
   } = useVideoGeneration();
+  
+  // Debug: Log whenever videoStatus changes
+  useEffect(() => {
+    console.log('🔄 VideoGeneration component - videoStatus changed:', {
+      exists: !!videoStatus,
+      progress: videoStatus?.progress_percent,
+      clipsCount: videoStatus?.clips?.length,
+      fullObject: videoStatus
+    });
+  }, [videoStatus]);
 
   const {
     generateAudio,
@@ -64,16 +75,23 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
 
   // Sync video clips from job status to store
   useEffect(() => {
-    console.log('📊 Job Status Update:', {
+    console.log('📊 VideoGeneration - Job Status Update:', {
       hasVideoStatus: !!videoStatus,
       status: videoStatus?.status,
+      progress: videoStatus?.progress_percent,
       clipsLength: videoStatus?.clips?.length,
-      clips: videoStatus?.clips
+      clipsProgress: videoStatus?.clips?.map(c => `Scene ${c.scene_number}: ${c.progress_percent}%`)
     });
 
     if (videoStatus?.clips && videoStatus.clips.length > 0) {
-      console.log('💾 Saving clips to store:', videoStatus.clips);
+      console.log('💾 Saving clips to store:', videoStatus.clips.map(c => ({
+        scene: c.scene_number,
+        progress: c.progress_percent,
+        status: c.status
+      })));
       setGeneratedClips(videoStatus.clips);
+      
+      console.log('✅ Clips saved to store');
     }
   }, [videoStatus, setGeneratedClips]);
 
@@ -102,18 +120,97 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
   };
 
   const handleStartGeneration = async () => {
+    console.log('🎬 Starting video generation...');
+    console.log('📋 Scene Plan:', scenePlan);
+    console.log('🎨 Selected Mood:', selectedMood);
+
+    // Validation 1: Check required data
     if (!scenePlan || !selectedMood) {
+      console.error('❌ Missing requirements:', {
+        scenePlan: !!scenePlan,
+        selectedMood: !!selectedMood
+      });
+      alert('Missing scene plan or mood selection. Please go back and complete previous steps.');
       return;
     }
 
-    // Filter scenes with seed images
-    const scenesWithImages = scenePlan.scenes.filter((s) => s.seed_image_url);
+    // Validation 2: Check scenes exist
+    if (!scenePlan.scenes || scenePlan.scenes.length === 0) {
+      console.error('❌ No scenes in scene plan');
+      alert('No scenes found in scene plan. Please go back to Step 3.');
+      return;
+    }
+
+    // Validation 3: Filter and validate scenes with seed images
+    const scenesWithImages = scenePlan.scenes.filter((s) => {
+      const hasUrl = !!s.seed_image_url;
+      const isValidUrl = hasUrl && s.seed_image_url!.trim().length > 0;
+      return isValidUrl;
+    });
+
+    console.log('📸 Scene validation:', {
+      totalScenes: scenePlan.scenes.length,
+      scenesWithImages: scenesWithImages.length,
+      sceneDetails: scenePlan.scenes.map(s => ({
+        number: s.scene_number,
+        hasImage: !!s.seed_image_url,
+        url: s.seed_image_url?.substring(0, 50) + '...',
+        urlLength: s.seed_image_url?.length || 0
+      }))
+    });
 
     if (scenesWithImages.length === 0) {
-      alert('No scenes with seed images found');
+      const scenesWithoutImages = scenePlan.scenes
+        .filter(s => !s.seed_image_url)
+        .map(s => s.scene_number)
+        .join(', ');
+      
+      console.error('❌ No valid seed images found');
+      alert(
+        `No scenes with valid seed images found.\n\n` +
+        `Scenes missing images: ${scenesWithoutImages}\n\n` +
+        `Please go back to Step 3 and regenerate the scene plan.`
+      );
       return;
     }
 
+    // Validation 4: Warn if some scenes are missing images
+    if (scenesWithImages.length < scenePlan.scenes.length) {
+      const missingCount = scenePlan.scenes.length - scenesWithImages.length;
+      const scenesWithoutImages = scenePlan.scenes
+        .filter(s => !s.seed_image_url)
+        .map(s => s.scene_number)
+        .join(', ');
+      
+      console.warn(`⚠️ ${missingCount} scene(s) missing images: ${scenesWithoutImages}`);
+      
+      const proceed = confirm(
+        `Warning: ${missingCount} scene(s) are missing seed images (scenes: ${scenesWithoutImages}).\n\n` +
+        `Only ${scenesWithImages.length} scene(s) will be generated.\n\n` +
+        `Continue anyway?`
+      );
+      
+      if (!proceed) return;
+    }
+
+    // Validation 5: Test if URLs are accessible (sample check)
+    const firstImageUrl = scenesWithImages[0].seed_image_url!;
+    console.log('🔗 Testing first seed image URL:', firstImageUrl);
+    
+    try {
+      // Quick check if URL format is valid
+      new URL(firstImageUrl);
+      console.log('✅ URL format is valid');
+    } catch (e) {
+      console.error('❌ Invalid URL format:', e);
+      alert(
+        `Seed image URL appears to be invalid:\n\n${firstImageUrl}\n\n` +
+        `Please go back to Step 3 and regenerate scenes.`
+      );
+      return;
+    }
+
+    // Build request with validated scenes
     const request: VideoGenerationRequest = {
       scenes: scenesWithImages.map((scene) => ({
         scene_number: scene.scene_number,
@@ -126,14 +223,44 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
       mood_aesthetic_direction: selectedMood.aesthetic_direction,
     };
 
+    console.log('📤 Sending validated request:', {
+      sceneCount: request.scenes.length,
+      scenes: request.scenes.map(s => ({
+        scene: s.scene_number,
+        imageUrl: s.seed_image_url.substring(0, 50) + '...'
+      })),
+      moodKeywords: request.mood_style_keywords
+    });
+
     setHasStarted(true);
-    await startGeneration(request);
+    const jobId = await startGeneration(request);
+
+    if (jobId) {
+      setVideoJobId(jobId);
+      console.log('✅ Video generation started successfully. Job ID:', jobId);
+    } else {
+      console.error('❌ No job ID returned - generation may have failed');
+      setHasStarted(false);
+    }
   };
 
   const isComplete = videoStatus?.status === 'completed' ||
     (generatedClips.length > 0 && generatedClips.every(c => c.status === 'completed'));
   const hasFailed = videoStatus?.status === 'failed';
   const hasExistingClips = generatedClips && generatedClips.length > 0;
+
+  // Debug button state
+  useEffect(() => {
+    console.log('🔘 Button state:', {
+      hasStarted,
+      isGenerating,
+      hasExistingClips,
+      audioUrl: !!audioUrl,
+      isAudioLoading,
+      buttonShouldBeVisible: !hasStarted && !isGenerating && !hasExistingClips,
+      buttonShouldBeEnabled: !!audioUrl && !isAudioLoading
+    });
+  }, [hasStarted, isGenerating, hasExistingClips, audioUrl, isAudioLoading]);
 
   return (
     <div className="space-y-6">
@@ -201,31 +328,86 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
       )}
 
       {/* Video Generation Status */}
-      {!hasStarted && !isGenerating && !hasExistingClips && (
-        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 text-center space-y-4">
-          <div className="text-4xl">🎬</div>
-          <h3 className="text-xl font-semibold">Ready to Generate Video Clips</h3>
-          <p className="text-muted-foreground">
-            We'll generate {scenePlan?.scenes.length || 0} video clips from your storyboard.
-            <br />
-            This may take several minutes.
-          </p>
-          <Button
-            onClick={handleStartGeneration}
-            size="lg"
-            disabled={!audioUrl || isAudioLoading}
-          >
-            Start Video Generation
-          </Button>
+      {!hasStarted && !isGenerating && (
+        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 space-y-6">
+          <div className="text-center space-y-4">
+            <div className="text-4xl">🎬</div>
+            <h3 className="text-xl font-semibold">
+              {hasExistingClips ? 'Regenerate Video Clips' : 'Ready to Generate Video Clips'}
+            </h3>
+            <p className="text-muted-foreground">
+              {hasExistingClips ? (
+                <>
+                  You have {generatedClips.length} existing clip{generatedClips.length > 1 ? 's' : ''}.
+                  <br />
+                  Click below to regenerate all {scenePlan?.scenes.filter(s => s.seed_image_url).length || 0} video clips.
+                </>
+              ) : (
+                <>
+                  We'll generate {scenePlan?.scenes.filter(s => s.seed_image_url).length || 0} video clips from your storyboard.
+                  <br />
+                  This may take several minutes.
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Scene Validation Display */}
+          {scenePlan && scenePlan.scenes && (
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-3">Scene Status:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                {scenePlan.scenes.map((scene) => (
+                  <div
+                    key={scene.scene_number}
+                    className={`flex items-center gap-2 px-3 py-2 rounded ${
+                      scene.seed_image_url
+                        ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+                        : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    <span>{scene.seed_image_url ? '✓' : '✗'}</span>
+                    <span>Scene {scene.scene_number}</span>
+                    {!scene.seed_image_url && (
+                      <span className="text-xs">(no image)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {scenePlan.scenes.some(s => !s.seed_image_url) && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-3">
+                  ⚠️ Some scenes are missing seed images. Only scenes with images will be generated.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="text-center">
+            <Button
+              onClick={handleStartGeneration}
+              size="lg"
+              disabled={!audioUrl || isAudioLoading}
+            >
+              {hasExistingClips ? 'Regenerate Video Clips' : 'Start Video Generation'}
+            </Button>
+          </div>
         </div>
       )}
 
       {/* Progress Display */}
-      {((hasStarted || isGenerating || isComplete || hasExistingClips) && videoStatus) && (
-        <VideoGenerationProgress
-          jobStatus={videoStatus}
-          scenes={scenePlan?.scenes}
-        />
+      {(hasStarted || isGenerating || isComplete || hasExistingClips) && (
+        <>
+          {/* Debug info */}
+          {videoStatus && (
+            <div className="text-xs bg-yellow-50 dark:bg-yellow-950 p-2 rounded font-mono">
+              Debug: Overall {videoStatus.progress_percent}% | Clips: {videoStatus.clips.map(c => `${c.scene_number}:${c.progress_percent}%`).join(', ')}
+            </div>
+          )}
+          <VideoGenerationProgress
+            jobStatus={videoStatus}
+            scenes={scenePlan?.scenes}
+          />
+        </>
       )}
 
       {/* Show clips even without job status (for resumed sessions) */}

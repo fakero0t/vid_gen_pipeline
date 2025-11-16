@@ -7,7 +7,7 @@ import type { VideoJobStatus } from '@/types/video.types';
 import type { Scene } from '@/types/scene.types';
 
 interface VideoGenerationProgressProps {
-  jobStatus: VideoJobStatus;
+  jobStatus: VideoJobStatus | null;
   scenes?: Scene[];
   onCancel?: () => void;
 }
@@ -17,6 +17,16 @@ export function VideoGenerationProgress({
   scenes = [],
   onCancel,
 }: VideoGenerationProgressProps) {
+  // Force re-render when jobStatus changes
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  React.useEffect(() => {
+    if (jobStatus) {
+      console.log('🔄 FORCING component re-render due to jobStatus change');
+      forceUpdate();
+    }
+  }, [jobStatus]);
+
   // Create a map of scene descriptions for easier lookup
   const sceneDescriptions = React.useMemo(() => {
     const map: Record<number, string> = {};
@@ -25,6 +35,43 @@ export function VideoGenerationProgress({
     });
     return map;
   }, [scenes]);
+
+  console.log('🎬 VideoGenerationProgress RENDER - jobStatus:', {
+    timestamp: new Date().toISOString(),
+    exists: !!jobStatus,
+    hasClips: !!jobStatus?.clips,
+    clipsLength: jobStatus?.clips?.length,
+    jobProgress: jobStatus?.progress_percent,
+    firstClipProgress: jobStatus?.clips?.[0]?.progress_percent,
+    clipsData: jobStatus?.clips
+  });
+  
+  // CRITICAL: Always prefer real data from jobStatus over placeholders
+  let displayClips;
+  
+  if (jobStatus?.clips && jobStatus.clips.length > 0) {
+    // Use real data from API
+    console.log('🎬 ✅ Using REAL clips from API:', jobStatus.clips.map(c => ({
+      scene: c.scene_number,
+      progress: c.progress_percent,
+      status: c.status
+    })));
+    displayClips = jobStatus.clips;
+  } else {
+    // Only use placeholders if we don't have real data yet
+    console.log('🎬 ⚠️ No jobStatus yet, using placeholder clips');
+    displayClips = scenes
+      .filter(scene => scene.seed_image_url)
+      .map((scene) => ({
+        scene_number: scene.scene_number,
+        status: 'pending' as const,
+        progress_percent: 0,
+        duration: scene.duration,
+        video_url: null,
+        error: null,
+      }));
+    console.log('🎬 Created', displayClips.length, 'placeholder clips');
+  }
 
   return (
     <div className="space-y-6">
@@ -38,7 +85,7 @@ export function VideoGenerationProgress({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Individual Clips</h3>
-          {jobStatus.status === 'processing' && onCancel && (
+          {jobStatus?.status === 'processing' && onCancel && (
             <button
               onClick={onCancel}
               className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
@@ -49,9 +96,9 @@ export function VideoGenerationProgress({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {jobStatus.clips.map((clip) => (
+          {displayClips.map((clip) => (
             <ClipProgress
-              key={clip.scene_number}
+              key={`clip-${clip.scene_number}`}
               clip={clip}
               sceneDescription={sceneDescriptions[clip.scene_number]}
             />
@@ -60,7 +107,7 @@ export function VideoGenerationProgress({
       </div>
 
       {/* Action buttons */}
-      {jobStatus.status === 'completed' && (
+      {jobStatus?.status === 'completed' && (
         <div className="flex gap-3 justify-center pt-4">
           <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity">
             Download All Videos
@@ -72,7 +119,7 @@ export function VideoGenerationProgress({
       )}
 
       {/* Retry option for failed generation */}
-      {jobStatus.status === 'failed' && (
+      {jobStatus?.status === 'failed' && (
         <div className="flex gap-3 justify-center pt-4">
           <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity">
             Retry Generation

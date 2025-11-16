@@ -39,30 +39,66 @@ export function useScenePlanning(): UseScenePlanningReturn {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/scenes/plan`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      // HARDCODED for testing
+      const hardcodedScenePlan: ScenePlan = {
+        total_duration: 30,
+        scenes: [
+          {
+            scene_number: 1,
+            duration: 5,
+            description: "Wide shot of majestic mountain peaks at sunrise",
+            style_prompt: "cinematic wide angle shot, dramatic mountain peaks, golden sunrise light, epic scale",
+            seed_image_url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
+            generation_success: true
           },
-          body: JSON.stringify(request),
-        }
-      );
+          {
+            scene_number: 2,
+            duration: 5,
+            description: "Adventurer hiking up rocky terrain",
+            style_prompt: "dynamic action shot, person hiking steep mountain trail, determined movement, adventure spirit",
+            seed_image_url: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=800",
+            generation_success: true
+          },
+          {
+            scene_number: 3,
+            duration: 5,
+            description: "Close-up of hiking boots on rugged path",
+            style_prompt: "detail shot, hiking boots on rocky mountain path, texture and determination, ground perspective",
+            seed_image_url: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800",
+            generation_success: true
+          },
+          {
+            scene_number: 4,
+            duration: 5,
+            description: "Panoramic view from mountain ridge",
+            style_prompt: "sweeping panoramic landscape, mountain ridge vista, vast wilderness, freedom and achievement",
+            seed_image_url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
+            generation_success: true
+          },
+          {
+            scene_number: 5,
+            duration: 5,
+            description: "Silhouette of adventurer at summit",
+            style_prompt: "hero shot silhouette, person standing at mountain summit, triumphant pose, golden hour backlight",
+            seed_image_url: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=800",
+            generation_success: true
+          },
+          {
+            scene_number: 6,
+            duration: 5,
+            description: "Sunset over mountain range finale",
+            style_prompt: "epic closing shot, vibrant sunset over mountain range, dramatic clouds, inspirational mood",
+            seed_image_url: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800",
+            generation_success: true
+          }
+        ]
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data: ScenePlanResponse = await response.json();
-
-      if (!data.success || !data.scene_plan) {
-        throw new Error(data.message || 'Failed to generate scene plan');
-      }
-
-      setScenePlan(data.scene_plan);
-      return data.scene_plan;
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setScenePlan(hardcodedScenePlan);
+      return hardcodedScenePlan;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -83,45 +119,22 @@ export function useScenePlanning(): UseScenePlanningReturn {
     setError(null);
 
     try {
-      const request: SeedImageRequest = {
-        scenes,
-        mood_style_keywords: moodStyleKeywords,
-        mood_color_palette: moodColorPalette,
-        mood_aesthetic_direction: moodAestheticDirection,
-      };
+      // HARDCODED for testing - images already included in scene plan
+      // Just return the scenes as-is since they already have seed images
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/scenes/seeds`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data: SeedImageResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to generate seed images');
-      }
-
-      // Update scene plan with seed images
+      // Update scene plan with seed images (already present)
       if (scenePlan) {
         const updatedScenePlan = {
           ...scenePlan,
-          scenes: data.scenes_with_images,
+          scenes: scenes,
         };
         setScenePlan(updatedScenePlan);
       }
 
-      return data.scenes_with_images;
+      return scenes;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);

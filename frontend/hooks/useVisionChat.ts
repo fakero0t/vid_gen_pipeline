@@ -105,7 +105,8 @@ export function useVisionChat(): UseVisionChatReturn {
 
   // Check if conversation has enough information to proceed
   const canProceed = useMemo(() => {
-    return isCreativeBriefComplete(creativeBrief);
+    // HARDCODED: Always allow proceeding for testing
+    return true;
   }, [creativeBrief]);
 
   // Manual extraction function with enhanced error handling
@@ -114,37 +115,32 @@ export function useVisionChat(): UseVisionChatReturn {
       return;
     }
 
-    if (!hasEnoughConversation(messages)) {
-      setError('Not enough conversation to extract a brief. Please continue chatting.');
-      return;
-    }
-
-    if (!isOnline()) {
-      setError('You appear to be offline. Please check your connection.');
-      return;
-    }
-
     setIsExtracting(true);
     setError(null);
 
     try {
-      const extracted = await extractCreativeBrief(messages);
-      if (extracted) {
-        setCreativeBrief(extracted);
-      } else {
-        setError('Could not extract creative brief. Please continue the conversation.');
-      }
+      // HARDCODED for testing
+      const hardcodedBrief: CreativeBrief = {
+        product_name: "Epic Mountain Adventure",
+        target_audience: "Adventure seekers and nature lovers aged 25-45",
+        emotional_tone: ["inspirational", "energetic", "adventurous", "bold"],
+        visual_style_keywords: ["cinematic", "dramatic", "vibrant", "epic", "golden-hour"],
+        key_messages: [
+          "Explore the unknown",
+          "Push your limits",
+          "Find your freedom",
+          "Experience nature's grandeur"
+        ]
+      };
+      setCreativeBrief(hardcodedBrief);
     } catch (error) {
       console.error('Extraction error:', error);
       const errorMessage = getErrorMessage(error);
       setError(errorMessage);
-      
-      // If error is retryable, we could show a retry button in the UI
-      // For now, we just show the error message
     } finally {
       setIsExtracting(false);
     }
-  }, [messages, isExtracting, isLoading, setError, setCreativeBrief]);
+  }, [isExtracting, isLoading, setError, setCreativeBrief]);
 
   // Handle sending messages with validation
   const onSendMessage = useCallback(
@@ -211,27 +207,19 @@ export function useVisionChat(): UseVisionChatReturn {
     // - Currently loading a response
     // - Already have a complete brief
     // - Already attempted extraction
-    // - Not enough conversation
     if (
       isExtracting ||
       isLoading ||
       isCreativeBriefComplete(creativeBrief) ||
-      extractionAttemptedRef.current ||
-      !hasEnoughConversation(messages)
+      extractionAttemptedRef.current
     ) {
       return;
     }
 
-    // Auto-extract when we have enough messages and conversation has paused
-    // Wait for streaming to complete before extracting
-    const userMessageCount = messages.filter(m => m.role === 'user').length;
-    const shouldExtract = userMessageCount >= 3 && !isLoading;
-
-    if (shouldExtract) {
-      extractionAttemptedRef.current = true;
-      extractBrief();
-    }
-  }, [messages.length, isLoading, isExtracting, creativeBrief, extractBrief]);
+    // HARDCODED: Auto-extract immediately on mount for testing
+    extractionAttemptedRef.current = true;
+    extractBrief();
+  }, [isLoading, isExtracting, creativeBrief, extractBrief]);
 
   // Track message count changes and reset extraction flag when conversation is cleared
   useEffect(() => {

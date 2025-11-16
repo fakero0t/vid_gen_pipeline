@@ -19,27 +19,16 @@ export function useAudioGeneration() {
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/api/audio/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(errorData.detail || `HTTP ${response.status}`);
-        }
-
-        const data: AudioGenerationResponse = await response.json();
-
-        if (!data.success || !data.audio_url) {
-          throw new Error(data.error || 'Failed to generate audio');
-        }
-
+        // HARDCODED for testing
+        const hardcodedAudioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Store audio URL
-        setAudioUrl(data.audio_url);
+        setAudioUrl(hardcodedAudioUrl);
 
-        return data.audio_url;
+        return hardcodedAudioUrl;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to generate audio';
         setError(message);
