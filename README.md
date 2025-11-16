@@ -40,14 +40,56 @@ A guided, multi-step AI video generation pipeline that transforms user vision in
    pip install -r requirements.txt
    ```
 
-5. **Configure environment variables**
+5. **Configure Taskmaster MCP (for Cursor users)**
+
+   If you're using Cursor with Taskmaster, set up the MCP server:
+   
+   **Option A: Project-level config (recommended for teams)**
+   ```bash
+   cp .cursor/mcp.json.example .cursor/mcp.json
+   ```
+   Then edit `.cursor/mcp.json` and add your API keys. You only need the keys for the AI providers you plan to use.
+   
+   **Option B: Global config (recommended for personal use)**
+   Edit `~/.cursor/mcp.json` and add the `task-master-ai` server configuration (see `.cursor/mcp.json.example` for reference).
+   
+   > 💡 **Note:** The project-level `.cursor/mcp.json` is gitignored to protect your API keys. Each team member should create their own.
+
+6. **Configure environment variables**
 
    **Backend** (`backend/.env`):
    ```env
+   # Required API Keys
    REPLICATE_API_TOKEN=your_replicate_api_token_here
    OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Environment Configuration (defaults to "development")
+   ENVIRONMENT=development  # Options: development, production
+   
+   # Optional: Override model selection
+   # REPLICATE_IMAGE_MODEL=stability-ai/sdxl:...  # Override default model
+   # OPENAI_MODEL=gpt-4o  # Override default model
+   
+   # CORS Configuration
    CORS_ORIGINS=http://localhost:3000
    ```
+   
+   > 💡 **Performance & Cost Optimization:** In development mode, the app automatically optimizes for speed:
+   > - **Replicate**: SDXL with optimized settings (20 steps, 640x1136) = ~20-40s/image
+   > - **Production**: SDXL with full quality (50 steps, 1080x1920) = ~30-60s/image
+   > - **Images per mood**: 2 in dev (faster), 4 in prod (more variety)
+   > - **OpenAI**: GPT-3.5-turbo (~$0.0015/1K tokens) instead of GPT-4o (~$0.005/1K tokens)
+   > 
+   > **Expected generation time:**
+   > - **Dev**: ~2-4 minutes for 6 images (3 moods × 2 images) at lower resolution
+   > - **Prod**: ~3-6 minutes for 12 images (3 moods × 4 images) at full resolution
+   > 
+   > **Speed improvements in dev:**
+   > - 4x fewer pixels (640x1136 vs 1080x1920) = ~4x faster
+   > - 2.5x fewer inference steps (20 vs 50) = ~2.5x faster
+   > - 50% fewer images (6 vs 12) = 50% faster
+   > 
+   > Set `ENVIRONMENT=production` to use full-quality settings for production.
 
    **Frontend** (`frontend/.env.local`):
    ```env
@@ -109,7 +151,8 @@ jant-vid-pipe/
 │   ├── prd.md           # Product Requirements Document
 │   └── architecture.md  # Technical Architecture
 │
-└── .taskmaster/         # Task management files
+├── .taskmaster/         # Task management files
+└── .cursor/             # Cursor IDE configuration (MCP setup)
 ```
 
 ## 🛠️ Tech Stack

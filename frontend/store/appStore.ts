@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CreativeBrief } from '@/types/chat.types';
+import type { Mood } from '@/types/mood.types';
 
 /**
  * Global application state store using Zustand.
@@ -16,9 +17,9 @@ interface AppState {
     setCreativeBrief: (brief: CreativeBrief | null) => void;
 
   // Step 2: Moods
-  moods: any[]; // Will be properly typed in Task 3
+  moods: Mood[];
   selectedMoodId: string | null;
-  setMoods: (moods: any[]) => void;
+  setMoods: (moods: Mood[]) => void;
   selectMood: (moodId: string) => void;
 
   // Step 3: Scenes
@@ -85,7 +86,12 @@ export const useAppStore = create<AppState>()(
       setError: (error) => set({ error }),
 
       // Reset
-      reset: () =>
+      reset: () => {
+        // Clear localStorage for this app
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+        // Reset state
         set({
           currentStep: 1,
           creativeBrief: null,
@@ -97,7 +103,8 @@ export const useAppStore = create<AppState>()(
           finalVideo: null,
           compositionProgress: 0,
           error: null,
-        }),
+        });
+      },
     }),
     {
       name: STORAGE_KEY,

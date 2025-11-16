@@ -39,8 +39,21 @@ export async function checkHealth(): Promise<{ status: string }> {
   return apiRequest<{ status: string }>('/health');
 }
 
+import type { MoodGenerationRequest, MoodGenerationResponse } from '@/types/mood.types';
+
+/**
+ * Generate mood boards from a creative brief
+ */
+export async function generateMoods(
+  creativeBrief: MoodGenerationRequest
+): Promise<MoodGenerationResponse> {
+  return apiRequest<MoodGenerationResponse>('/api/moods/generate', {
+    method: 'POST',
+    body: JSON.stringify(creativeBrief),
+  });
+}
+
 // Additional API client functions will be added in later tasks:
-// - Mood generation endpoints (Task 3)
 // - Scene planning endpoints (Task 4)
 // - Video generation endpoints (Task 5)
 // - Video composition endpoints (Task 7)
