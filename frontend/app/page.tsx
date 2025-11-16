@@ -62,14 +62,6 @@ export default function Home() {
   // Use creativeBrief from store (persisted) or from chat hook
   const activeBrief = creativeBrief || chatBrief;
 
-  // HARDCODED: Auto-set audio URL when entering step 4
-  useEffect(() => {
-    if (currentStep === 4 && !audioUrl) {
-      const hardcodedAudioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-      useAppStore.getState().setAudioUrl(hardcodedAudioUrl);
-    }
-  }, [currentStep, audioUrl]);
-
   // HARDCODED: Auto-generate moods when entering step 2
   useEffect(() => {
     if (currentStep === 2 && moods.length === 0 && !isMoodLoading) {
