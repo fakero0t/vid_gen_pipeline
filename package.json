@@ -4,14 +4,14 @@
   "private": true,
   "description": "AI Video Generation Pipeline - Monorepo",
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
     "dev:frontend": "cd frontend && pnpm dev",
     "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000",
     "build": "cd frontend && pnpm build",
-    "start": "cd frontend && pnpm start"
+    "start": "cd frontend && pnpm start",
+    "clean": "lsof -ti:8000,3000 | xargs kill -9 2>/dev/null || true; rm -rf frontend/.next 2>/dev/null || true; echo '✓ Cleaned up ports and build artifacts'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
-

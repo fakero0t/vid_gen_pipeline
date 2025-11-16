@@ -936,15 +936,15 @@ Single global Zustand store containing:
 ### **Local Development Setup**
 
 **Prerequisites:**
-- Node.js 18+ and npm/yarn/pnpm
+- Node.js 18+ and pnpm (package manager)
 - Python 3.11+
 - FFmpeg installed on system (`brew install ffmpeg` on macOS)
 
 **Frontend Setup:**
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 # Runs on http://localhost:3000
 ```
 
@@ -956,6 +956,12 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 # Runs on http://localhost:8000
+```
+
+**Running Both Servers:**
+```bash
+# From the root directory
+pnpm dev
 ```
 
 ---

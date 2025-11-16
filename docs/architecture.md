@@ -612,15 +612,15 @@ CORS_ORIGINS=http://localhost:3000
 ## Local Development Setup
 
 ### Prerequisites
-- Node.js 18+ and npm/yarn/pnpm
+- Node.js 18+ and pnpm (package manager)
 - Python 3.11+
 - FFmpeg installed on system (`brew install ffmpeg` on macOS)
 
 ### Frontend Setup
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 # Runs on http://localhost:3000
 ```
 
@@ -635,20 +635,26 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 ### Running Both Simultaneously
-**Option 1: Two terminals**
-- Terminal 1: `cd frontend && npm run dev`
-- Terminal 2: `cd backend && uvicorn app.main:app --reload --port 8000`
+**Option 1: Use concurrently (Recommended)**
+```bash
+# From the root directory
+pnpm dev
+```
 
-**Option 2: Use concurrently (add to root package.json)**
+This uses the root `package.json` scripts:
 ```json
 {
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 8000"
+    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000"
   }
 }
 ```
+
+**Option 2: Two terminals**
+- Terminal 1: `cd frontend && pnpm dev`
+- Terminal 2: `cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000`
 
 ---
 
