@@ -41,7 +41,6 @@ venv/
 env/
 ENV/
 .venv
-
-# Task files
-tasks.json
-tasks/ 
+# Task Master files
+.taskmaster/
+.cursor/rules/taskmaster/ 

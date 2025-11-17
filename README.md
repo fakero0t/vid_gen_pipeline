@@ -42,22 +42,7 @@ A guided, multi-step AI video generation pipeline that transforms user vision in
    pip install -r requirements.txt
    ```
 
-5. **Configure Taskmaster MCP (for Cursor users)**
-
-   If you're using Cursor with Taskmaster, set up the MCP server:
-   
-   **Option A: Project-level config (recommended for teams)**
-   ```bash
-   cp .cursor/mcp.json.example .cursor/mcp.json
-   ```
-   Then edit `.cursor/mcp.json` and add your API keys. You only need the keys for the AI providers you plan to use.
-   
-   **Option B: Global config (recommended for personal use)**
-   Edit `~/.cursor/mcp.json` and add the `task-master-ai` server configuration (see `.cursor/mcp.json.example` for reference).
-   
-   > 💡 **Note:** The project-level `.cursor/mcp.json` is gitignored to protect your API keys. Each team member should create their own.
-
-6. **Configure environment variables**
+5. **Configure environment variables**
 
    **Backend** (`backend/.env`):
    ```env
@@ -172,8 +157,7 @@ jant-vid-pipe/
 │   ├── prd.md           # Product Requirements Document
 │   └── architecture.md  # Technical Architecture
 │
-├── .taskmaster/         # Task management files
-└── .cursor/             # Cursor IDE configuration (MCP setup)
+└── .cursor/             # Cursor IDE configuration
 ```
 
 ## 🛠️ Tech Stack
