@@ -29,13 +29,12 @@ export function MoodBoard({
 }: MoodBoardProps) {
   const hasMoods = moods.length > 0;
   
-  // Check if all moods have loaded their images
-  const allMoodsLoaded = hasMoods && moods.every(mood => 
-    mood.images.some(img => img.success && img.url)
-  );
+  // Check if the selected mood has loaded at least one image
+  const selectedMood = selectedMoodId ? moods.find(m => m.id === selectedMoodId) : null;
+  const selectedMoodIsLoaded = selectedMood && selectedMood.images.some(img => img.success && img.url);
   
-  // Can only continue when moods are loaded, not loading, and a mood is selected
-  const canContinue = !isLoading && allMoodsLoaded && selectedMoodId !== null;
+  // Can continue when not loading and the selected mood has at least one image
+  const canContinue = !isLoading && selectedMoodIsLoaded;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -71,9 +70,9 @@ export function MoodBoard({
               <p className="text-sm text-muted-foreground">
                 {isLoading 
                   ? 'Loading mood boards...' 
-                  : !allMoodsLoaded 
-                  ? 'Please wait for all mood boards to load...'
-                  : 'Please select a mood board to continue'}
+                  : !selectedMoodId
+                  ? 'Please select a mood board to continue'
+                  : 'Please wait for the selected mood board to load...'}
               </p>
             )}
             <Button

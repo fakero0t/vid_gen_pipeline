@@ -63,8 +63,8 @@ async def generate_moods(
         # Determine images per mood and resolution based on environment
         from app.config import settings
         
-        # Images per mood: 2 for dev (faster), 4 for prod (more variety)
-        images_per_mood = settings.IMAGES_PER_MOOD if settings.IMAGES_PER_MOOD > 0 else (2 if settings.is_development() else 4)
+        # Images per mood: 1 for dev (faster), 4 for prod (more variety)
+        images_per_mood = settings.IMAGES_PER_MOOD if settings.IMAGES_PER_MOOD > 0 else (1 if settings.is_development() else 4)
         
         # Resolution: Lower for dev (faster), higher for prod (better quality)
         if settings.IMAGE_WIDTH > 0 and settings.IMAGE_HEIGHT > 0:

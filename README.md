@@ -77,21 +77,40 @@ A guided, multi-step AI video generation pipeline that transforms user vision in
    ```
    
    > 💡 **Performance & Cost Optimization:** In development mode, the app automatically optimizes for speed:
-   > - **Replicate**: SDXL with optimized settings (20 steps, 640x1136) = ~20-40s/image
-   > - **Production**: SDXL with full quality (50 steps, 1080x1920) = ~30-60s/image
-   > - **Images per mood**: 2 in dev (faster), 4 in prod (more variety)
+   > - **Replicate Image Generation**:
+   >   - **Dev**: 15 inference steps, guidance scale 6.5, resolution 512×912 = ~10-15s/image
+   >   - **Prod**: 50 inference steps, guidance scale 7.5, resolution 1080×1920 = ~30-60s/image
+   > - **Images per mood**: 1 in dev (faster), 4 in prod (more variety)
    > - **OpenAI**: GPT-3.5-turbo (~$0.0015/1K tokens) instead of GPT-4o (~$0.005/1K tokens)
    > 
    > **Expected generation time:**
-   > - **Dev**: ~2-4 minutes for 6 images (3 moods × 2 images) at lower resolution
-   > - **Prod**: ~3-6 minutes for 12 images (3 moods × 4 images) at full resolution
+   > - **Dev**: ~10-20 seconds for 3 images (3 moods × 1 image) at lower quality
+   > - **Prod**: ~3-6 minutes for 12 images (3 moods × 4 images) at full quality
    > 
-   > **Speed improvements in dev:**
-   > - 4x fewer pixels (640x1136 vs 1080x1920) = ~4x faster
-   > - 2.5x fewer inference steps (20 vs 50) = ~2.5x faster
-   > - 50% fewer images (6 vs 12) = 50% faster
+   > **To test with higher quality in dev mode**, adjust these settings:
    > 
-   > Set `ENVIRONMENT=production` to use full-quality settings for production.
+   > 1. **Images Per Mood** - Edit `backend/app/routers/moods.py` (line 67):
+   >    ```python
+   >    images_per_mood = 2  # Or 4 for full prod-like experience
+   >    ```
+   > 
+   > 2. **Image Resolution** - Edit `backend/app/routers/moods.py` (lines 75-76):
+   >    ```python
+   >    image_width = 640   # Higher = better quality (512→640→1080)
+   >    image_height = 1136 # Must be divisible by 8 for SDXL
+   >    ```
+   > 
+   > 3. **Inference Steps** - Edit `backend/app/services/replicate_service.py` (line 77):
+   >    ```python
+   >    num_inference_steps = 20  # Higher = better quality (15→20→30→50)
+   >    ```
+   > 
+   > 4. **Guidance Scale** - Edit `backend/app/services/replicate_service.py` (line 84):
+   >    ```python
+   >    guidance_scale = 7.0  # Higher = better prompt adherence (6.5→7.0→7.5)
+   >    ```
+   > 
+   > Set `ENVIRONMENT=production` to use full-quality settings automatically.
 
    **Frontend** (`frontend/.env.local`):
    ```env

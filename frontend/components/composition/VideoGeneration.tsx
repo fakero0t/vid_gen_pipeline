@@ -218,6 +218,10 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
     (generatedClips.length > 0 && generatedClips.every(c => c.status === 'completed'));
   const hasFailed = videoStatus?.status === 'failed';
   const hasExistingClips = generatedClips && generatedClips.length > 0;
+  
+  // Check if all clips are actually completed
+  const allClipsCompleted = generatedClips.length > 0 && 
+    generatedClips.every(c => c.status === 'completed');
 
   // Debug button state
   useEffect(() => {
@@ -225,11 +229,13 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
       hasStarted,
       isGenerating,
       hasExistingClips,
+      allClipsCompleted,
       audioUrl: !!audioUrl,
       buttonShouldBeVisible: !hasStarted && !isGenerating && !hasExistingClips,
-      buttonShouldBeEnabled: !!audioUrl
+      buttonShouldBeEnabled: !!audioUrl,
+      continueButtonVisible: allClipsCompleted
     });
-  }, [hasStarted, isGenerating, hasExistingClips, audioUrl]);
+  }, [hasStarted, isGenerating, hasExistingClips, allClipsCompleted, audioUrl]);
 
   return (
     <div className="space-y-6">
@@ -441,7 +447,7 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
       )}
 
       {/* Continue Button */}
-      {(isComplete || hasExistingClips) && generatedClips.length > 0 && (
+      {allClipsCompleted && (
         <div className="flex justify-center">
           <Button onClick={onComplete} size="lg">
             Continue to Final Composition →
