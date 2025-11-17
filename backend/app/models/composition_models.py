@@ -46,6 +46,7 @@ class CompositionJobStatus(BaseModel):
     total_clips: int = Field(..., description="Total number of clips")
     current_step: Optional[str] = Field(None, description="Current processing step")
     video_url: Optional[str] = Field(None, description="URL of the final composed video")
+    file_path: Optional[str] = Field(None, description="Local file path of the composed video")
     file_size_mb: Optional[float] = Field(None, description="Size of final video in MB")
     duration_seconds: Optional[float] = Field(None, description="Duration of final video in seconds")
     error: Optional[str] = Field(None, description="Error message if job failed")

@@ -399,14 +399,12 @@ class ReplicateImageService:
 class ReplicateVideoService:
     """Service for generating videos using Replicate API img2vid models."""
 
-    # Production model: Stable Video Diffusion (high quality, good for commercial use)
-    # Creates smooth 3-4 second video clips from seed images
-    # Verified and widely used model
-    PRODUCTION_VIDEO_MODEL = "stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438"
+    # Production model: MiniMax Video-01-Director (high quality, supports 6s clips)
+    # Professional grade video generation from images
+    PRODUCTION_VIDEO_MODEL = "minimax/video-01-director"
 
-    # Development model: Same as production but with optimized parameters
-    # We'll use lower motion_bucket_id and fewer frames for faster generation
-    DEVELOPMENT_VIDEO_MODEL = "stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438"
+    # Development model: Zeroscope v2 XL (faster, cheaper for dev)
+    DEVELOPMENT_VIDEO_MODEL = "anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351"
 
     def __init__(self):
         """Initialize the Replicate video service with API token."""
@@ -427,7 +425,7 @@ class ReplicateVideoService:
         self,
         image_url: str,
         duration_seconds: float = 4.0,
-        fps: int = 24,
+        fps: int = 8,
         motion_bucket_id: int = 127,
         cond_aug: float = 0.02,
         model: Optional[str] = None,
@@ -438,10 +436,10 @@ class ReplicateVideoService:
 
         Args:
             image_url: URL of the seed image
-            duration_seconds: Target duration in seconds (model outputs ~4s, adjust frames)
-            fps: Frames per second (default: 24)
-            motion_bucket_id: Amount of motion (1-255, default: 127 for moderate motion)
-            cond_aug: Conditioning augmentation (0.0-1.0, default: 0.02)
+            duration_seconds: Target duration in seconds (3-10 seconds supported)
+            fps: Frames per second (default: 8 for Zeroscope)
+            motion_bucket_id: Amount of motion (unused for Zeroscope, kept for compatibility)
+            cond_aug: Conditioning augmentation (unused for Zeroscope, kept for compatibility)
             model: Optional model identifier (uses default if not provided)
             timeout: Timeout in seconds (default: 300)
 
@@ -450,25 +448,37 @@ class ReplicateVideoService:
         """
         model_id = model or self.default_model
 
-        # Calculate number of frames based on duration and fps
-        # SVD typically generates 14-25 frames, we'll adjust based on environment
-        if settings.is_development():
-            # Dev: Faster generation with fewer frames
-            num_frames = min(14, int(duration_seconds * fps))
-            motion_bucket_id = min(motion_bucket_id, 100)  # Less motion for faster gen
+        # Build input parameters based on model type
+        if "minimax" in model_id.lower():
+            # MiniMax Video-01-Director parameters
+            # Generates 6-second clips at high quality
+            input_params = {
+                "first_frame_image": image_url,
+                "prompt": "smooth camera movement, high quality video, cinematic"
+            }
         else:
-            # Prod: Higher quality with more frames
-            num_frames = min(25, int(duration_seconds * fps))
+            # Zeroscope v2 XL parameters
+            # Calculate number of frames based on duration and fps
+            num_frames = int(duration_seconds * fps)
+            
+            if settings.is_development():
+                # Dev: Faster generation with fewer frames/steps
+                num_frames = min(num_frames, 40)  # Cap at ~5 seconds for dev
+                num_inference_steps = 20
+            else:
+                # Prod: Higher quality with more frames
+                num_frames = min(num_frames, 80)  # Cap at ~10 seconds
+                num_inference_steps = 50
 
-        # Build input parameters for Stable Video Diffusion
-        input_params = {
-            "input_image": image_url,
-            "video_length": "14_frames_with_svd",  # SVD default mode
-            "sizing_strategy": "maintain_aspect_ratio",
-            "frames_per_second": fps,
-            "motion_bucket_id": motion_bucket_id,
-            "cond_aug": cond_aug
-        }
+            input_params = {
+                "init_image": image_url,
+                "num_frames": num_frames,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": 17.5,
+                "fps": fps,
+                "width": 576,  # Zeroscope default width
+                "height": 1024  # 9:16 aspect ratio
+            }
 
         try:
             # Run the model asynchronously with timeout

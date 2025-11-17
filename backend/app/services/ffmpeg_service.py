@@ -155,6 +155,27 @@ class FFmpegCompositionService:
             print(f"⚠ Warning: Could not probe video duration for {video_path.name}: {e}")
             return 0.0
 
+    def _check_has_audio(self, video_path: Path) -> bool:
+        """
+        Check if a video file has audio streams.
+
+        Args:
+            video_path: Path to video file
+
+        Returns:
+            True if video has audio, False otherwise
+        """
+        try:
+            probe = ffmpeg.probe(str(video_path))
+            # Check if any stream is audio
+            for stream in probe.get('streams', []):
+                if stream.get('codec_type') == 'audio':
+                    return True
+            return False
+        except Exception as e:
+            print(f"⚠ Warning: Could not probe video for audio: {e}")
+            return False
+
     def create_clip_list_file(self, video_paths: List[Path], output_path: Path) -> Path:
         """
         Create a file list for FFmpeg concat demuxer.
@@ -291,34 +312,60 @@ class FFmpegCompositionService:
             Path to output file or None if failed
         """
         try:
+            # Check if clips have audio
+            has_audio = self._check_has_audio(video_paths[0])
+            if has_audio:
+                print("🔗 Concatenating clips with audio (no transitions)...")
+            else:
+                print("🔗 Concatenating video-only clips (no transitions)...")
+
             # Create file list for concat
             list_file = self.create_clip_list_file(video_paths, output_path)
-
-            print("🔗 Concatenating clips (no transitions)...")
 
             # Build FFmpeg command
             bitrate = target_bitrate or "2500k"  # Default to 2.5 Mbps
 
             # Use concat demuxer for simple concatenation
-            await asyncio.to_thread(
-                lambda: (
-                    ffmpeg
-                    .input(str(list_file), format='concat', safe=0)
-                    .output(
-                        str(output_path),
-                        vcodec='libx264',
-                        video_bitrate=bitrate,
-                        acodec='aac',
-                        audio_bitrate='192k',
-                        s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
-                        r=self.TARGET_FPS,
-                        preset='medium',
-                        pix_fmt='yuv420p'
+            if has_audio:
+                # Clips have audio
+                await asyncio.to_thread(
+                    lambda: (
+                        ffmpeg
+                        .input(str(list_file), format='concat', safe=0)
+                        .output(
+                            str(output_path),
+                            vcodec='libx264',
+                            video_bitrate=bitrate,
+                            acodec='aac',
+                            audio_bitrate='192k',
+                            s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
+                            r=self.TARGET_FPS,
+                            preset='medium',
+                            pix_fmt='yuv420p'
+                        )
+                        .overwrite_output()
+                        .run(capture_stdout=True, capture_stderr=True)
                     )
-                    .overwrite_output()
-                    .run(capture_stdout=True, capture_stderr=True)
                 )
-            )
+            else:
+                # Video-only clips (no audio)
+                await asyncio.to_thread(
+                    lambda: (
+                        ffmpeg
+                        .input(str(list_file), format='concat', safe=0)
+                        .output(
+                            str(output_path),
+                            vcodec='libx264',
+                            video_bitrate=bitrate,
+                            s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
+                            r=self.TARGET_FPS,
+                            preset='medium',
+                            pix_fmt='yuv420p'
+                        )
+                        .overwrite_output()
+                        .run(capture_stdout=True, capture_stderr=True)
+                    )
+                )
 
             print("✓ Concatenation complete")
             return output_path
@@ -353,6 +400,13 @@ class FFmpegCompositionService:
         try:
             print("🎞️  Composing with crossfade transitions...")
 
+            # Check if clips have audio streams
+            has_audio = self._check_has_audio(video_paths[0])
+            if has_audio:
+                print("   ✓ Clips have audio streams")
+            else:
+                print("   ℹ Clips are video-only (no audio)")
+
             # Build complex filter for crossfade
             # This will create a filter chain that crossfades between clips
             inputs = [ffmpeg.input(str(path)) for path in video_paths]
@@ -371,8 +425,11 @@ class FFmpegCompositionService:
                             offset=offset)
                 )
 
-                # Mix audio streams
-                audio = ffmpeg.filter([inputs[0].audio, inputs[1].audio], 'concat', n=2, v=0, a=1)
+                # Mix audio streams only if they exist
+                if has_audio:
+                    audio = ffmpeg.filter([inputs[0].audio, inputs[1].audio], 'concat', n=2, v=0, a=1)
+                else:
+                    audio = None
 
             else:
                 # Multiple clips: chain crossfades
@@ -392,28 +449,45 @@ class FFmpegCompositionService:
 
                 video = current_video
 
-                # Concatenate all audio streams
-                audio = ffmpeg.filter(
-                    [inp.audio for inp in inputs],
-                    'concat',
-                    n=len(inputs),
-                    v=0,
-                    a=1
-                )
+                # Concatenate all audio streams only if they exist
+                if has_audio:
+                    audio = ffmpeg.filter(
+                        [inp.audio for inp in inputs],
+                        'concat',
+                        n=len(inputs),
+                        v=0,
+                        a=1
+                    )
+                else:
+                    audio = None
 
             # Output with scaling and encoding
-            output = ffmpeg.output(
-                video, audio,
-                str(output_path),
-                vcodec='libx264',
-                video_bitrate=bitrate,
-                acodec='aac',
-                audio_bitrate='192k',
-                s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
-                r=self.TARGET_FPS,
-                preset='medium',
-                pix_fmt='yuv420p'
-            ).overwrite_output()
+            if audio:
+                # Video with audio
+                output = ffmpeg.output(
+                    video, audio,
+                    str(output_path),
+                    vcodec='libx264',
+                    video_bitrate=bitrate,
+                    acodec='aac',
+                    audio_bitrate='192k',
+                    s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
+                    r=self.TARGET_FPS,
+                    preset='medium',
+                    pix_fmt='yuv420p'
+                ).overwrite_output()
+            else:
+                # Video only (no audio)
+                output = ffmpeg.output(
+                    video,
+                    str(output_path),
+                    vcodec='libx264',
+                    video_bitrate=bitrate,
+                    s=f'{self.TARGET_WIDTH}x{self.TARGET_HEIGHT}',
+                    r=self.TARGET_FPS,
+                    preset='medium',
+                    pix_fmt='yuv420p'
+                ).overwrite_output()
 
             # Run FFmpeg
             await asyncio.to_thread(

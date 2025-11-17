@@ -196,8 +196,9 @@ async def _process_composition(job_id: str, request: CompositionRequest):
         # In production, you would upload this to cloud storage (S3, etc.)
         video_url = f"/api/composition/download/{job_id}"
 
-        # Store output path in job for download endpoint
-        _jobs[job_id].video_url = str(output_path)
+        # Store file path and URL separately
+        _jobs[job_id].file_path = str(output_path)
+        _jobs[job_id].video_url = video_url
 
         _update_job_status(
             job_id,
@@ -351,14 +352,14 @@ async def download_video(job_id: str):
                 detail=f"Job {job_id} is not completed yet (status: {job.status.value})"
             )
 
-        # Get video path (stored in video_url for now)
-        if not job.video_url:
+        # Get video file path
+        if not job.file_path:
             raise HTTPException(
                 status_code=404,
                 detail=f"Video file not found for job {job_id}"
             )
 
-        video_path = Path(job.video_url)
+        video_path = Path(job.file_path)
         if not video_path.exists():
             raise HTTPException(
                 status_code=404,
@@ -393,6 +394,8 @@ async def list_jobs():
                 "progress": job.progress_percent,
                 "total_clips": job.total_clips,
                 "current_step": job.current_step,
+                "video_url": job.video_url,
+                "file_path": job.file_path,
                 "file_size_mb": job.file_size_mb,
                 "duration_seconds": job.duration_seconds
             }
