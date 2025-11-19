@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Storyboard, StoryboardScene, SSESceneUpdate } from '@/types/storyboard.types';
 import * as storyboardAPI from '@/lib/api/storyboard';
-import { retryOperation, StoryboardError, ERROR_CODES } from '@/lib/errors';
+import { retryOperation, StoryboardError, ERROR_CODES, isSensitiveContentError, extractErrorMessage } from '@/lib/errors';
 
 /**
  * Storyboard Store
@@ -286,7 +286,9 @@ export const useStoryboardStore = create<StoryboardState>()(
           get().updateScene(sceneId, updatedScene);
           set({ isSaving: false });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to update text';
+          // Extract error message using the helper function
+          const errorMessage = extractErrorMessage(error, 'Failed to update text');
+          
           set({
             error: errorMessage,
             isSaving: false,
@@ -312,6 +314,31 @@ export const useStoryboardStore = create<StoryboardState>()(
           // SSE will handle the update
           set({ isSaving: false });
         } catch (error) {
+          // Check if error is due to sensitive content
+          if (isSensitiveContentError(error)) {
+            const errorMessage = 'Your input prompt contains sensitive content. Please modify the scene description and try again.';
+            set({
+              error: errorMessage,
+              isSaving: false,
+            });
+            // Update scene with error message
+            const scene = get().scenes.find(s => s.id === sceneId);
+            if (scene) {
+              get().updateScene(sceneId, {
+                error_message: errorMessage,
+                generation_status: {
+                  ...scene.generation_status,
+                  video: 'error',
+                },
+              });
+            }
+            throw new StoryboardError(
+              errorMessage,
+              ERROR_CODES.API_CONTENT_POLICY,
+              false, // Not retryable - user must change input
+              sceneId
+            );
+          }
           set({
             error: error instanceof Error ? error.message : 'Failed to generate video',
             isSaving: false,
@@ -391,14 +418,55 @@ export const useStoryboardStore = create<StoryboardState>()(
           if (!storyboard) {
             throw new Error('No storyboard loaded');
           }
-          await storyboardAPI.regenerateSceneVideo(storyboard.storyboard_id, sceneId);
-          // SSE will handle the update
-          set({ isSaving: false });
+          
+          // Retry logic for sensitive content errors (output flagged as sensitive)
+          let lastError: unknown = null;
+          let retryCount = 0;
+          const maxRetries = 2;
+          
+          while (retryCount <= maxRetries) {
+            try {
+              await storyboardAPI.regenerateSceneVideo(storyboard.storyboard_id, sceneId);
+              // SSE will handle the update
+              set({ isSaving: false });
+              return; // Success
+            } catch (error) {
+              lastError = error;
+              
+              // If it's a sensitive content error and we haven't exceeded retries, retry
+              if (isSensitiveContentError(error) && retryCount < maxRetries) {
+                retryCount++;
+                // Wait a bit before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+              }
+              
+              // If it's sensitive content and we've exhausted retries, or it's a different error, throw
+              throw error;
+            }
+          }
+          
+          // If we get here, all retries failed
+          throw lastError;
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to regenerate video';
           set({
-            error: error instanceof Error ? error.message : 'Failed to regenerate video',
+            error: errorMessage,
             isSaving: false,
           });
+          // Update scene with error if it's a sensitive content error after retries
+          if (isSensitiveContentError(error)) {
+            const scene = get().scenes.find(s => s.id === sceneId);
+            if (scene) {
+              get().updateScene(sceneId, {
+                error_message: 'Video generation failed due to sensitive content. Please try adjusting the scene description.',
+                generation_status: {
+                  ...scene.generation_status,
+                  video: 'error',
+                },
+              });
+            }
+          }
         }
       },
       

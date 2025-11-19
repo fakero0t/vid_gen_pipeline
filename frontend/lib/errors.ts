@@ -210,6 +210,88 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
+ * Extract a human-readable error message from any error type
+ */
+export function extractErrorMessage(error: unknown, fallback: string = 'An error occurred'): string {
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+  
+  if (error && typeof error === 'object') {
+    // Handle complex error objects
+    if ('message' in error) {
+      if (typeof error.message === 'string') {
+        return error.message;
+      } else if (error.message && typeof error.message === 'object') {
+        try {
+          return JSON.stringify(error.message);
+        } catch {
+          return fallback;
+        }
+      }
+    }
+    
+    if ('detail' in error) {
+      if (typeof error.detail === 'string') {
+        return error.detail;
+      } else if (Array.isArray(error.detail)) {
+        return error.detail.map((e: any) => {
+          if (typeof e === 'string') return e;
+          if (e?.msg) return e.msg;
+          if (e?.loc && e?.msg) return `${e.loc.join('.')}: ${e.msg}`;
+          try {
+            return JSON.stringify(e);
+          } catch {
+            return String(e);
+          }
+        }).join(', ');
+      } else if (error.detail && typeof error.detail === 'object') {
+        try {
+          return JSON.stringify(error.detail);
+        } catch {
+          return fallback;
+        }
+      }
+    }
+    
+    if ('error' in error && typeof error.error === 'string') {
+      return error.error;
+    }
+    
+    // Last resort: try to stringify the whole object
+    try {
+      const stringified = JSON.stringify(error);
+      return stringified.length > 200 
+        ? stringified.substring(0, 200) + '...' 
+        : stringified;
+    } catch {
+      return fallback;
+    }
+  }
+  
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  return fallback;
+}
+
+/**
+ * Check if error is related to sensitive content / content policy
+ */
+export function isSensitiveContentError(error: unknown): boolean {
+  const message = extractErrorMessage(error, '').toLowerCase();
+  return (
+    message.includes('content_policy') ||
+    message.includes('nsfw') ||
+    message.includes('inappropriate') ||
+    message.includes('policy') ||
+    message.includes('violation') ||
+    message.includes('content did not pass moderation')
+  );
+}
+
+/**
  * Check if error is retryable
  */
 export function isRetryableError(error: unknown): boolean {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import type { StoryboardScene, PreviewData } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
@@ -24,49 +24,71 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [failedVideoScenes, setFailedVideoScenes] = useState<Set<string>>(new Set());
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get preview data for all scenes in order
-  const previewData: PreviewData[] = sceneOrder.map((sceneId) => {
-    const scene = scenes.find((s) => s.id === sceneId);
-    if (!scene) {
+  // Get preview data for all scenes in order - recalculate when scenes change
+  const previewData: PreviewData[] = useMemo(() => {
+    return sceneOrder.map((sceneId) => {
+      const scene = scenes.find((s) => s.id === sceneId);
+      if (!scene) {
+        return {
+          scene_id: sceneId,
+          type: 'text',
+          text: 'Scene not found',
+          duration: 5,
+        };
+      }
+
+      // Skip video if this scene's video has previously failed to load
+      const videoHasFailed = failedVideoScenes.has(scene.id);
+
+      // Video available - use it (check for valid URL and complete status)
+      // Note: We check for video_url and complete status, but don't require state === 'video'
+      // because preview should show videos if they exist, regardless of UI state
+      // Skip if video has previously failed
+      if (
+        !videoHasFailed &&
+        scene.video_url && 
+        scene.video_url.trim() !== '' && 
+        scene.generation_status.video === 'complete' &&
+        (scene.video_url.startsWith('http://') || scene.video_url.startsWith('https://') || scene.video_url.startsWith('blob:') || scene.video_url.startsWith('data:'))
+      ) {
+        // Additional validation: try to create URL object to ensure it's valid
+        try {
+          new URL(scene.video_url);
+          return {
+            scene_id: scene.id,
+            type: 'video',
+            url: scene.video_url,
+            duration: scene.video_duration,
+          };
+        } catch (e) {
+          // Invalid URL format - fall through to image or text
+        }
+      }
+
+      // Image available - use it with duration (check for valid URL and complete status)
+      if (scene.image_url && scene.image_url.trim() !== '' && scene.generation_status.image === 'complete') {
+        return {
+          scene_id: scene.id,
+          type: 'image',
+          url: scene.image_url,
+          duration: scene.video_duration || 5,
+        };
+      }
+
+      // Fallback to text
       return {
-        scene_id: sceneId,
+        scene_id: scene.id,
         type: 'text',
-        text: 'Scene not found',
+        text: scene.text,
         duration: 5,
       };
-    }
-
-    // Video available - use it
-    if (scene.video_url && scene.generation_status.video === 'complete') {
-      return {
-        scene_id: scene.id,
-        type: 'video',
-        url: scene.video_url,
-        duration: scene.video_duration,
-      };
-    }
-
-    // Image available - use it with duration
-    if (scene.image_url && scene.generation_status.image === 'complete') {
-      return {
-        scene_id: scene.id,
-        type: 'image',
-        url: scene.image_url,
-        duration: scene.video_duration || 5,
-      };
-    }
-
-    // Fallback to text
-    return {
-      scene_id: scene.id,
-      type: 'text',
-      text: scene.text,
-      duration: 5,
-    };
-  });
+    });
+  }, [scenes, sceneOrder, failedVideoScenes]);
 
   const currentPreview = previewData[currentSceneIndex];
   const totalScenes = previewData.length;
@@ -109,17 +131,19 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
   };
 
   // Go to next scene
-  const nextScene = () => {
-    if (currentSceneIndex < totalScenes - 1) {
-      setCurrentSceneIndex(currentSceneIndex + 1);
-      setProgress(0);
-    } else {
-      // Reached end
-      setIsPlaying(false);
-      setCurrentSceneIndex(0);
-      setProgress(0);
-    }
-  };
+  const nextScene = useCallback(() => {
+    setCurrentSceneIndex((prev) => {
+      const nextIndex = prev + 1;
+      if (nextIndex < previewData.length) {
+        return nextIndex;
+      } else {
+        // Reached end
+        setIsPlaying(false);
+        return 0;
+      }
+    });
+    setProgress(0);
+  }, [previewData.length]);
 
   // Go to previous scene
   const prevScene = () => {
@@ -130,25 +154,60 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
     }
   };
 
-  // Reset when scene changes
+  // Reset when scene changes or preview data updates
   useEffect(() => {
     setProgress(0);
+    setVideoError(null);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
 
+    const preview = previewData[currentSceneIndex];
+    if (!preview) return;
+
+    // Reset video element when scene changes
+    if (videoRef.current && preview.type === 'video' && preview.url) {
+      videoRef.current.load(); // Force reload of video source
+    }
+
     // Auto-play next scene if currently playing
     if (isPlaying) {
-      if (currentPreview.type === 'video' && videoRef.current) {
-        videoRef.current.play();
+      if (preview.type === 'video' && videoRef.current && preview.url) {
+        videoRef.current.play().catch((error) => {
+          console.error('Video play error:', error);
+          setVideoError('Failed to play video');
+        });
       } else {
         timeoutRef.current = setTimeout(() => {
           nextScene();
-        }, currentPreview.duration * 1000);
+        }, preview.duration * 1000);
       }
     }
-  }, [currentSceneIndex]);
+  }, [currentSceneIndex, previewData, isPlaying, nextScene]);
+
+  // Handle video URL changes - force reload when URL changes
+  useEffect(() => {
+    const preview = previewData[currentSceneIndex];
+    if (preview && preview.type === 'video' && preview.url && videoRef.current) {
+      // Validate URL before using it
+      try {
+        new URL(preview.url);
+        // Check if the video source has changed
+        const currentSrc = videoRef.current.src || videoRef.current.currentSrc;
+        const normalizedCurrentSrc = currentSrc ? new URL(currentSrc).href : '';
+        const normalizedPreviewUrl = new URL(preview.url).href;
+        
+        if (normalizedCurrentSrc !== normalizedPreviewUrl && preview.url) {
+          videoRef.current.load();
+          setVideoError(null);
+        }
+      } catch (e) {
+        // Invalid URL - fallback to image or text
+        setVideoError('Invalid video URL');
+      }
+    }
+  }, [previewData, currentSceneIndex]);
 
   // Handle video end
   const handleVideoEnded = () => {
@@ -178,12 +237,27 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
       setCurrentSceneIndex(0);
       setIsPlaying(false);
       setProgress(0);
+      setVideoError(null);
+      // Don't clear failedVideoScenes - keep them so we don't retry failed videos
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
     }
   }, [isOpen]);
+
+  // Clear failed videos when scenes change (new generation)
+  // Watch for changes in video URLs to reset failed state
+  useEffect(() => {
+    // Create a signature of all scene video URLs
+    const videoUrlSignature = scenes
+      .map(s => `${s.id}:${s.video_url || 'none'}`)
+      .sort()
+      .join('|');
+    
+    // Reset failed videos when video URLs change (new generation happened)
+    setFailedVideoScenes(new Set());
+  }, [scenes.map(s => `${s.id}-${s.video_url || ''}`).join(',')]);
 
   if (!isOpen) return null;
 
@@ -210,14 +284,99 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
 
         {/* Preview Area */}
         <div className="relative aspect-[9/16] max-h-[600px] bg-black">
-          {currentPreview.type === 'video' && currentPreview.url ? (
-            <video
-              ref={videoRef}
-              src={currentPreview.url}
-              className="w-full h-full object-contain"
-              onEnded={handleVideoEnded}
-              onTimeUpdate={handleVideoTimeUpdate}
-            />
+          {currentPreview.type === 'video' && currentPreview.url && !videoError ? (
+            <>
+              <video
+                key={`${currentPreview.scene_id}-${currentPreview.url}`}
+                ref={videoRef}
+                src={currentPreview.url}
+                crossOrigin="anonymous"
+                className="w-full h-full object-contain"
+                onEnded={handleVideoEnded}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onError={(e) => {
+                  const videoElement = e.currentTarget;
+                  const error = videoElement.error;
+                  let errorMessage = 'Failed to load video.';
+                  
+                  if (error) {
+                    switch (error.code) {
+                      case error.MEDIA_ERR_ABORTED:
+                        errorMessage = 'Video loading was aborted.';
+                        break;
+                      case error.MEDIA_ERR_NETWORK:
+                        errorMessage = 'Network error while loading video. The URL may have expired.';
+                        break;
+                      case error.MEDIA_ERR_DECODE:
+                        errorMessage = 'Video decoding error. The file may be corrupted.';
+                        break;
+                      case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = 'Video format not supported or URL not accessible.';
+                        break;
+                    }
+                  }
+                  
+                  // Mark this scene's video as failed so we use fallback
+                  setFailedVideoScenes((prev) => new Set(prev).add(currentPreview.scene_id));
+                  setVideoError(errorMessage);
+                }}
+                onLoadedData={() => {
+                  // Video loaded successfully
+                  setVideoError(null);
+                }}
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
+              {videoError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+                  <div className="text-center p-4">
+                    <svg className="w-12 h-12 text-white/60 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-white text-sm mb-2">{videoError}</p>
+                    <p className="text-white/60 text-xs">Scene {currentSceneIndex + 1}</p>
+                    <p className="text-white/40 text-xs mt-2">Falling back to image or text</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (videoError && currentPreview.type === 'video') ? (
+            // Show fallback when video fails - try image or text
+            (() => {
+              const scene = scenes.find((s) => s.id === currentPreview.scene_id);
+              if (scene && scene.image_url && scene.image_url.trim() !== '') {
+                return (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={scene.image_url}
+                      alt={`Scene ${currentSceneIndex + 1} (video failed, showing image)`}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 768px) 100vw, 800px"
+                    />
+                    <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3">
+                      <p className="text-white text-sm">
+                        Video unavailable - showing image ({currentPreview.duration.toFixed(1)}s)
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="w-full h-full flex items-center justify-center p-8">
+                  <div className="max-w-md text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-white text-lg leading-relaxed">{scene?.text || currentPreview.text}</p>
+                    <p className="text-white/60 text-sm mt-4">5s duration (text placeholder - video unavailable)</p>
+                  </div>
+                </div>
+              );
+            })()
           ) : currentPreview.type === 'image' && currentPreview.url ? (
             <div className="relative w-full h-full">
               <Image

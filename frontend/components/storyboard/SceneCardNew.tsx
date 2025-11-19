@@ -51,9 +51,17 @@ export function SceneCardNew({
   // Handle text save
   const handleSaveText = async () => {
     if (editedText !== scene.text) {
-      await onEditText(editedText);
+      try {
+        await onEditText(editedText);
+        setIsEditing(false);
+      } catch (error) {
+        // Error is handled by the store and displayed in the error alert
+        // Keep editing mode open so user can fix and retry
+        console.error('Failed to save text:', error);
+      }
+    } else {
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   // Handle duration edit with warning
@@ -71,9 +79,6 @@ export function SceneCardNew({
   const isGeneratingImage = scene.generation_status.image === 'generating';
   const isGeneratingVideo = scene.generation_status.video === 'generating';
   const hasError = !!scene.error_message;
-
-  // Debug logging
-  console.log(`[SceneCard ${sceneNumber}] Render - state: ${scene.state}, video_status: ${scene.generation_status.video}, isGeneratingVideo: ${isGeneratingVideo}`);
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-card border-2 border-border rounded-lg overflow-hidden shadow-lg">
@@ -149,11 +154,20 @@ export function SceneCardNew({
                 )}
               </div>
 
-              <Button onClick={onApproveText} disabled={isLoading || isEditing} size="lg">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Approve & Generate Image
+              <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="lg">
+                {isGeneratingImage ? (
+                  <>
+                    <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Generating Image...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Approve & Generate Image
+                  </>
+                )}
               </Button>
             </div>
             
@@ -196,14 +210,36 @@ export function SceneCardNew({
 
             {/* Text below image */}
             <div className="space-y-2">
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
-                <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </Button>
-              </div>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="w-full min-h-[120px] p-4 border-2 border-primary rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={isLoading}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveText} disabled={isLoading}>
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setEditedText(scene.text);
+                      setIsEditing(false);
+                    }} disabled={isLoading}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
+                  <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Duration configuration */}
@@ -296,28 +332,58 @@ export function SceneCardNew({
 
               {/* Text and duration */}
               <div className="space-y-2">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
-                  <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Duration:</span>
-                  <span className="text-sm font-medium">{scene.video_duration.toFixed(1)}s</span>
-                  <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleDurationChange(duration)} title="Edit duration (will erase video)">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Button>
-                </div>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editedText}
+                      onChange={(e) => setEditedText(e.target.value)}
+                      className="w-full min-h-[120px] p-4 border-2 border-primary rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                      disabled={isLoading}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveText} disabled={isLoading}>
+                        Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setEditedText(scene.text);
+                        setIsEditing(false);
+                      }} disabled={isLoading}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
+                      <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Duration:</span>
+                      <span className="text-sm font-medium">{scene.video_duration.toFixed(1)}s</span>
+                      <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleDurationChange(duration)} title="Edit duration (will erase video)">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
+              <Button size="sm" variant="outline" onClick={onRegenerateImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo}>
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Regenerate Image
+              </Button>
               <Button size="sm" variant="outline" onClick={onRegenerateVideo} disabled={isLoading || isGeneratingVideo}>
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

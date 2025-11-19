@@ -50,7 +50,26 @@ async function apiRequest<T>(
     }
     
     // FastAPI returns errors in 'detail' field
-    const errorMessage = error.detail || error.message || `API request failed: ${response.statusText}`;
+    // Handle cases where detail might be an object or array
+    let errorMessage = `API request failed: ${response.statusText}`;
+    if (error.detail) {
+      if (typeof error.detail === 'string') {
+        errorMessage = error.detail;
+      } else if (Array.isArray(error.detail)) {
+        // FastAPI validation errors are arrays
+        errorMessage = error.detail.map((e: any) => {
+          if (typeof e === 'string') return e;
+          if (e?.msg) return e.msg;
+          if (e?.loc && e?.msg) return `${e.loc.join('.')}: ${e.msg}`;
+          return JSON.stringify(e);
+        }).join(', ');
+      } else if (typeof error.detail === 'object') {
+        errorMessage = JSON.stringify(error.detail);
+      }
+    } else if (error.message && typeof error.message === 'string') {
+      errorMessage = error.message;
+    }
+    
     throw new Error(errorMessage);
   }
 
@@ -95,7 +114,7 @@ export async function updateSceneText(
     `/api/storyboards/${storyboardId}/scenes/${sceneId}/text`,
     {
       method: 'PUT',
-      body: JSON.stringify({ new_text: newText } as SceneTextUpdateRequest),
+      body: JSON.stringify({ text: newText } as SceneTextUpdateRequest),
     }
   );
   if (!result.scene) {
@@ -181,7 +200,7 @@ export async function updateSceneDuration(
     `/api/storyboards/${storyboardId}/scenes/${sceneId}/duration`,
     {
       method: 'PUT',
-      body: JSON.stringify({ new_duration: newDuration } as SceneDurationUpdateRequest),
+      body: JSON.stringify({ duration: newDuration } as SceneDurationUpdateRequest),
     }
   );
   if (!result.scene) {

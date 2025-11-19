@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { SceneTimelineNew } from './SceneTimelineNew';
 import { SceneCardNew } from './SceneCardNew';
 import { PreviewPlayer } from './PreviewPlayer';
+import { useAppStore } from '@/store/appStore';
+import { useAudioGeneration } from '@/hooks/useAudioGeneration';
+import type { AudioGenerationRequest } from '@/types/audio.types';
 
 interface StoryboardCarouselProps {
   storyboard: Storyboard;
@@ -43,6 +46,12 @@ export function StoryboardCarousel({
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
+  // Get audio URL and mood data from app store
+  const { audioUrl, creativeBrief, moods, selectedMoodId } = useAppStore();
+  
+  // Audio generation hook
+  const { generateAudio, isLoading: isGeneratingAudio, error: audioError } = useAudioGeneration();
+
   // Get current scene based on scene_order
   const currentSceneId = storyboard.scene_order[currentSceneIndex];
   const currentScene = scenes.find(s => s.id === currentSceneId);
@@ -73,6 +82,35 @@ export function StoryboardCarousel({
     }
   };
 
+  // Handle regenerate audio
+  const handleRegenerateAudio = async () => {
+    if (!creativeBrief || !selectedMoodId || !moods.length) {
+      console.error('Missing required data for audio generation');
+      return;
+    }
+
+    // Find mood - check both id and mood_id for compatibility
+    const selectedMood = moods.find((m) => (m as any).mood_id === selectedMoodId || m.id === selectedMoodId);
+    if (!selectedMood) {
+      console.error('Selected mood not found');
+      return;
+    }
+
+    // Use style_name if available, otherwise use name
+    const moodName = (selectedMood as any).style_name || selectedMood.name;
+
+    const audioRequest: AudioGenerationRequest = {
+      mood_name: moodName,
+      mood_description: selectedMood.aesthetic_direction || '',
+      emotional_tone: creativeBrief.emotional_tone || [],
+      aesthetic_direction: selectedMood.aesthetic_direction || '',
+      style_keywords: selectedMood.style_keywords || [],
+      duration: 30,
+    };
+
+    await generateAudio(audioRequest);
+  };
+
   if (!currentScene) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -91,6 +129,116 @@ export function StoryboardCarousel({
           currentSceneIndex={currentSceneIndex}
           onSceneClick={handleTimelineClick}
         />
+      </div>
+
+      {/* Audio Player */}
+      <div className="w-full">
+        {audioUrl ? (
+          <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-green-600 dark:text-green-400">✓</span>
+                <p className="text-sm font-semibold text-green-900 dark:text-green-100">
+                  Background music ready!
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleRegenerateAudio}
+                disabled={isGeneratingAudio || isLoading || !creativeBrief || !selectedMoodId}
+              >
+                {isGeneratingAudio ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Regenerate Audio
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Audio Player */}
+            <div className="bg-white dark:bg-zinc-900 rounded-md p-3 border border-green-200 dark:border-green-700">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🎵</span>
+                <div className="flex-1">
+                  <audio
+                    controls
+                    src={audioUrl}
+                    className="w-full"
+                    preload="metadata"
+                    style={{
+                      height: '32px',
+                      accentColor: '#22c55e',
+                    }}
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Preview your 30-second background music
+              </p>
+            </div>
+            {audioError && (
+              <div className="text-xs text-destructive mt-2">
+                {audioError}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isGeneratingAudio ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Generating audio...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Audio not generated yet
+                    </p>
+                  </>
+                )}
+              </div>
+              {!isGeneratingAudio && creativeBrief && selectedMoodId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRegenerateAudio}
+                  disabled={isLoading}
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Generate Audio
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isGeneratingAudio 
+                ? 'Background music will appear here once generated'
+                : 'Click "Generate Audio" to create background music for your video'}
+            </p>
+            {audioError && (
+              <div className="text-xs text-destructive mt-2">
+                {audioError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

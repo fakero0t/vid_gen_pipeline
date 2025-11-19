@@ -111,9 +111,16 @@ function StoryboardPageContent() {
         duration: 3000,
       });
     } catch (error) {
+      // Extract error message properly
+      let errorMessage = 'Failed to update text';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update text',
+        message: errorMessage,
         duration: 5000,
       });
     }
