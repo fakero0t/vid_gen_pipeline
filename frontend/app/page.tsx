@@ -2,7 +2,6 @@
 
 import { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { StepIndicator } from '@/components/ui/StepIndicator';
 import { LoadingFallback, StepSkeleton } from '@/components/ui/LoadingFallback';
 import { SkipToContent } from '@/components/ui/SkipToContent';
 import { useVisionChat } from '@/hooks/useVisionChat';
@@ -241,11 +240,6 @@ function HomeContent() {
     <>
       <SkipToContent />
       <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        {/* Step Indicator - Responsive */}
-        <header className="sticky top-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm border-b z-50 transition-all duration-300">
-          <StepIndicator currentStep={currentStep} />
-        </header>
-
         {/* Main content with semantic HTML */}
         <main id="main-content" tabIndex={-1} className="outline-none">
 
