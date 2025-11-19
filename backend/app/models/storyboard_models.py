@@ -40,6 +40,10 @@ class StoryboardScene(BaseModel):
     seed_image_urls: Optional[List[str]] = Field(default=None, description="Alternative seed images for regeneration")
     video_url: Optional[str] = Field(default=None, description="URL of generated video")
     video_duration: float = Field(default=5.0, description="Video duration in seconds", ge=1.0, le=10.0)
+    
+    # Product compositing (for product mode)
+    use_product_composite: bool = Field(default=False, description="Whether to composite product into scene")
+    product_id: Optional[str] = Field(default=None, description="Product ID to composite (if use_product_composite=True)")
 
     # Generation tracking
     generation_status: SceneGenerationStatus = Field(default_factory=SceneGenerationStatus)

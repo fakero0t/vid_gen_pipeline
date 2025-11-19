@@ -1,0 +1,12 @@
+# Modal Functions Requirements
+# These dependencies are installed in the Modal image
+
+# Modal SDK
+modal>=0.63.0
+
+# NeRF Studio and dependencies
+# Let nerfstudio manage its own dependency versions
+nerfstudio>=1.0.0,<2.0.0
+
+# Image processing
+Pillow>=10.0.0

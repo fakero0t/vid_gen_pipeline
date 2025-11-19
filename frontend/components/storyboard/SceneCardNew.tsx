@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import type { StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
+import { config } from '@/lib/config';
+import { useAppStore } from '@/store/appStore';
+import { useStoryboardStore } from '@/store/storyboardStore';
 
 interface SceneCardNewProps {
   scene: StoryboardScene;
@@ -153,6 +156,13 @@ export function SceneCardNew({
                 Approve & Generate Image
               </Button>
             </div>
+            
+            {/* Product Toggle */}
+            {config.isProductMode() && (
+              <div className="pt-4 border-t border-border">
+                <ProductToggleSection scene={scene} />
+              </div>
+            )}
           </div>
         )}
 
@@ -168,7 +178,10 @@ export function SceneCardNew({
                 </div>
               ) : scene.image_url ? (
                 <Image
-                  src={scene.image_url}
+                  src={scene.image_url.startsWith('http') 
+                    ? scene.image_url 
+                    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${scene.image_url}`
+                  }
                   alt={`Scene ${sceneNumber}`}
                   fill
                   className="object-cover"
@@ -316,5 +329,70 @@ export function SceneCardNew({
         )}
       </div>
     </div>
+  );
+}
+
+// Product Toggle Section Component
+function ProductToggleSection({ scene }: { scene: StoryboardScene }) {
+  const uploadedProduct = useAppStore((s) => s.uploadedProduct);
+  const { enableProductComposite, disableProductComposite } = useStoryboardStore();
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsToggling(true);
+    try {
+      if (e.target.checked && uploadedProduct) {
+        await enableProductComposite(scene.id, uploadedProduct.product_id);
+        
+        if (scene.image_url) {
+          // Show toast: scene will be regenerated
+          console.log('Scene will be regenerated with product');
+        }
+      } else {
+        await disableProductComposite(scene.id);
+        
+        if (scene.image_url) {
+          console.log('Scene will be regenerated without product');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle product:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  if (!uploadedProduct) {
+    return (
+      <div className="text-sm text-muted-foreground italic">
+        Upload a product to enable compositing
+      </div>
+    );
+  }
+
+  return (
+    <label className="flex items-center gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={scene.use_product_composite || false}
+        onChange={handleToggle}
+        disabled={isToggling}
+        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+      />
+      <div className="flex items-center gap-2">
+        {scene.use_product_composite && (
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <img
+              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${uploadedProduct.thumbnail_url}`}
+              alt="Product"
+              className="w-full h-full object-contain rounded"
+            />
+          </div>
+        )}
+        <span className="text-sm font-medium text-foreground">
+          {scene.use_product_composite ? 'Product included' : 'Include product in this scene'}
+        </span>
+      </div>
+    </label>
   );
 }

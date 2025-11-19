@@ -14,6 +14,8 @@ import { useAppStore } from '@/store/appStore';
 import { StoryboardCarousel } from '@/components/storyboard';
 import { ToastProvider, useToast } from '@/components/ui/Toast';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { config } from '@/lib/config';
+import { ProductImageUpload } from '@/components/product/ProductImageUpload';
 import type { MoodGenerationRequest } from '@/types/mood.types';
 import type { ScenePlanRequest } from '@/types/scene.types';
 import type { AudioGenerationRequest } from '@/types/audio.types';
@@ -34,6 +36,8 @@ function HomeContent() {
     selectedMoodId,
     audioUrl,
     setStoryboardCompleted,
+    scenePlan,
+    setScenePlan,
   } = useAppStore();
 
   // Step 1: Vision Chat
@@ -47,7 +51,10 @@ function HomeContent() {
     canProceed,
   } = useVisionChat();
 
-  // Step 2: Mood Generation
+  // Step 2: Product Upload (placeholder for future implementation)
+  // Will be implemented in a future task
+
+  // Step 3: Mood Generation
   const {
     isLoading: isMoodLoading,
     error: moodError,
@@ -56,7 +63,7 @@ function HomeContent() {
     clearError: clearMoodError,
   } = useMoodGeneration();
 
-  // Step 3: Scene Planning
+  // Step 4: Scene Planning
   const {
     scenePlan: generatedScenePlan,
     isLoading: isSceneLoading,
@@ -94,9 +101,9 @@ function HomeContent() {
   // Use creativeBrief from store (persisted) or from chat hook
   const activeBrief = creativeBrief || chatBrief;
 
-  // HARDCODED: Auto-generate moods when entering step 2
+  // HARDCODED: Auto-generate moods when entering step 3
   useEffect(() => {
-    if (currentStep === 2 && moods.length === 0 && !isMoodLoading) {
+    if (currentStep === 3 && moods.length === 0 && !isMoodLoading) {
       const request: MoodGenerationRequest = {
         product_name: activeBrief?.product_name || 'Test Product',
         target_audience: activeBrief?.target_audience || 'Test Audience',
@@ -116,12 +123,12 @@ function HomeContent() {
     }
   }, [moods, selectedMoodId]);
 
-  // HARDCODED: Auto-generate audio when entering step 3
+  // HARDCODED: Auto-generate audio when entering step 4
   useEffect(() => {
-    if (currentStep === 3 && !audioUrl && selectedMoodId && activeBrief && !isAudioLoading) {
+    if (currentStep === 4 && !audioUrl && selectedMoodId && activeBrief && !isAudioLoading) {
       const selectedMood = moods.find((m) => m.id === selectedMoodId);
       if (selectedMood) {
-        console.log('🎵 Pre-generating audio for Step 4...');
+        console.log('🎵 Pre-generating audio for Step 5...');
         const audioRequest: AudioGenerationRequest = {
           mood_name: selectedMood.name,
           mood_description: selectedMood.description,
@@ -135,20 +142,25 @@ function HomeContent() {
     }
   }, [currentStep, audioUrl, selectedMoodId, activeBrief, isAudioLoading, moods, generateAudio]);
 
-  // Auto-initialize storyboard when entering step 3
+  // Auto-initialize storyboard when entering step 4
   useEffect(() => {
-    if (currentStep === 3 && !storyboard && !isStoryboardLoading && activeBrief && selectedMoodId) {
+    if (currentStep === 4 && !storyboard && !isStoryboardLoading && activeBrief && selectedMoodId) {
       const selectedMood = moods.find((m) => m.id === selectedMoodId);
       if (selectedMood) {
-        console.log('[Page] Auto-initializing storyboard for step 3');
+        console.log('[Page] Auto-initializing storyboard for step 4');
         initializeStoryboard(activeBrief, selectedMood);
       }
     }
   }, [currentStep, storyboard, isStoryboardLoading, activeBrief, selectedMoodId, moods, initializeStoryboard]);
 
-  const handleContinueToMoods = () => {
+  const handleContinueToProductUpload = () => {
     // HARDCODED: Skip validation for testing
     setCurrentStep(2);
+  };
+
+  const handleContinueToMoods = () => {
+    // HARDCODED: Skip validation for testing
+    setCurrentStep(3);
   };
 
   const handleGenerateMoods = async () => {
@@ -166,7 +178,7 @@ function HomeContent() {
 
   const handleContinueFromMoods = () => {
     // HARDCODED: Skip validation for testing
-    setCurrentStep(3);
+    setCurrentStep(4);
   };
 
   const handleGenerateScenePlan = async () => {
@@ -219,9 +231,9 @@ function HomeContent() {
   };
 
   const handleGenerateFinalVideo = () => {
-    // Mark storyboard as completed and navigate to final composition (Step 4)
+    // Mark storyboard as completed and navigate to video generation (Step 5)
     setStoryboardCompleted(true);
-    setCurrentStep(4);
+    setCurrentStep(5);
   };
 
   // Render based on current step
@@ -247,7 +259,7 @@ function HomeContent() {
               <Suspense fallback={<LoadingFallback message="Loading summary..." />}>
                 <LazyComponents.CreativeBriefSummary
                   brief={activeBrief}
-                  onContinue={handleContinueToMoods}
+                  onContinue={handleContinueToProductUpload}
                 />
               </Suspense>
             </div>
@@ -272,10 +284,54 @@ function HomeContent() {
 
       {currentStep === 2 && (
         <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+          <div className="w-full max-w-7xl animate-slideUp">
+            {config.isProductMode() ? (
+              <ProductImageUpload 
+                onComplete={(productId) => {
+                  console.log('Product uploaded:', productId);
+                  setCurrentStep(3);
+                }}
+                onBack={() => setCurrentStep(1)}
+              />
+            ) : (
+              <>
+                {/* Back button - Responsive */}
+                <button
+                  onClick={() => setCurrentStep(1)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 animate-slideUp mb-4"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Back to Chat
+                </button>
+                
+                {/* NeRF Pipeline View */}
+                <Suspense fallback={<LoadingFallback message="Loading NeRF pipeline..." />}>
+                  <LazyComponents.NeRFPipelineView />
+                </Suspense>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {currentStep === 3 && (
+        <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
           <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6">
           {/* Back button - Responsive */}
           <button
-            onClick={() => setCurrentStep(1)}
+            onClick={() => setCurrentStep(2)}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 animate-slideUp"
           >
             <svg
@@ -291,7 +347,7 @@ function HomeContent() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back to Chat
+            Back to Product Upload
           </button>
           
           <div className="animate-slideUp animation-delay-100">
@@ -311,35 +367,35 @@ function HomeContent() {
         </div>
       )}
 
-      {/* Step 3: Storyboard - Embedded progressive workflow */}
-      {currentStep === 3 && (
+      {/* Step 4: Storyboard - Embedded progressive workflow */}
+      {currentStep === 4 && (
         <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
           <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6">
-            {/* Back button */}
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 animate-slideUp"
+          {/* Back button - Responsive */}
+          <button
+            onClick={() => setCurrentStep(3)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 animate-slideUp"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Back to Moods
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back to Moods
+          </button>
 
             {/* Error display */}
             {storyboardError && (
               <div className="animate-slideUp animation-delay-100">
-                <ErrorAlert message={storyboardError} />
+                <ErrorAlert error={storyboardError} />
               </div>
             )}
 
@@ -374,11 +430,24 @@ function HomeContent() {
         </div>
       )}
 
-      {currentStep === 4 && (
+      {currentStep === 5 && (
+        <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+          <div className="w-full max-w-7xl animate-slideUp">
+            <Suspense fallback={<StepSkeleton />}>
+              <LazyComponents.VideoGeneration
+                onComplete={() => setCurrentStep(6)}
+                onBack={() => setCurrentStep(4)}
+              />
+            </Suspense>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 6 && (
         <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
           <div className="w-full max-w-6xl animate-slideUp">
             <Suspense fallback={<StepSkeleton />}>
-              <LazyComponents.FinalComposition onBack={() => setCurrentStep(3)} />
+              <LazyComponents.FinalComposition onBack={() => setCurrentStep(5)} />
             </Suspense>
           </div>
         </div>

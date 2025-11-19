@@ -22,7 +22,7 @@ export function useAudioGeneration() {
         const response = await apiGenerateAudio(request);
 
         if (!response.success || !response.audio_url) {
-          throw new Error(response.message || 'Failed to generate audio');
+          throw new Error(response.error || 'Failed to generate audio');
         }
 
         // Store audio URL

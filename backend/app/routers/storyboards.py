@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import AsyncGenerator
+from pydantic import BaseModel
 from app.models.storyboard_models import (
     StoryboardInitializeRequest,
     StoryboardInitializeResponse,
@@ -14,6 +15,9 @@ from app.models.storyboard_models import (
     ErrorResponse,
 )
 from app.services.storyboard_service import storyboard_service
+from app.services.product_service import get_product_service
+from app.services.replicate_service import get_replicate_service
+from app.services.metrics_service import get_composite_metrics
 from app.database import db
 from app.config import settings
 import json
@@ -291,6 +295,127 @@ async def get_scene_status(storyboard_id: str, scene_id: str):
 
 
 # ============================================================================
+# Product Composite Endpoints
+# ============================================================================
+
+class EnableProductCompositeRequest(BaseModel):
+    """Request to enable product compositing for a scene."""
+    product_id: str
+
+
+@router.post("/{storyboard_id}/scenes/{scene_id}/product-composite")
+async def enable_product_composite(
+    storyboard_id: str,
+    scene_id: str,
+    request: EnableProductCompositeRequest
+):
+    """
+    Enable product compositing for a scene.
+    
+    This marks the scene to include the product in image generation.
+    If the scene already has an image, it will need to be regenerated.
+    """
+    # Check if product mode is enabled
+    if not settings.is_product_mode():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Product compositing not available in NeRF mode"
+        )
+    
+    try:
+        # Validate product exists
+        product_service = get_product_service()
+        product = product_service.get_product_image(request.product_id)
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product {request.product_id} not found"
+            )
+        
+        # Get scene
+        scene = db.get_scene(scene_id)
+        if not scene:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Scene {scene_id} not found"
+            )
+        
+        # Update scene
+        scene.use_product_composite = True
+        scene.product_id = request.product_id
+        
+        # If scene already has an image, mark for regeneration
+        if scene.image_url:
+            scene.generation_status.image = "pending"
+            scene.image_url = None
+        
+        # Save scene
+        db.update_scene(scene_id, scene)
+        
+        return {
+            "success": True,
+            "scene": scene,
+            "message": "Product compositing enabled"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to enable product composite: {str(e)}"
+        )
+
+
+@router.delete("/{storyboard_id}/scenes/{scene_id}/product-composite")
+async def disable_product_composite(
+    storyboard_id: str,
+    scene_id: str
+):
+    """
+    Disable product compositing for a scene.
+    
+    Removes product from the scene. If the scene has an image with product,
+    it will need to be regenerated.
+    """
+    try:
+        # Get scene
+        scene = db.get_scene(scene_id)
+        if not scene:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Scene {scene_id} not found"
+            )
+        
+        # Update scene
+        scene.use_product_composite = False
+        scene.product_id = None
+        
+        # If scene has an image, mark for regeneration
+        if scene.image_url:
+            scene.generation_status.image = "pending"
+            scene.image_url = None
+        
+        # Save scene
+        db.update_scene(scene_id, scene)
+        
+        return {
+            "success": True,
+            "scene": scene,
+            "message": "Product compositing disabled"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to disable product composite: {str(e)}"
+        )
+
+
+# ============================================================================
 # Image Generation Endpoints
 # ============================================================================
 
@@ -320,39 +445,122 @@ async def generate_image_task(scene_id: str):
             print(f"[Image Generation] Placeholder image set for scene {scene_id}")
             return
 
-        # Generate image using Replicate
-        # Using Flux model for high-quality image generation
-        prompt = f"{scene.text}. Style: {scene.style_prompt}"
-        print(f"[Image Generation] Generating image for scene {scene_id} with prompt: {prompt[:100]}...")
+        # Check if product compositing is enabled
+        if scene.use_product_composite and scene.product_id:
+            # Product compositing path
+            print(f"[Image Generation] Product compositing enabled for scene {scene_id}")
+            
+            # Get product service
+            product_service = get_product_service()
+            product = product_service.get_product_image(scene.product_id)
+            
+            if not product:
+                raise Exception(f"Product {scene.product_id} not found")
+            
+            # Get product image path (full path)
+            product_image_path = product_service.get_product_image_path(scene.product_id, thumbnail=False)
+            
+            if not product_image_path:
+                raise Exception(f"Product image file not found for {scene.product_id}")
+            
+            # Use Replicate service to generate scene with product
+            replicate_service = get_replicate_service()
+            
+            # Choose method based on feature flag
+            use_kontext = settings.USE_KONTEXT_COMPOSITE and settings.COMPOSITE_METHOD == "kontext"
+            
+            if use_kontext:
+                print(f"[Image Generation] Using Kontext composite method")
+                try:
+                    # Try Kontext method with timeout
+                    image_url = await asyncio.wait_for(
+                        replicate_service.generate_scene_with_kontext_composite(
+                            scene_text=scene.text,
+                            style_prompt=scene.style_prompt,
+                            product_image_path=str(product_image_path),
+                            width=1080,
+                            height=1920
+                        ),
+                        timeout=settings.KONTEXT_TIMEOUT_SECONDS
+                    )
+                    print(f"[Image Generation] Kontext composite succeeded")
+                    
+                except asyncio.TimeoutError:
+                    print(f"[Image Generation] Kontext timeout, falling back to PIL")
+                    
+                    # Record fallback
+                    metrics = get_composite_metrics()
+                    metrics.record_fallback()
+                    
+                    image_url = await replicate_service.generate_scene_with_product(
+                        scene_text=scene.text,
+                        style_prompt=scene.style_prompt,
+                        product_image_path=str(product_image_path),
+                        width=1080,
+                        height=1920
+                    )
+                    
+                except Exception as e:
+                    print(f"[Image Generation] Kontext failed: {e}, falling back to PIL")
+                    
+                    # Record fallback
+                    metrics = get_composite_metrics()
+                    metrics.record_fallback()
+                    
+                    # Silent fallback to PIL method
+                    image_url = await replicate_service.generate_scene_with_product(
+                        scene_text=scene.text,
+                        style_prompt=scene.style_prompt,
+                        product_image_path=str(product_image_path),
+                        width=1080,
+                        height=1920
+                    )
+            else:
+                print(f"[Image Generation] Using PIL composite method")
+                # Use PIL method (existing implementation)
+                image_url = await replicate_service.generate_scene_with_product(
+                    scene_text=scene.text,
+                    style_prompt=scene.style_prompt,
+                    product_image_path=str(product_image_path),
+                    width=1080,
+                    height=1920
+                )
+        else:
+            # Standard scene generation (existing logic)
+            # Generate image using Replicate
+            # Using Flux model for high-quality image generation
+            prompt = f"{scene.text}. Style: {scene.style_prompt}"
+            print(f"[Image Generation] Generating image for scene {scene_id} with prompt: {prompt[:100]}...")
 
-        # Create Replicate client with token
-        client = replicate.Client(api_token=replicate_token)
-        
-        output = await asyncio.to_thread(
-            client.run,
-            "black-forest-labs/flux-schnell",
-            input={
-                "prompt": prompt,
-                "width": 1080,
-                "height": 1920,
-                "num_outputs": 1,
-            }
-        )
+            # Create Replicate client with token
+            client = replicate.Client(api_token=replicate_token)
+            
+            output = await asyncio.to_thread(
+                client.run,
+                "black-forest-labs/flux-schnell",
+                input={
+                    "prompt": prompt,
+                    "width": 1080,
+                    "height": 1920,
+                    "num_outputs": 1,
+                }
+            )
 
-        print(f"[Image Generation] Replicate returned output for scene {scene_id}: {output}")
+            print(f"[Image Generation] Replicate returned output for scene {scene_id}: {output}")
 
-        # Extract image URL from output
-        if output and len(output) > 0:
+            # Extract image URL from output
+            if not output or len(output) == 0:
+                raise Exception("No image generated")
+            
             image_url = str(output[0]) if hasattr(output[0], '__str__') else output[0]
             print(f"[Image Generation] Extracted image URL for scene {scene_id}: {image_url}")
-
-            # Update scene with image URL
-            scene.image_url = image_url
-            scene.generation_status.image = "complete"
-            scene.state = "image"
-            scene.error_message = None
-        else:
-            raise Exception("No image generated")
+        
+        # Update scene with result (common for both paths)
+        # Update scene with image URL
+        scene.image_url = image_url
+        scene.generation_status.image = "complete"
+        scene.state = "image"
+        scene.error_message = None
 
         db.update_scene(scene_id, scene)
         print(f"[Image Generation] Successfully updated scene {scene_id} with image")
@@ -495,11 +703,37 @@ async def generate_video_task(scene_id: str):
         # Using ByteDance SeeDance-1 Pro Fast - supports longer videos
         client = replicate.Client(api_token=replicate_token)
         
+        # Convert relative image URL to full URL for Replicate API
+        full_image_url = settings.to_full_url(scene.image_url)
+        
+        # For localhost URLs, Replicate can't access them, so we need to convert to base64
+        # This is necessary for local development
+        if "localhost" in full_image_url or "127.0.0.1" in full_image_url:
+            # Extract the local file path from the URL
+            # e.g., http://localhost:8000/uploads/composites/file.png -> uploads/composites/file.png
+            from pathlib import Path
+            import base64
+            
+            local_path = full_image_url.split("/uploads/", 1)[-1]
+            local_file_path = f"uploads/{local_path}"
+            
+            # Check if file exists locally
+            if Path(local_file_path).exists():
+                try:
+                    # Convert to base64 data URI
+                    with open(local_file_path, 'rb') as f:
+                        image_data = f.read()
+                    base64_data = base64.b64encode(image_data).decode('utf-8')
+                    full_image_url = f"data:image/png;base64,{base64_data}"
+                    print(f"[Video Generation] Converted localhost URL to base64 data URI for scene {scene_id}")
+                except Exception as e:
+                    print(f"[Video Generation] Failed to convert to base64: {e}, will try URL anyway")
+        
         output = await asyncio.to_thread(
             client.run,
             "bytedance/seedance-1-pro-fast",
             input={
-                "image": scene.image_url,
+                "image": full_image_url,
                 "prompt": scene.text,
                 "duration": scene.video_duration,
             }
@@ -636,54 +870,104 @@ async def scene_update_generator(storyboard_id: str) -> AsyncGenerator[str, None
 
     This watches for changes to scenes in the storyboard and sends updates.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Track last known state for each scene
     last_states = {}
     
     try:
+        # Send initial connection success message
+        yield f"event: connected\ndata: {{'storyboard_id': '{storyboard_id}'}}\n\n"
+        logger.info(f"SSE connection established for storyboard {storyboard_id}")
+        
         while True:
-            # Get all scenes for this storyboard
-            scenes = db.get_scenes_by_storyboard(storyboard_id)
+            try:
+                # Get all scenes for this storyboard
+                scenes = db.get_scenes_by_storyboard(storyboard_id)
 
-            # Check for changes
-            for scene in scenes:
-                current_state = {
-                    "state": scene.state,
-                    "image_status": scene.generation_status.image,
-                    "video_status": scene.generation_status.video,
-                    "image_url": scene.image_url,
-                    "video_url": scene.video_url,
-                    "error": scene.error_message
-                }
+                # Check for changes
+                for scene in scenes:
+                    current_state = {
+                        "state": scene.state,
+                        "image_status": scene.generation_status.image,
+                        "video_status": scene.generation_status.video,
+                        "image_url": scene.image_url,
+                        "video_url": scene.video_url,
+                        "error": scene.error_message
+                    }
 
-                # Compare with last known state
-                last_state = last_states.get(scene.id)
+                    # Compare with last known state
+                    last_state = last_states.get(scene.id)
+                    
+                    if last_state != current_state:
+                        # State changed, send update with BOTH statuses
+                        update = SSESceneUpdate(
+                            scene_id=scene.id,
+                            state=scene.state,
+                            image_status=scene.generation_status.image,
+                            video_status=scene.generation_status.video,
+                            image_url=scene.image_url,
+                            video_url=scene.video_url,
+                            error=scene.error_message
+                        )
+
+                        # Format as SSE event
+                        data = f"event: scene_update\ndata: {update.model_dump_json()}\n\n"
+                        yield data
+
+                        # Update last known state
+                        last_states[scene.id] = current_state
+
+                # Send keepalive ping every poll cycle to prevent timeout
+                yield f": keepalive\n\n"
                 
-                if last_state != current_state:
-                    # State changed, send update with BOTH statuses
-                    update = SSESceneUpdate(
-                        scene_id=scene.id,
-                        state=scene.state,
-                        image_status=scene.generation_status.image,
-                        video_status=scene.generation_status.video,
-                        image_url=scene.image_url,
-                        video_url=scene.video_url,
-                        error=scene.error_message
-                    )
-
-                    # Format as SSE event
-                    data = f"event: scene_update\ndata: {update.model_dump_json()}\n\n"
-                    yield data
-
-                    # Update last known state
-                    last_states[scene.id] = current_state
-
-            # Wait before next poll
-            await asyncio.sleep(2)  # Poll every 2 seconds
+                # Wait before next poll
+                await asyncio.sleep(2)  # Poll every 2 seconds
+                
+            except Exception as e:
+                logger.error(f"Error in SSE update loop: {e}", exc_info=True)
+                # Send error to client
+                error_data = f"event: error\ndata: {{'error': 'Internal server error'}}\n\n"
+                yield error_data
+                await asyncio.sleep(5)  # Wait before retrying
 
     except asyncio.CancelledError:
-        pass
-    except Exception:
-        pass
+        logger.info(f"SSE connection cancelled for storyboard {storyboard_id}")
+        raise
+    except Exception as e:
+        logger.error(f"Fatal error in SSE generator: {e}", exc_info=True)
+        raise
+
+
+@router.get("/test-sse")
+async def test_sse():
+    """
+    Test SSE endpoint to verify EventSource connectivity.
+    Returns a simple heartbeat every second for 10 seconds.
+    """
+    async def heartbeat_generator():
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("SSE test endpoint called")
+        
+        try:
+            for i in range(10):
+                yield f"event: heartbeat\ndata: {{\"count\": {i+1}}}\n\n"
+                await asyncio.sleep(1)
+            yield f"event: complete\ndata: {{\"message\": \"Test completed\"}}\n\n"
+        except Exception as e:
+            logger.error(f"Error in test SSE: {e}")
+            
+    return StreamingResponse(
+        heartbeat_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
 
 
 @router.get("/{storyboard_id}/events")
@@ -694,14 +978,22 @@ async def scene_updates_sse(storyboard_id: str):
     Clients connect to this endpoint to receive real-time updates
     about scene generation progress (image/video generation status).
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"SSE connection requested for storyboard {storyboard_id}")
+    
     # Verify storyboard exists
     storyboard = db.get_storyboard(storyboard_id)
     if not storyboard:
+        logger.warning(f"SSE connection rejected: Storyboard {storyboard_id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Storyboard {storyboard_id} not found"
         )
 
+    logger.info(f"Starting SSE stream for storyboard {storyboard_id}")
+    
     return StreamingResponse(
         scene_update_generator(storyboard_id),
         media_type="text/event-stream",
@@ -709,5 +1001,9 @@ async def scene_updates_sse(storyboard_id: str):
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
+            # CORS headers for SSE
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Access-Control-Allow-Headers": "*",
         }
     )

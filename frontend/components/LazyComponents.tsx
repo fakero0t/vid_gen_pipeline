@@ -17,7 +17,20 @@ export const CreativeBriefSummary = lazy(() =>
   }))
 );
 
-// Step 2: Mood Generation
+// Step 2: Product Upload & NeRF Pipeline
+export const ProductUpload = lazy(() =>
+  import('@/components/product/ProductUpload').then((module) => ({
+    default: module.ProductUpload,
+  }))
+);
+
+export const NeRFPipelineView = lazy(() =>
+  import('@/components/nerf/NeRFPipelineView').then((module) => ({
+    default: module.NeRFPipelineView,
+  }))
+);
+
+// Step 3: Mood Generation
 export const MoodBoard = lazy(() =>
   import('@/components/moods/MoodBoard').then((module) => ({
     default: module.MoodBoard,
