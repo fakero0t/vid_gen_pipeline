@@ -40,6 +40,10 @@ export interface StoryboardScene {
   error_message?: string | null;
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+  
+  // Product compositing (for product mode)
+  use_product_composite?: boolean;
+  product_id?: string | null;
 }
 
 /**

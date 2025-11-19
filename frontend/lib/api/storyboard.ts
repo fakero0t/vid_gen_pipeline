@@ -269,20 +269,41 @@ export function createSSEConnection(
   const eventSource = new EventSource(url);
 
   console.log('[API] Adding event listeners...');
+  
+  // Connection established
+  eventSource.addEventListener('connected', (event) => {
+    console.log('[API] SSE connection established:', event);
+  });
+  
+  // Scene updates
   eventSource.addEventListener('scene_update', (event) => {
     console.log('[API] Received scene_update event:', event);
     onUpdate(event);
   });
+  
+  // Error handling
   eventSource.addEventListener('error', (e) => {
     console.error('[API] SSE error event:', e);
+    console.error('[API] EventSource readyState:', eventSource.readyState);
+    console.error('[API] EventSource url:', eventSource.url);
+    
+    // Check if backend is reachable
+    if (eventSource.readyState === EventSource.CLOSED) {
+      console.error('[API] SSE connection closed. Backend may be down or unreachable.');
+    }
+    
     if (onError) onError(e);
   });
+  
+  // Complete event
   eventSource.addEventListener('complete', (event) => {
     console.log('[API] Received complete event:', event);
     onUpdate(event);
   });
+  
+  // Connection opened
   eventSource.addEventListener('open', () => {
-    console.log('[API] EventSource onopen fired');
+    console.log('[API] EventSource connection opened successfully');
   });
 
   // Also listen for ALL messages for debugging

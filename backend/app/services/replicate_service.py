@@ -2,7 +2,18 @@
 import asyncio
 from typing import List, Dict, Any, Optional
 import replicate
+import requests
+import tempfile
+import uuid
+from pathlib import Path
+from PIL import Image
+import io
+import base64
+import shutil
+import time
 from app.config import settings
+from app.services.rate_limiter import get_kontext_rate_limiter
+from app.services.metrics_service import get_composite_metrics
 
 
 class ReplicateImageService:
@@ -410,6 +421,435 @@ class ReplicateImageService:
             results.append(result)
 
         return results
+    
+    async def generate_scene_with_product(
+        self,
+        scene_text: str,
+        style_prompt: str,
+        product_image_path: str,
+        width: int = 1080,
+        height: int = 1920
+    ) -> str:
+        """
+        Generate scene image with product composited in.
+        
+        MVP Implementation:
+        Uses two-stage approach:
+        1. Generate scene background
+        2. Composite product using PIL
+        
+        This gives maximum control over final result.
+        
+        Args:
+            scene_text: Scene description
+            style_prompt: Style/mood prompt
+            product_image_path: Path to product image file
+            width: Target width (default 1080)
+            height: Target height (default 1920)
+        
+        Returns:
+            URL to generated composited image
+        """
+        print(f"[Product Composite] Generating scene with product")
+        
+        # Stage 1: Generate scene background
+        # Add "empty space in center" to prompt to leave room for product
+        bg_prompt = f"{scene_text}. {style_prompt}. empty space in center for product placement. elegant composition."
+        
+        print(f"[Product Composite] Generating background scene...")
+        
+        # Use the standard generate_image method with flux-schnell for consistency
+        output = await asyncio.to_thread(
+            self.client.run,
+            "black-forest-labs/flux-schnell",
+            input={
+                "prompt": bg_prompt,
+                "width": width,
+                "height": height,
+                "num_outputs": 1,
+                "output_format": "png",
+                "output_quality": 90,
+            }
+        )
+        
+        if not output or not isinstance(output, list) or len(output) == 0:
+            raise Exception("No output from Replicate for background")
+        
+        bg_image_url = output[0]
+        
+        # Stage 2: Composite product onto scene
+        print(f"[Product Composite] Compositing product onto scene...")
+        
+        # Download background image
+        bg_response = requests.get(bg_image_url)
+        bg_image = Image.open(io.BytesIO(bg_response.content))
+        
+        # Load product image
+        product_image = Image.open(product_image_path)
+        
+        # Composite product onto center
+        composited = self._composite_product_centered(
+            background=bg_image,
+            product=product_image,
+            max_product_width_percent=50,
+            max_product_height_percent=60
+        )
+        
+        # Save composited image to temp file
+        temp_dir = Path(tempfile.gettempdir()) / "product_composites"
+        temp_dir.mkdir(exist_ok=True)
+        
+        composite_filename = f"composite_{uuid.uuid4()}.png"
+        composite_path = temp_dir / composite_filename
+        
+        composited.save(composite_path, 'PNG')
+        
+        # Move to uploads directory for serving
+        uploads_dir = Path("uploads/composites")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        
+        final_path = uploads_dir / composite_filename
+        composited.save(final_path, 'PNG')
+        
+        # Return URL (assumes FastAPI serves /uploads/ statically)
+        return f"/uploads/composites/{composite_filename}"
+    
+    def _composite_product_centered(
+        self,
+        background: Image.Image,
+        product: Image.Image,
+        max_product_width_percent: int = 50,
+        max_product_height_percent: int = 60
+    ) -> Image.Image:
+        """
+        Composite product image onto center of background.
+        
+        Algorithm Specifications:
+        1. Calculate max dimensions:
+           - max_width = bg_width * (50/100) = bg_width * 0.5
+           - max_height = bg_height * (60/100) = bg_height * 0.6
+        
+        2. Calculate scale factor (never upscale):
+           - width_scale = max_width / prod_width
+           - height_scale = max_height / prod_height
+           - scale_factor = min(width_scale, height_scale, 1.0)
+        
+        3. Calculate new dimensions:
+           - new_width = int(prod_width * scale_factor)
+           - new_height = int(prod_height * scale_factor)
+        
+        4. Resize with LANCZOS (highest quality)
+        
+        5. Calculate center position:
+           - x = (bg_width - new_width) // 2  (integer division)
+           - y = (bg_height - new_height) // 2
+        
+        6. Alpha composite:
+           - If RGBA: Use alpha channel as mask
+           - If RGB: Direct paste
+        
+        Args:
+            background: Background scene image (e.g., 1080x1920)
+            product: Product image (any size, any format)
+            max_product_width_percent: Max width as % of bg (default 50)
+            max_product_height_percent: Max height as % of bg (default 60)
+        
+        Returns:
+            Composited image (same size as background)
+        
+        Example:
+            Background: 1080x1920
+            Product: 2048x2048
+            Max dimensions: 540x1152
+            Scale factor: min(540/2048, 1152/2048, 1.0) = 0.264
+            New size: 540x540
+            Position: x=270, y=690 (centered)
+        """
+        bg_width, bg_height = background.size
+        prod_width, prod_height = product.size
+        
+        # Calculate max product dimensions (integer pixels)
+        max_prod_width = int(bg_width * max_product_width_percent / 100)
+        max_prod_height = int(bg_height * max_product_height_percent / 100)
+        
+        # Scale product to fit within max dimensions (maintain aspect ratio)
+        # CRITICAL: Do not upscale (cap at 1.0)
+        width_scale = max_prod_width / prod_width
+        height_scale = max_prod_height / prod_height
+        scale_factor = min(width_scale, height_scale, 1.0)
+        
+        # Calculate new dimensions (integer pixels)
+        new_prod_width = int(prod_width * scale_factor)
+        new_prod_height = int(prod_height * scale_factor)
+        
+        # Resize product using LANCZOS (highest quality resampling)
+        product_resized = product.resize(
+            (new_prod_width, new_prod_height),
+            Image.Resampling.LANCZOS
+        )
+        
+        # Calculate exact center position (integer division)
+        x = (bg_width - new_prod_width) // 2
+        y = (bg_height - new_prod_height) // 2
+        
+        # Create composite (copy background to avoid modifying original)
+        result = background.copy()
+        
+        # Ensure background is RGB or RGBA
+        if result.mode not in ['RGB', 'RGBA']:
+            result = result.convert('RGB')
+        
+        # Composite based on product mode
+        if product_resized.mode == 'RGBA':
+            # Use alpha channel for transparency
+            result.paste(product_resized, (x, y), product_resized)
+        elif product_resized.mode == 'RGB':
+            # Direct paste (no transparency)
+            result.paste(product_resized, (x, y))
+        else:
+            # Convert other modes to RGB first
+            product_rgb = product_resized.convert('RGB')
+            result.paste(product_rgb, (x, y))
+        
+        return result
+    
+    async def _image_to_base64(self, image_path: str) -> str:
+        """
+        Convert image file to base64 string.
+        
+        Args:
+            image_path: Path to image file
+        
+        Returns:
+            Base64 encoded string
+            
+        Raises:
+            Exception: If file too large (>10MB) or invalid
+        """
+        path = Path(image_path)
+        
+        # Check file size
+        file_size = path.stat().st_size
+        max_size = 10 * 1024 * 1024  # 10MB
+        
+        if file_size > max_size:
+            raise Exception(f"Image too large: {file_size} bytes (max {max_size})")
+        
+        # Check if compression needed (5-10MB)
+        if file_size > 5 * 1024 * 1024:
+            print(f"[Image Encoding] Compressing large image: {file_size} bytes")
+            image = Image.open(image_path)
+            
+            # Compress to temporary file
+            temp_path = Path(tempfile.gettempdir()) / f"compressed_{uuid.uuid4()}.png"
+            image.save(temp_path, 'PNG', optimize=True, quality=85)
+            
+            # Read compressed file
+            with open(temp_path, 'rb') as f:
+                image_data = f.read()
+            
+            # Clean up temp file
+            temp_path.unlink()
+        else:
+            # Read file directly
+            with open(image_path, 'rb') as f:
+                image_data = f.read()
+        
+        # Encode to base64
+        encoded = base64.b64encode(image_data).decode('utf-8')
+        print(f"[Image Encoding] Encoded {len(image_data)} bytes to {len(encoded)} base64 chars")
+        
+        return encoded
+    
+    async def _upload_temp_image(self, image_path: str) -> str:
+        """
+        Upload image to temporary storage and return public URL.
+        
+        Fallback method when base64 encoding fails or isn't supported.
+        
+        Args:
+            image_path: Path to image file
+        
+        Returns:
+            Publicly accessible URL to image
+        """
+        # Create temp uploads directory
+        temp_dir = Path("uploads/temp")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate unique filename
+        filename = f"temp_{uuid.uuid4()}{Path(image_path).suffix}"
+        temp_path = temp_dir / filename
+        
+        # Copy file to temp location
+        shutil.copy2(image_path, temp_path)
+        
+        # Schedule cleanup (1 hour)
+        # Note: In production, use a task queue or cron job
+        asyncio.create_task(self._cleanup_temp_file(temp_path, delay=3600))
+        
+        # Return URL (assumes FastAPI serves /uploads/)
+        url = f"/uploads/temp/{filename}"
+        print(f"[Image Upload] Uploaded to temp storage: {url}")
+        
+        return url
+    
+    async def _cleanup_temp_file(self, file_path: Path, delay: int = 3600):
+        """
+        Delete temporary file after delay.
+        
+        Args:
+            file_path: Path to file to delete
+            delay: Delay in seconds before deletion (default 1 hour)
+        """
+        await asyncio.sleep(delay)
+        
+        try:
+            if file_path.exists():
+                file_path.unlink()
+                print(f"[Cleanup] Deleted temp file: {file_path}")
+        except Exception as e:
+            print(f"[Cleanup] Failed to delete temp file {file_path}: {e}")
+    
+    async def generate_scene_with_kontext_composite(
+        self,
+        scene_text: str,
+        style_prompt: str,
+        product_image_path: str,
+        width: int = 1080,
+        height: int = 1920
+    ) -> str:
+        """
+        Generate scene with product using FLUX Kontext multi-image.
+        
+        Three-stage approach:
+        1. Generate base scene background
+        2. Prepare product image (base64 or URL)
+        3. Use FLUX Kontext to intelligently composite
+        
+        Args:
+            scene_text: Scene description
+            style_prompt: Style/mood prompt
+            product_image_path: Path to product image file
+            width: Target width
+            height: Target height
+        
+        Returns:
+            URL to composited image
+            
+        Raises:
+            Exception: If generation fails at any stage
+        """
+        print(f"[Kontext Composite] Starting scene generation with Kontext")
+        
+        metrics = get_composite_metrics()
+        start_time = time.time()
+        
+        try:
+            # Acquire rate limit slot
+            rate_limiter = get_kontext_rate_limiter()
+            async with rate_limiter:
+                # Stage 1: Generate base scene background
+                # Use full prompt without "empty space" modification
+                bg_prompt = f"{scene_text}. {style_prompt}"
+                
+                print(f"[Kontext Composite] Generating base scene...")
+                
+                output = await asyncio.to_thread(
+                    self.client.run,
+                    "black-forest-labs/flux-schnell",
+                    input={
+                        "prompt": bg_prompt,
+                        "width": width,
+                        "height": height,
+                        "num_outputs": 1,
+                        "output_format": "png",
+                        "output_quality": 90,
+                    }
+                )
+                
+                if not output or not isinstance(output, list) or len(output) == 0:
+                    raise Exception("No output from Replicate for base scene")
+                
+                base_scene_url = output[0]
+                print(f"[Kontext Composite] Base scene generated: {base_scene_url}")
+                
+                # Stage 2: Prepare product image
+                print(f"[Kontext Composite] Preparing product image...")
+                
+                # Try base64 encoding first
+                try:
+                    product_data = await self._image_to_base64(product_image_path)
+                    product_input = f"data:image/png;base64,{product_data}"
+                    print(f"[Kontext Composite] Product encoded as base64")
+                except Exception as e:
+                    print(f"[Kontext Composite] Base64 encoding failed: {e}, using URL fallback")
+                    # Fallback: Upload to temp storage and get URL
+                    product_input = await self._upload_temp_image(product_image_path)
+                
+                # Stage 3: Composite with FLUX Kontext
+                print(f"[Kontext Composite] Compositing product into scene...")
+                
+                composite_prompt = f"""Seamlessly integrate the product from image 2 into the scene from image 1.
+Place the product naturally with matching perspective, lighting, and shadows.
+Scene: {scene_text}
+Style: {style_prompt}
+Ensure the product appears as part of the original scene."""
+                
+                output = await asyncio.to_thread(
+                    self.client.run,
+                    settings.KONTEXT_MODEL_ID,
+                    input={
+                        "image_1": base_scene_url,
+                        "image_2": product_input,
+                        "prompt": composite_prompt,
+                        "output_format": "png",
+                        "output_quality": 90,
+                    }
+                )
+                
+                if not output or len(output) == 0:
+                    raise Exception("No output from FLUX Kontext")
+                
+                composite_url = str(output[0]) if hasattr(output[0], '__str__') else output[0]
+                print(f"[Kontext Composite] Composite generated: {composite_url}")
+            
+            # Stage 4: Download and save composite
+            print(f"[Kontext Composite] Saving composite image...")
+            
+            response = requests.get(composite_url)
+            if response.status_code != 200:
+                raise Exception(f"Failed to download composite: {response.status_code}")
+            
+            composite_image = Image.open(io.BytesIO(response.content))
+            
+            # Save to uploads directory
+            uploads_dir = Path("uploads/composites")
+            uploads_dir.mkdir(parents=True, exist_ok=True)
+            
+            composite_filename = f"kontext_{uuid.uuid4()}.png"
+            final_path = uploads_dir / composite_filename
+            
+            composite_image.save(final_path, 'PNG')
+            
+            # Return URL
+            final_url = f"/uploads/composites/{composite_filename}"
+            print(f"[Kontext Composite] Composite saved: {final_url}")
+            
+            # Record success
+            duration = time.time() - start_time
+            metrics.record_kontext_call(success=True, duration_seconds=duration)
+            
+            # Check generation alert
+            metrics.check_daily_generation_alert(threshold=settings.KONTEXT_DAILY_GENERATION_LIMIT)
+            
+            return final_url
+            
+        except Exception as e:
+            # Record failure
+            duration = time.time() - start_time
+            metrics.record_kontext_call(success=False, duration_seconds=duration)
+            raise
 
 
 class ReplicateVideoService:
@@ -456,7 +896,7 @@ class ReplicateVideoService:
         Generate a video from a seed image using Replicate's img2vid model.
 
         Args:
-            image_url: URL of the seed image
+            image_url: URL of the seed image (can be relative path or full URL)
             duration_seconds: Target duration in seconds (2-12 seconds for Seedance, 3-10 for others)
             fps: Frames per second (default: 8, unused for Seedance/MiniMax)
             motion_bucket_id: Amount of motion (unused, kept for compatibility)
@@ -469,6 +909,29 @@ class ReplicateVideoService:
             Video URL or None if generation failed
         """
         model_id = model or self.default_model
+        
+        # Convert relative image URL to full URL for Replicate API
+        # Replicate requires a proper URI format (http:// or https://)
+        full_image_url = settings.to_full_url(image_url)
+        
+        # For localhost URLs, convert to base64 data URI since Replicate can't access localhost
+        # This is necessary for local development with composites
+        if "localhost" in full_image_url or "127.0.0.1" in full_image_url:
+            # Extract the local file path from the URL
+            # e.g., http://localhost:8000/uploads/composites/file.png -> uploads/composites/file.png
+            local_path = full_image_url.split("/uploads/", 1)[-1]
+            local_file_path = f"uploads/{local_path}"
+            
+            # Check if file exists locally
+            from pathlib import Path
+            if Path(local_file_path).exists():
+                try:
+                    # Convert to base64 data URI
+                    base64_data = await self._image_to_base64(local_file_path)
+                    full_image_url = f"data:image/png;base64,{base64_data}"
+                    print(f"[Video Generation] Converted localhost URL to base64 data URI for Replicate")
+                except Exception as e:
+                    print(f"[Video Generation] Failed to convert to base64: {e}, will try URL anyway")
 
         # Build input parameters based on model type
         if "seedance" in model_id.lower():
@@ -489,7 +952,7 @@ class ReplicateVideoService:
                 resolution = "1080p"  # Higher quality for prod
             
             input_params = {
-                "image": image_url,
+                "image": full_image_url,
                 "prompt": video_prompt,  # Use scene description
                 "duration": clamped_duration,  # Seedance supports 3-10 seconds
                 "resolution": resolution,  # 480p, 720p, or 1080p
@@ -501,7 +964,7 @@ class ReplicateVideoService:
             video_prompt = prompt or "smooth camera movement, high quality video, cinematic"
             
             input_params = {
-                "first_frame_image": image_url,
+                "first_frame_image": full_image_url,
                 "prompt": video_prompt  # Use scene description instead of hard-coded prompt
             }
         else:
@@ -519,7 +982,7 @@ class ReplicateVideoService:
                 num_inference_steps = 50
 
             input_params = {
-                "init_image": image_url,
+                "init_image": full_image_url,
                 "num_frames": num_frames,
                 "num_inference_steps": num_inference_steps,
                 "guidance_scale": 17.5,
@@ -743,4 +1206,23 @@ class ReplicateVideoService:
                 "duration": duration,
                 "error": error_msg
             }
+
+
+# Singleton instances
+_replicate_image_service: Optional[ReplicateImageService] = None
+_replicate_video_service: Optional[ReplicateVideoService] = None
+
+def get_replicate_service() -> ReplicateImageService:
+    """Get or create replicate image service singleton."""
+    global _replicate_image_service
+    if _replicate_image_service is None:
+        _replicate_image_service = ReplicateImageService()
+    return _replicate_image_service
+
+def get_replicate_video_service() -> ReplicateVideoService:
+    """Get or create replicate video service singleton."""
+    global _replicate_video_service
+    if _replicate_video_service is None:
+        _replicate_video_service = ReplicateVideoService()
+    return _replicate_video_service
 

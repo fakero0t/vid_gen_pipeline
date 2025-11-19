@@ -82,7 +82,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
         setCurrentPhase('audio');
         setPhaseProgress({ audio: 0, composition: 0 });
 
-        const selectedMood = moods.find((m) => m.mood_id === selectedMoodId);
+        const selectedMood = moods.find((m) => m.id === selectedMoodId);
         
         if (selectedMood) {
           // Simulate progress for audio generation
@@ -94,7 +94,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
           }, 500);
 
           const audioRequest: AudioGenerationRequest = {
-            mood_name: selectedMood.style_name,
+            mood_name: selectedMood.name,
             mood_description: selectedMood.aesthetic_direction || '',
             emotional_tone: creativeBrief.emotional_tone || [],
             aesthetic_direction: selectedMood.aesthetic_direction || '',

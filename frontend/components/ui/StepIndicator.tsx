@@ -1,14 +1,16 @@
 'use client';
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 const STEPS = [
   { number: 1, label: 'Vision & Brief' },
-  { number: 2, label: 'Mood Selection' },
-  { number: 3, label: 'Storyboard' },
-  { number: 4, label: 'Final Video' },
+  { number: 2, label: 'Product Upload' },
+  { number: 3, label: 'Mood Selection' },
+  { number: 4, label: 'Storyboard' },
+  { number: 5, label: 'Video Clips' },
+  { number: 6, label: 'Final Video' },
 ];
 
 export function StepIndicator({ currentStep }: StepIndicatorProps) {

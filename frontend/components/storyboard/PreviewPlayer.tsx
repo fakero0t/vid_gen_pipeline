@@ -221,7 +221,10 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
           ) : currentPreview.type === 'image' && currentPreview.url ? (
             <div className="relative w-full h-full">
               <Image
-                src={currentPreview.url}
+                src={currentPreview.url.startsWith('http') 
+                  ? currentPreview.url 
+                  : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${currentPreview.url}`
+                }
                 alt={`Scene ${currentSceneIndex + 1}`}
                 fill
                 className="object-contain"
