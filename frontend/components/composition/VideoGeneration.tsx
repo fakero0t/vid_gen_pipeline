@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/appStore';
+import { useStoryboardStore } from '@/store/storyboardStore';
 import { useVideoGeneration } from '@/hooks/useVideoGeneration';
 import { VideoGenerationProgress } from '@/components/video';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,9 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
     setGeneratedClips,
     setVideoJobId,
   } = useAppStore();
+  
+  // Check if using storyboard flow instead
+  const { storyboard, scenes: storyboardScenes } = useStoryboardStore();
 
   const {
     jobStatus: videoStatus,
@@ -49,15 +53,27 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
   const [hasStarted, setHasStarted] = useState(false);
 
   const selectedMood = moods.find((m) => m.id === selectedMoodId);
+  
+  // Check if we're in storyboard mode with existing videos
+  const isStoryboardMode = !!storyboard && storyboardScenes.length > 0;
+  const storyboardVideosReady = isStoryboardMode && storyboardScenes.every(
+    scene => scene.video_url && scene.generation_status.video === 'complete'
+  );
+  const storyboardVideoCount = storyboardScenes.filter(
+    scene => scene.video_url && scene.generation_status.video === 'complete'
+  ).length;
 
   // Debug: Log what's in the store
   useEffect(() => {
     console.log('🔍 Checking for existing clips:', {
       generatedClips,
       length: generatedClips?.length,
-      hasClips: generatedClips && generatedClips.length > 0
+      hasClips: generatedClips && generatedClips.length > 0,
+      isStoryboardMode,
+      storyboardVideosReady,
+      storyboardVideoCount
     });
-  }, []);
+  }, [generatedClips, isStoryboardMode, storyboardVideosReady, storyboardVideoCount]);
 
   // Check if we have existing clips (from previous session or page refresh)
   useEffect(() => {
@@ -296,69 +312,27 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
         </div>
       )}
 
-      {/* Video Generation Status */}
+      {/* Video Clips Ready - Create Final Video */}
       {!hasStarted && !isGenerating && (
         <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 space-y-6">
           <div className="text-center space-y-4">
-            <div className="text-4xl">🎬</div>
-            <h3 className="text-xl font-semibold">
-              {hasExistingClips ? 'Regenerate Video Clips' : 'Ready to Generate Video Clips'}
-            </h3>
+            <div className="text-4xl">✅</div>
+            <h3 className="text-xl font-semibold">Video Clips Ready!</h3>
             <p className="text-muted-foreground">
-              {hasExistingClips ? (
-                <>
-                  You have {generatedClips.length} existing clip{generatedClips.length > 1 ? 's' : ''}.
-                  <br />
-                  Click below to regenerate all {scenePlan?.scenes.filter(s => s.seed_image_url).length || 0} video clips.
-                </>
-              ) : (
-                <>
-                  We'll generate {scenePlan?.scenes.filter(s => s.seed_image_url).length || 0} video clips from your storyboard.
-                  <br />
-                  This may take several minutes.
-                </>
-              )}
+              You have {storyboardVideoCount} video clip{storyboardVideoCount > 1 ? 's' : ''} ready from your storyboard.
+              <br />
+              Click below to combine them with music into your final video.
             </p>
-          </div>
-
-          {/* Scene Validation Display */}
-          {scenePlan && scenePlan.scenes && (
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-medium mb-3">Scene Status:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                {scenePlan.scenes.map((scene) => (
-                  <div
-                    key={scene.scene_number}
-                    className={`flex items-center gap-2 px-3 py-2 rounded ${
-                      scene.seed_image_url
-                        ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                        : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
-                    }`}
-                  >
-                    <span>{scene.seed_image_url ? '✓' : '✗'}</span>
-                    <span>Scene {scene.scene_number}</span>
-                    {!scene.seed_image_url && (
-                      <span className="text-xs">(no image)</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {scenePlan.scenes.some(s => !s.seed_image_url) && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-3">
-                  ⚠️ Some scenes are missing seed images. Only scenes with images will be generated.
-                </p>
-              )}
+            
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center pt-4">
+              <Button onClick={onBack} variant="outline" size="lg">
+                ← Back to Storyboard
+              </Button>
+              <Button onClick={onComplete} size="lg">
+                Create Final Video 🎬
+              </Button>
             </div>
-          )}
-
-          <div className="text-center">
-            <Button
-              onClick={handleStartGeneration}
-              size="lg"
-              disabled={!audioUrl}
-            >
-              {hasExistingClips ? 'Regenerate Video Clips' : 'Start Video Generation'}
-            </Button>
           </div>
         </div>
       )}
