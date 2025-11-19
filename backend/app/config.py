@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     
     # Upload mode configuration
     UPLOAD_MODE: Literal["nerf", "product"] = Field(
-        default="nerf",
+        default="product",
         description="Upload mode: 'nerf' for NeRF pipeline, 'product' for single image"
     )
     
