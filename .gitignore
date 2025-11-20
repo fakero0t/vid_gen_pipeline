@@ -50,3 +50,6 @@ ENV/
 # Task files
 # tasks.json
 # tasks/ 
+
+# Upload directories
+backend/uploads

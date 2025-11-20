@@ -123,7 +123,7 @@ export function ProductImageUpload({ onComplete, onBack }: ProductImageUploadPro
               onClick={() => onComplete(uploadedProduct.product_id)}
               className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Continue to Storyboard →
+              Continue to Mood Selection →
             </button>
             <button
               onClick={handleReplace}

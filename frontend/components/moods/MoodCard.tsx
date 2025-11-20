@@ -20,15 +20,26 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
 
   // Filter successful images only
   const successfulImages = mood.images.filter(img => img.success && img.url);
+  
+  // Debug: Log image state
+  React.useEffect(() => {
+    if (mood.images.length > 0) {
+      console.log(`MoodCard ${mood.name}:`, {
+        totalImages: mood.images.length,
+        successfulImages: successfulImages.length,
+        images: mood.images.map(img => ({
+          hasUrl: !!img.url,
+          success: img.success,
+          url: img.url?.substring(0, 50) + '...'
+        }))
+      });
+    }
+  }, [mood.images, mood.name, successfulImages.length]);
 
   return (
     <div
       className={`
-        relative rounded-lg border-2 transition-all duration-300 cursor-pointer
-        ${isSelected 
-          ? 'border-primary shadow-lg scale-105 ring-2 ring-primary ring-offset-2' 
-          : 'border-border hover:border-primary/50 hover:shadow-md'
-        }
+        relative rounded-lg transition-all duration-300 cursor-pointer w-full max-w-full max-h-[calc(100vh-200px)] overflow-hidden flex flex-col
         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
       `}
       onClick={handleClick}
@@ -63,84 +74,130 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
       )}
 
       {/* Mood header */}
-      <div className="p-4 border-b border-border bg-card">
-        <h3 className="font-semibold text-lg mb-1">{mood.name}</h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">
+      <div className="p-4 md:p-6 border-b border-border bg-card">
+        <h3 className="font-semibold text-lg md:text-xl mb-2">{mood.name}</h3>
+        <p className="text-sm text-muted-foreground mb-4">
           {mood.description}
         </p>
+        
+        {/* Style keywords and Color palette */}
+        {(mood.style_keywords.length > 0 || mood.color_palette.length > 0) && (
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Style keywords */}
+            {mood.style_keywords.length > 0 && (
+              <>
+                {mood.style_keywords.slice(0, 4).map((keyword, idx) => (
+                  <span
+                    key={idx}
+                    className="text-xs px-2.5 py-1 bg-muted/50 rounded-full text-muted-foreground"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+                {mood.style_keywords.length > 4 && (
+                  <span className="text-xs px-2.5 py-1 text-muted-foreground">
+                    +{mood.style_keywords.length - 4} more
+                  </span>
+                )}
+              </>
+            )}
+            
+            {/* Color palette */}
+            {mood.color_palette.length > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground font-medium">Color Palette:</span>
+                <div className="flex gap-1.5">
+                  {mood.color_palette.slice(0, 6).map((color, idx) => (
+                    <div
+                      key={idx}
+                      className="w-4 h-4 rounded-full border border-border/50 shadow-sm"
+                      style={{
+                        backgroundColor: color.startsWith('#') ? color : `var(--${color})`,
+                      }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Image grid */}
-      <div className="p-4">
+      <div className="p-4 md:p-6 flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-4 gap-3 md:gap-4">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="aspect-[9/16] bg-muted rounded animate-pulse"
+                className="bg-muted rounded-lg animate-pulse aspect-[9/16] max-h-[calc(100vh-400px)]"
               />
             ))}
           </div>
         ) : successfulImages.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-4 gap-3 md:gap-4">
             {successfulImages.slice(0, 4).map((image, idx) => (
               <div
-                key={idx}
-                className="relative aspect-[9/16] rounded overflow-hidden bg-muted"
+                key={`${image.url}-${idx}`}
+                className="relative rounded-lg overflow-hidden bg-muted shadow-md hover:shadow-lg transition-shadow aspect-[9/16] max-h-[calc(100vh-400px)]"
               >
                 <Image
                   src={image.url}
                   alt={`${mood.name} mood image ${idx + 1}`}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 25vw"
+                  sizes="(max-width: 768px) 25vw, (max-width: 1024px) 25vw, 25vw"
+                  unoptimized
+                  onError={(e) => {
+                    console.error(`Failed to load image ${idx + 1} for ${mood.name}:`, image.url);
+                  }}
                 />
               </div>
             ))}
           </div>
+        ) : mood.images.length > 0 ? (
+          // Show images even if they're not marked as successful, or show error state
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">
+              {mood.images.length} image(s) available but not loaded yet
+            </div>
+            <div className="grid grid-cols-4 gap-3 md:gap-4">
+              {mood.images.slice(0, 4).map((image, idx) => (
+                <div
+                  key={idx}
+                  className="relative rounded-lg overflow-hidden bg-muted aspect-[9/16] max-h-[calc(100vh-400px)]"
+                >
+                  {image.url ? (
+                    <Image
+                      src={image.url}
+                      alt={`${mood.name} mood image ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 25vw, (max-width: 1024px) 25vw, 25vw"
+                      unoptimized
+                      onError={(e) => {
+                        console.error(`Failed to load image ${idx + 1}:`, image.url);
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      {image.success ? 'Loading...' : 'Failed'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
-          <div className="aspect-[9/16] bg-muted rounded flex items-center justify-center text-muted-foreground text-sm">
+          <div className="bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-sm h-64">
             No images available
           </div>
         )}
       </div>
 
-      {/* Mood metadata footer */}
-      <div className="p-4 border-t border-border bg-muted/30">
-        <div className="flex flex-wrap gap-2 mb-2">
-          {mood.style_keywords.slice(0, 3).map((keyword, idx) => (
-            <span
-              key={idx}
-              className="text-xs px-2 py-1 bg-background rounded-full text-muted-foreground"
-            >
-              {keyword}
-            </span>
-          ))}
-          {mood.style_keywords.length > 3 && (
-            <span className="text-xs px-2 py-1 text-muted-foreground">
-              +{mood.style_keywords.length - 3} more
-            </span>
-          )}
-        </div>
-        {mood.color_palette.length > 0 && (
-          <div className="flex gap-1.5 items-center">
-            <span className="text-xs text-muted-foreground">Colors:</span>
-            <div className="flex gap-1">
-              {mood.color_palette.slice(0, 5).map((color, idx) => (
-                <div
-                  key={idx}
-                  className="w-4 h-4 rounded-full border border-border"
-                  style={{
-                    backgroundColor: color.startsWith('#') ? color : `var(--${color})`,
-                  }}
-                  title={color}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
+
 

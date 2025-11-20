@@ -37,7 +37,7 @@ export function VisionPrompt({
 
   return (
     <div className={cn('flex items-end gap-2 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4', className)}>
-      <div className="flex-1 relative">
+      <div className="flex-1 relative flex items-end">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
