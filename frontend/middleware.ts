@@ -6,7 +6,9 @@ import { NextResponse } from "next/server";
  * Protects routes and handles callback URL preservation
  */
 const isProtectedRoute = createRouteMatcher([
+  "/",
   "/projects(.*)",
+  "/project(.*)",
   "/brand-assets(.*)",
 ]);
 
@@ -15,8 +17,13 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Check if the route is protected
   if (isProtectedRoute(req)) {
-    // If user is not authenticated, redirect to sign-in with callback URL
+    // If user is not authenticated, redirect to sign-in
     if (!userId) {
+      // For root path, redirect to sign-in without callback (will go to projects after sign-in)
+      if (req.nextUrl.pathname === '/') {
+        return NextResponse.redirect(new URL("/sign-in", req.url));
+      }
+      // For other protected routes, redirect with callback URL
       const signInUrl = new URL("/sign-in", req.url);
       signInUrl.searchParams.set("callbackUrl", req.url);
       return NextResponse.redirect(signInUrl);

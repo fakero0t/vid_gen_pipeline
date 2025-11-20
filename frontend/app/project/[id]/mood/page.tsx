@@ -4,9 +4,11 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useMoodGeneration } from '@/hooks/useMoodGeneration';
 import { useAppStore } from '@/store/appStore';
+import { useProjectStore } from '@/store/projectStore';
 import { MoodBoard } from '@/components/moods/MoodBoard';
 import { StepSkeleton } from '@/components/ui/LoadingFallback';
 import type { MoodGenerationRequest } from '@/types/mood.types';
+import { STEPS } from '@/lib/steps';
 
 /**
  * Mood selection page - allows users to select a mood board
@@ -22,6 +24,28 @@ export default function MoodPage() {
     selectedMoodId,
     setCurrentStep,
   } = useAppStore();
+  const { loadProject, getCurrentProject, currentProjectId } = useProjectStore();
+
+  // Load project on mount
+  useEffect(() => {
+    if (projectId && projectId !== currentProjectId) {
+      try {
+        loadProject(projectId);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        router.push('/projects');
+      }
+    }
+  }, [projectId, currentProjectId, loadProject, router]);
+
+  // Verify project exists
+  useEffect(() => {
+    const project = getCurrentProject();
+    if (projectId && !project) {
+      console.error('Project not found:', projectId);
+      router.push('/projects');
+    }
+  }, [projectId, getCurrentProject, router]);
 
   const {
     isLoading: isMoodLoading,
@@ -67,14 +91,14 @@ export default function MoodPage() {
 
   const handleContinue = () => {
     // Navigate to scenes page
-    setCurrentStep(4);
+    setCurrentStep(STEPS.SCENES);
     router.push(`/project/${projectId}/scenes`);
   };
 
   const handleBack = () => {
-    // Navigate back to product upload
-    setCurrentStep(2);
-    router.push('/');
+    // Navigate back to chat
+    setCurrentStep(STEPS.CHAT);
+    router.push(`/project/${projectId}/chat`);
   };
 
   return (
@@ -98,7 +122,7 @@ export default function MoodPage() {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Back to Product Upload
+          Back to Chat
         </button>
 
         {/* Mood Board Component */}

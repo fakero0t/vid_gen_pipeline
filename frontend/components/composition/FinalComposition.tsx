@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/appStore';
-import { useStoryboardStore } from '@/store/storyboardStore';
+import { useSceneStore } from '@/store/sceneStore';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useAudioGeneration } from '@/hooks/useAudioGeneration';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
   } = useAppStore();
   
   // Get storyboard scenes with videos
-  const { storyboard, scenes } = useStoryboardStore();
+  const { storyboard, scenes } = useSceneStore();
 
   const {
     composeVideo,

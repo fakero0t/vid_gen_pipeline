@@ -1,15 +1,18 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Storyboard, StoryboardScene, SSESceneUpdate } from '@/types/storyboard.types';
 import * as storyboardAPI from '@/lib/api/storyboard';
 import { retryOperation, StoryboardError, ERROR_CODES, isSensitiveContentError, extractErrorMessage } from '@/lib/errors';
 
 /**
- * Storyboard Store
+ * Scene Store
  *
- * Manages storyboard state with automatic persistence and real-time updates via SSE.
+ * Manages scene/storyboard state with real-time updates via SSE.
+ * 
+ * NOTE: This store is NOT persisted to localStorage directly.
+ * Storyboards are stored in the backend database and referenced by ID in the projectStore.
+ * Each project has a storyboardId that's used to load the correct storyboard from the API.
  */
-interface StoryboardState {
+interface SceneState {
   // Core data
   storyboard: Storyboard | null;
   scenes: StoryboardScene[];
@@ -56,31 +59,27 @@ interface StoryboardState {
   reset: () => void;
 }
 
-const STORAGE_KEY = 'jant-vid-pipe-storyboard-state';
-
-export const useStoryboardStore = create<StoryboardState>()(
-  persist(
-    (set, get) => ({
-      // Initial state
-      storyboard: null,
-      scenes: [],
-      currentSceneIndex: 0,
-      sseConnection: null,
-      isLoading: false,
-      isSaving: false,
-      isRegeneratingAll: false,
-      error: null,
+export const useSceneStore = create<SceneState>((set, get) => ({
+  // Initial state
+  storyboard: null,
+  scenes: [],
+  currentSceneIndex: 0,
+  sseConnection: null,
+  isLoading: false,
+  isSaving: false,
+  isRegeneratingAll: false,
+  error: null,
 
       // Initialize new storyboard
       initializeStoryboard: async (creativeBrief, selectedMood) => {
         // Prevent duplicate initialization calls
         const currentState = get();
         if (currentState.isLoading || currentState.storyboard) {
-          console.log('[Store] Skipping duplicate initializeStoryboard call (already loading or storyboard exists)');
+          console.log('[StoryboardStore] Skipping duplicate initializeStoryboard call (already loading or storyboard exists)');
           return;
         }
 
-        console.log('[Store] Starting storyboard initialization');
+        console.log('[StoryboardStore] Starting storyboard initialization for product:', creativeBrief?.product_name);
         set({ isLoading: true, error: null });
         try {
           const response = await retryOperation(
@@ -98,7 +97,11 @@ export const useStoryboardStore = create<StoryboardState>()(
           );
 
           if (response.success) {
-            console.log('[Store] Storyboard initialized:', response.storyboard.storyboard_id);
+            console.log('[StoryboardStore] Storyboard initialized:', {
+              storyboardId: response.storyboard.storyboard_id,
+              product: creativeBrief?.product_name,
+              sceneCount: response.scenes.length
+            });
             set({
               storyboard: response.storyboard,
               scenes: response.scenes,
@@ -127,6 +130,7 @@ export const useStoryboardStore = create<StoryboardState>()(
 
       // Load existing storyboard
       loadStoryboard: async (storyboardId) => {
+        console.log('[StoryboardStore] Loading storyboard:', storyboardId);
         set({ isLoading: true, error: null });
         try {
           const { storyboard, scenes } = await retryOperation(
@@ -136,6 +140,13 @@ export const useStoryboardStore = create<StoryboardState>()(
               operationName: 'Load Storyboard',
             }
           );
+
+          console.log('[StoryboardStore] Storyboard loaded successfully:', {
+            storyboardId: storyboard.storyboard_id,
+            creativeBriefProduct: storyboard.creative_brief?.product_name,
+            sceneCount: scenes.length,
+            firstSceneText: scenes[0]?.text?.substring(0, 50)
+          });
 
           set({
             storyboard,
@@ -162,6 +173,30 @@ export const useStoryboardStore = create<StoryboardState>()(
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to load storyboard';
+          
+          // Check if it's a 404 (storyboard not found)
+          const isNotFound = errorMessage.includes('404') || 
+                            errorMessage.includes('not found') ||
+                            errorMessage.includes('Backend endpoint not found');
+          
+          if (isNotFound) {
+            console.warn('[StoryboardStore] Storyboard not found, clearing reference:', storyboardId);
+            // Reset storyboard state instead of throwing error
+            set({
+              storyboard: null,
+              scenes: [],
+              isLoading: false,
+              error: null, // Don't show error for missing storyboard
+            });
+            // Return a special error that projectStore can handle
+            throw new StoryboardError(
+              'STORYBOARD_NOT_FOUND',
+              ERROR_CODES.STORYBOARD_LOAD_FAILED,
+              false, // Not retryable
+              storyboardId
+            );
+          }
+          
           set({
             error: errorMessage,
             isLoading: false,
@@ -648,36 +683,22 @@ export const useStoryboardStore = create<StoryboardState>()(
       // Set error
       setError: (error) => set({ error }),
 
-      // Reset state
-      reset: () => {
-        get().disconnectSSE();
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-        set({
-          storyboard: null,
-          scenes: [],
-          currentSceneIndex: 0,
-          sseConnection: null,
-          isLoading: false,
-          isSaving: false,
-          isRegeneratingAll: false,
-          error: null,
-        });
-      },
-    }),
-    {
-      name: STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
-      // Only persist storyboard and scenes, not connection state
-      partialize: (state) => ({
-        storyboard: state.storyboard,
-        scenes: state.scenes,
-        currentSceneIndex: state.currentSceneIndex,
-      }),
-    }
-  )
-);
+  // Reset state
+  reset: () => {
+    console.log('[StoryboardStore] Resetting storyboard state');
+    get().disconnectSSE();
+    set({
+      storyboard: null,
+      scenes: [],
+      currentSceneIndex: 0,
+      sseConnection: null,
+      isLoading: false,
+      isSaving: false,
+      isRegeneratingAll: false,
+      error: null,
+    });
+  },
+}));
 
 /**
  * Polling fallback for scene status when SSE is not available

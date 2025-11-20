@@ -1,6 +1,23 @@
 # AI Video Generation Pipeline
 
-A guided, multi-step AI video generation pipeline that transforms user vision into 30-second vertical videos optimized for social media. Built with Next.js 16 (App Router) and FastAPI.
+A project-based AI video generation pipeline that transforms user vision into 30-second vertical videos optimized for social media. Built with Next.js 16 (App Router) and FastAPI.
+
+## 🎯 User Flow
+
+The application follows a streamlined 4-step workflow within projects:
+
+1. **Projects Dashboard** - Create, manage, and switch between multiple video projects
+2. **Vision & Brief** (`/project/[id]/chat`) - Conversational AI interface to capture your video concept
+3. **Mood Selection** (`/project/[id]/mood`) - Choose from AI-generated mood boards
+4. **Scene Storyboard** (`/project/[id]/scenes`) - Progressive scene generation (text → image → video)
+5. **Final Composition** (`/project/[id]/final`) - Generate the complete video with audio
+
+### State Management
+
+- **Project-Based**: All work is organized into projects with automatic saving
+- **Multi-Project Support**: Switch between projects without losing progress
+- **Persistent State**: Project data saves to browser localStorage
+- **Scene Store**: Real-time scene updates via Server-Sent Events (SSE)
 
 ## 🚀 Quick Start
 
@@ -45,25 +62,7 @@ A guided, multi-step AI video generation pipeline that transforms user vision in
    pip install -r requirements.txt
    ```
 
-<<<<<<< Updated upstream
-5. **Configure environment variables**
-=======
-5. **Configure Taskmaster MCP (for Cursor users)**
-
-   If you're using Cursor with Taskmaster, set up the MCP server:
-   
-   **Option A: Project-level config (recommended for teams)**
-   ```bash
-   cp .cursor/mcp.json.example .cursor/mcp.json
-   ```
-   Then edit `.cursor/mcp.json` and add your API keys. You only need the keys for the AI providers you plan to use.
-   
-   **Option B: Global config (recommended for personal use)**
-   Edit `~/.cursor/mcp.json` and add the `task-master-ai` server configuration (see `.cursor/mcp.json.example` for reference).
-   
-   > 💡 **Note:** The project-level `.cursor/mcp.json` is gitignored to protect your API keys. Each team member should create their own.
-
-6. **Set up Modal (for NeRF processing - optional for MVP)**
+5. **Set up Modal (for NeRF processing - optional for MVP)**
 
    If you want to use NeRF product video generation:
    
@@ -80,8 +79,7 @@ A guided, multi-step AI video generation pipeline that transforms user vision in
    
    Get your Modal credentials from [modal.com/settings](https://modal.com/settings) for use in `.env`.
 
-7. **Configure environment variables**
->>>>>>> Stashed changes
+6. **Configure environment variables**
 
    **Backend** (`backend/.env`):
    ```env
@@ -179,14 +177,29 @@ uvicorn app.main:app --reload --port 8000
 
 ```
 jant-vid-pipe/
-├── frontend/              # Next.js 16 App (App Router)
-│   ├── app/              # App Router pages and API routes
-│   ├── components/       # React components
-│   ├── lib/              # Utilities and API client
-│   ├── store/            # Zustand state management
-│   └── types/            # TypeScript type definitions
+├── frontend/                    # Next.js 16 App (App Router)
+│   ├── app/                    # App Router pages and API routes
+│   │   ├── projects/           # Projects dashboard
+│   │   ├── project/[id]/       # Project-specific pages
+│   │   │   ├── chat/           # Step 1: Vision & Brief
+│   │   │   ├── mood/           # Step 2: Mood Selection
+│   │   │   ├── scenes/         # Step 3: Scene Storyboard
+│   │   │   └── final/          # Step 4: Final Composition
+│   │   ├── sign-in/            # Authentication
+│   │   └── sign-up/            # User registration
+│   ├── components/             # React components
+│   │   ├── storyboard/         # Scene carousel & timeline
+│   │   ├── moods/              # Mood gallery
+│   │   └── ui/                 # Shared UI components
+│   ├── lib/                    # Utilities and API client
+│   ├── store/                  # Zustand state management
+│   │   ├── appStore.ts         # Workflow state (ephemeral)
+│   │   ├── projectStore.ts     # Project management (persistent)
+│   │   └── sceneStore.ts       # Scene state (ephemeral, API-backed)
+│   ├── types/                  # TypeScript type definitions
+│   └── hooks/                  # Custom React hooks
 │
-├── backend/              # FastAPI application
+├── backend/                    # FastAPI application
 │   ├── app/
 │   │   ├── main.py      # FastAPI app entry point
 │   │   ├── config.py    # Configuration settings
@@ -225,10 +238,12 @@ jant-vid-pipe/
 ### Frontend
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
+- **Authentication:** Clerk (user management & auth)
 - **UI Components:** shadcn/ui
 - **Styling:** Tailwind CSS v4
-- **State Management:** Zustand
+- **State Management:** Zustand (3 stores: appStore, projectStore, sceneStore)
 - **AI/Chat:** Vercel AI SDK with OpenAI
+- **Real-time Updates:** Server-Sent Events (SSE)
 - **Package Manager:** pnpm
 
 ### Backend
@@ -245,9 +260,19 @@ jant-vid-pipe/
 
 ## 📚 Documentation
 
-- **[Product Requirements Document (PRD)](docs/prd.md)** - Complete product specifications and user flows
-- **[Architecture Documentation](docs/architecture.md)** - Technical architecture, API structure, and design decisions
-- **[NeRF Implementation Guide](nerf_md.md)** - NeRF processing pipeline and Modal integration
+### User Documentation
+- **[User Guide](docs/USER_GUIDE.md)** - Complete walkthrough of the 4-step workflow
+- **[Architecture Overview](docs/architecture.md)** - System architecture and technical design
+
+### Developer Documentation
+- **[Frontend README](frontend/README.md)** - Frontend architecture and state management
+- **[Implementation Notes](docs/implementation-notes.md)** - Technical implementation details and decisions
+- **[Storyboard Components](frontend/components/storyboard/README.md)** - Scene carousel and timeline documentation
+- **[Error Handling](frontend/components/storyboard/ERROR_HANDLING.md)** - Comprehensive error handling system
+
+### Deployment & Testing
+- **[Composite Testing Guide](docs/composite_testing.md)** - Testing guide for product compositing
+- **[Composite Deployment Guide](docs/composite_deployment.md)** - Deployment instructions for compositing features
 - **[Modal Functions README](modal_functions/README.md)** - Setup and deployment guide for Modal functions
 
 ## 🎬 NeRF Product Videos (Optional Feature)

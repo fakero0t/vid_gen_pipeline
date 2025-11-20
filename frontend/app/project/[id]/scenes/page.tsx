@@ -5,8 +5,10 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { StoryboardCarousel } from '@/components/storyboard';
 import { useStoryboard, useStoryboardRecovery } from '@/hooks/useStoryboard';
 import { useAppStore } from '@/store/appStore';
+import { useProjectStore } from '@/store/projectStore';
 import { ToastProvider, useToast } from '@/components/ui/Toast';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { STEPS } from '@/lib/steps';
 
 /**
  * Unified Storyboard Interface Page
@@ -20,10 +22,36 @@ function ScenesPageContent() {
   const params = useParams();
   const projectId = params.id as string;
   const searchParams = useSearchParams();
-  const storyboardId = searchParams.get('id');
+  const urlStoryboardId = searchParams.get('id');
 
   // App-level state for creative brief and mood
   const { creativeBrief, moods, selectedMoodId, setCurrentStep, setStoryboardCompleted } = useAppStore();
+  const { loadProject, getCurrentProject, currentProjectId } = useProjectStore();
+  
+  // Get storyboardId from URL or from current project
+  const currentProject = getCurrentProject();
+  const storyboardId = urlStoryboardId || currentProject?.storyboardId;
+
+  // Load project on mount
+  useEffect(() => {
+    if (projectId && projectId !== currentProjectId) {
+      try {
+        loadProject(projectId);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        router.push('/projects');
+      }
+    }
+  }, [projectId, currentProjectId, loadProject, router]);
+
+  // Verify project exists
+  useEffect(() => {
+    const project = getCurrentProject();
+    if (projectId && !project) {
+      console.error('Project not found:', projectId);
+      router.push('/projects');
+    }
+  }, [projectId, getCurrentProject, router]);
 
   // Storyboard store
   const {
@@ -50,24 +78,53 @@ function ScenesPageContent() {
 
   // Initialize or load storyboard
   useEffect(() => {
-    // Skip if already loading or if storyboard exists and matches the URL
+    // Skip if already loading or if storyboard exists and matches
     if (isLoading || isRecovering) return;
     if (storyboard && storyboardId && storyboard.storyboard_id === storyboardId) return;
-    if (storyboard && !storyboardId) return; // Already have a storyboard for new creation
-
+    
+    // If we have a storyboardId (from URL or project), load it
     if (storyboardId) {
-      // Load existing storyboard from URL
-      console.log('[Page] Loading storyboard from URL:', storyboardId);
+      console.log('[Page] Loading storyboard:', storyboardId, urlStoryboardId ? '(from URL)' : '(from project)');
       loadStoryboard(storyboardId);
-    } else if (!storyboard && creativeBrief && selectedMoodId) {
-      // Initialize new storyboard from creative brief and mood
+    } 
+    // Only initialize new storyboard if we don't have one and we have the required data
+    else if (!storyboard && creativeBrief && selectedMoodId) {
       const selectedMood = moods.find((m) => m.id === selectedMoodId);
       if (selectedMood) {
         console.log('[Page] Initializing new storyboard');
         initializeStoryboard(creativeBrief, selectedMood);
       }
     }
-  }, [storyboardId, storyboard, creativeBrief, selectedMoodId, moods, isLoading, isRecovering, loadStoryboard, initializeStoryboard]);
+  }, [storyboardId, urlStoryboardId, storyboard, creativeBrief, selectedMoodId, moods, isLoading, isRecovering, loadStoryboard, initializeStoryboard]);
+
+  // Save storyboardId to project immediately when storyboard is created
+  useEffect(() => {
+    if (storyboard && currentProjectId) {
+      const project = getCurrentProject();
+      // If project doesn't have this storyboardId yet, save it immediately
+      if (project && project.storyboardId !== storyboard.storyboard_id) {
+        console.log('[Page] Saving new storyboardId to project:', storyboard.storyboard_id);
+        useProjectStore.getState().saveCurrentProject();
+      }
+    }
+  }, [storyboard, currentProjectId, getCurrentProject]);
+
+  // Update project thumbnail when scene images are generated
+  useEffect(() => {
+    if (scenes.length > 0 && currentProjectId) {
+      const firstSceneWithImage = scenes.find(scene => scene.image_url);
+      if (firstSceneWithImage) {
+        const project = getCurrentProject();
+        // Update thumbnail if it's different or doesn't exist
+        if (project && project.thumbnail !== firstSceneWithImage.image_url) {
+          console.log('[Page] Updating project thumbnail with scene image');
+          useProjectStore.getState().updateProject(currentProjectId, {
+            thumbnail: firstSceneWithImage.image_url
+          });
+        }
+      }
+    }
+  }, [scenes, currentProjectId, getCurrentProject]);
 
   // Handle operations with toast feedback
   const handleApproveText = async (sceneId: string) => {
@@ -221,10 +278,10 @@ function ScenesPageContent() {
 
   // Handle generate final video
   const handleGenerateFinalVideo = () => {
-    // Mark storyboard as completed and navigate to final composition (Step 4)
+    // Mark storyboard as completed and navigate to final composition
     setStoryboardCompleted(true);
-    setCurrentStep(4);
-    router.push(`/project/${projectId}?step=4`);
+    setCurrentStep(STEPS.FINAL);
+    router.push(`/project/${projectId}/final`);
   };
 
   // Loading state
@@ -235,7 +292,7 @@ function ScenesPageContent() {
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="text-muted-foreground">
-              {isRecovering ? 'Recovering your storyboard...' : 'Loading storyboard...'}
+              Loading Storyboard
             </p>
           </div>
         </div>
@@ -267,7 +324,7 @@ function ScenesPageContent() {
               </div>
             </div>
             <button
-              onClick={() => router.push(`/project/${projectId}`)}
+              onClick={() => router.push(`/project/${projectId}/chat`)}
               className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Return to Project

@@ -109,7 +109,7 @@ function StoryboardPage() {
 
 ## State Management
 
-The components integrate with the Zustand storyboard store (`store/storyboardStore.ts`) which provides:
+The components integrate with the Zustand scene store (`store/sceneStore.ts`) which provides:
 - Auto-save to localStorage
 - Server-Sent Events (SSE) for real-time updates
 - Polling fallback when SSE unavailable

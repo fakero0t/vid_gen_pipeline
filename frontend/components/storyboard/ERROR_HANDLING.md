@@ -80,7 +80,7 @@ await retryOperation(
 
 ### Store Operations with Retry
 
-The `storyboardStore.ts` wraps all API operations with retry logic:
+The `sceneStore.ts` wraps all API operations with retry logic:
 
 **Text operations:**
 - `approveText()` - 2 retries

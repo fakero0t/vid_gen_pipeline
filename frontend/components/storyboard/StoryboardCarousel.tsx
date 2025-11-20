@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Storyboard, StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
 import { SceneTimelineNew } from './SceneTimelineNew';
@@ -51,6 +51,27 @@ export function StoryboardCarousel({
   
   // Audio generation hook
   const { generateAudio, isLoading: isGeneratingAudio, error: audioError } = useAudioGeneration();
+
+  // Audio ref to stop playback when switching projects
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Stop audio when audioUrl changes or component unmounts
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      // Stop and reset audio when audioUrl changes
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    
+    // Cleanup: stop audio when component unmounts
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [audioUrl]);
 
   // Get current scene based on scene_order
   const currentSceneId = storyboard.scene_order[currentSceneIndex];
@@ -170,6 +191,7 @@ export function StoryboardCarousel({
                 <span className="text-xl">🎵</span>
                 <div className="flex-1">
                   <audio
+                    ref={audioRef}
                     controls
                     src={audioUrl}
                     className="w-full"

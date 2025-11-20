@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
+import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
  */
 export default function SignInPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { userId } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [clerkError, setClerkError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function SignInPage() {
   // Get callback URL from query params or default to /projects
   const callbackUrl = searchParams.get("callbackUrl") || "/projects";
 
+  // All hooks must be called before any conditional returns
   const {
     register,
     handleSubmit,
@@ -36,6 +38,22 @@ export default function SignInPage() {
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isLoaded && userId) {
+      router.replace(callbackUrl);
+    }
+  }, [isLoaded, userId, callbackUrl, router]);
+
+  // Don't render form if already authenticated (redirecting)
+  if (isLoaded && userId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-muted-foreground">Redirecting...</div>
+      </div>
+    );
+  }
 
   const onSubmit = async (data: SignInFormData) => {
     if (!isLoaded) return;

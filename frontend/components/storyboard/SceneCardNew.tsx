@@ -6,7 +6,7 @@ import type { StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
 import { config } from '@/lib/config';
 import { useAppStore } from '@/store/appStore';
-import { useStoryboardStore } from '@/store/storyboardStore';
+import { useSceneStore } from '@/store/sceneStore';
 
 interface SceneCardNewProps {
   scene: StoryboardScene;
@@ -401,7 +401,7 @@ export function SceneCardNew({
 // Product Toggle Section Component
 function ProductToggleSection({ scene }: { scene: StoryboardScene }) {
   const uploadedProduct = useAppStore((s) => s.uploadedProduct);
-  const { enableProductComposite, disableProductComposite } = useStoryboardStore();
+  const { enableProductComposite, disableProductComposite } = useSceneStore();
   const [isToggling, setIsToggling] = useState(false);
 
   const handleToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {

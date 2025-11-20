@@ -6,8 +6,10 @@ import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { SkipToContent } from '@/components/ui/SkipToContent';
 import { useVisionChat } from '@/hooks/useVisionChat';
 import { useAppStore } from '@/store/appStore';
+import { useProjectStore } from '@/store/projectStore';
 import { ToastProvider } from '@/components/ui/Toast';
 import * as LazyComponents from '@/components/LazyComponents';
+import { STEPS } from '@/lib/steps';
 
 /**
  * Chat page for vision chat interface and creative brief generation.
@@ -17,6 +19,28 @@ function ChatContent() {
   const params = useParams();
   const projectId = params.id as string;
   const { creativeBrief, setCreativeBrief } = useAppStore();
+  const { loadProject, getCurrentProject, currentProjectId } = useProjectStore();
+
+  // Load project on mount
+  useEffect(() => {
+    if (projectId && projectId !== currentProjectId) {
+      try {
+        loadProject(projectId);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        router.push('/projects');
+      }
+    }
+  }, [projectId, currentProjectId, loadProject, router]);
+
+  // Verify project exists
+  useEffect(() => {
+    const project = getCurrentProject();
+    if (projectId && !project) {
+      console.error('Project not found:', projectId);
+      router.push('/projects');
+    }
+  }, [projectId, getCurrentProject, router]);
 
   // Step 1: Vision Chat
   const {
@@ -38,10 +62,10 @@ function ChatContent() {
     }
   }, [chatBrief, creativeBrief, setCreativeBrief]);
 
-  const handleContinueToProductUpload = () => {
-    // Set step to 2 and navigate to main page
-    useAppStore.getState().setCurrentStep(2);
-    router.push('/');
+  const handleContinueToMood = () => {
+    // Set step to mood and navigate to mood page
+    useAppStore.getState().setCurrentStep(STEPS.MOOD);
+    router.push(`/project/${projectId}/mood`);
   };
 
   return (
@@ -70,7 +94,7 @@ function ChatContent() {
                 <Suspense fallback={<LoadingFallback message="Loading summary..." />}>
                   <LazyComponents.CreativeBriefSummary
                     brief={activeBrief}
-                    onContinue={handleContinueToProductUpload}
+                    onContinue={handleContinueToMood}
                   />
                 </Suspense>
               </div>

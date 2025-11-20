@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStoryboardStore } from '@/store/storyboardStore';
+import { useSceneStore } from '@/store/sceneStore';
 
 /**
  * Custom hook for storyboard operations
@@ -8,7 +8,7 @@ import { useStoryboardStore } from '@/store/storyboardStore';
  * with automatic SSE connection management and session recovery.
  */
 export function useStoryboard() {
-  const store = useStoryboardStore();
+  const store = useSceneStore();
 
   // Auto-connect SSE when storyboard is loaded
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useStoryboard() {
  * if a storyboard ID is present in the persisted state.
  */
 export function useStoryboardRecovery() {
-  const store = useStoryboardStore();
+  const store = useSceneStore();
 
   useEffect(() => {
     // Only run once on mount
@@ -54,7 +54,7 @@ export function useStoryboardRecovery() {
  * Hook for getting current scene
  */
 export function useCurrentScene() {
-  const { storyboard, scenes, currentSceneIndex } = useStoryboardStore();
+  const { storyboard, scenes, currentSceneIndex } = useSceneStore();
 
   if (!storyboard || scenes.length === 0) {
     return null;
@@ -68,7 +68,7 @@ export function useCurrentScene() {
  * Hook for checking if all scenes are ready for final video
  */
 export function useAllScenesReady() {
-  const { scenes } = useStoryboardStore();
+  const { scenes } = useSceneStore();
 
   const allReady = scenes.every(
     (scene) => scene.state === 'video' && scene.generation_status.video === 'complete'

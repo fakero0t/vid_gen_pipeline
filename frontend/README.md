@@ -1,8 +1,191 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend - AI Video Generation Pipeline
 
-## Environment Variables
+A Next.js 16 (App Router) application with project-based workflow management for AI video generation.
 
-Create a `.env.local` file in the frontend directory with the following variables:
+## 🎯 Architecture Overview
+
+### Project-Based Workflow
+
+The application is built around a **project-based architecture** where each video is a separate project with its own isolated state. Users can:
+- Create multiple projects
+- Switch between projects without losing progress
+- Automatically save state to browser localStorage
+- Resume work from any step in the pipeline
+
+### State Management (Zustand)
+
+Three specialized stores manage different aspects of the application:
+
+#### 1. **appStore** (Ephemeral Workflow State)
+- **Purpose**: Tracks the current workflow progress
+- **Persistence**: NOT persisted directly (managed by projectStore)
+- **Contains**:
+  - `currentStep` - Current pipeline step ('chat', 'mood', 'scenes', 'final')
+  - `creativeBrief` - AI-generated creative brief from chat
+  - `moods` - Array of generated mood boards
+  - `selectedMoodId` - Selected mood for the project
+  - `storyboardCompleted` - Flag for scene completion
+  - `audioUrl`, `compositionJobId`, `finalVideo` - Final composition data
+
+#### 2. **projectStore** (Project Management - Persistent)
+- **Purpose**: Manages multiple projects and their lifecycle
+- **Persistence**: Saves to `localStorage` as `jant-vid-pipe-projects`
+- **Contains**:
+  - List of all projects
+  - Current project ID
+  - Project CRUD operations (create, update, delete, duplicate, rename)
+  - Auto-save functionality (debounced to prevent excessive writes)
+  - Thumbnail generation for projects
+
+#### 3. **sceneStore** (Scene/Storyboard State - Ephemeral)
+- **Purpose**: Manages scene generation and real-time updates
+- **Persistence**: NOT persisted (loads from backend database via API)
+- **Contains**:
+  - Storyboard metadata
+  - Array of scenes with their current states (text, image, video)
+  - Scene operations (approve, regenerate, edit)
+  - SSE connection for real-time generation updates
+  - Loading/error states
+
+### User Flow
+
+```
+Authentication (Clerk)
+    ↓
+Projects Dashboard (/projects)
+    ↓
+Create/Select Project
+    ↓
+┌─────────────────────────────────────┐
+│  Project Pipeline (4 Steps)        │
+├─────────────────────────────────────┤
+│ 1. Vision & Brief (/chat)          │
+│    - Conversational AI interface   │
+│    - Creative brief generation     │
+│                                     │
+│ 2. Mood Selection (/mood)          │
+│    - AI-generated mood boards      │
+│    - Visual style selection        │
+│                                     │
+│ 3. Scene Storyboard (/scenes)      │
+│    - Progressive scene workflow    │
+│    - Text → Image → Video          │
+│    - Real-time SSE updates         │
+│                                     │
+│ 4. Final Composition (/final)      │
+│    - Audio generation              │
+│    - Video composition             │
+│    - Final export                  │
+└─────────────────────────────────────┘
+```
+
+## 📂 Directory Structure
+
+```
+frontend/
+├── app/                          # Next.js App Router
+│   ├── layout.tsx                # Root layout with Clerk provider
+│   ├── page.tsx                  # Landing page (redirects to /projects)
+│   ├── projects/                 # Projects dashboard
+│   │   └── page.tsx              # Project list, create, manage
+│   ├── project/[id]/             # Dynamic project routes
+│   │   ├── chat/                 # Step 1: Vision & Brief
+│   │   ├── mood/                 # Step 2: Mood Selection
+│   │   ├── scenes/               # Step 3: Scene Storyboard
+│   │   └── final/                # Step 4: Final Composition
+│   ├── sign-in/                  # Clerk sign-in
+│   ├── sign-up/                  # Clerk sign-up
+│   └── api/                      # API routes
+│       └── chat/                 # OpenAI chat endpoint
+│
+├── components/
+│   ├── storyboard/               # Scene components
+│   │   ├── StoryboardCarousel.tsx      # Main carousel container
+│   │   ├── SceneCardNew.tsx            # Individual scene card
+│   │   ├── SceneTimelineNew.tsx        # Visual timeline
+│   │   ├── README.md                   # Component documentation
+│   │   └── ERROR_HANDLING.md           # Error handling guide
+│   ├── moods/                    # Mood selection components
+│   │   ├── MoodGallery.tsx
+│   │   └── MoodCard.tsx
+│   ├── projects/                 # Project management components
+│   │   └── ProjectCard.tsx
+│   ├── auth/                     # Authentication components
+│   └── ui/                       # Shared UI components (shadcn/ui)
+│
+├── store/
+│   ├── appStore.ts               # Workflow state (ephemeral)
+│   ├── projectStore.ts           # Project management (persistent)
+│   └── sceneStore.ts             # Scene state (ephemeral)
+│
+├── lib/
+│   ├── api/                      # API client functions
+│   │   ├── storyboard.ts         # Storyboard API
+│   │   └── moods.ts              # Mood generation API
+│   ├── auth/                     # Auth utilities
+│   ├── steps.ts                  # Step definitions and utilities
+│   ├── errors.ts                 # Error handling utilities
+│   └── utils.ts                  # Shared utilities
+│
+├── hooks/
+│   ├── useStoryboard.ts          # Storyboard hook with SSE
+│   ├── useMoodGeneration.ts      # Mood generation hook
+│   └── ...                       # Other custom hooks
+│
+└── types/
+    ├── project.types.ts          # Project and state types
+    ├── storyboard.types.ts       # Scene and storyboard types
+    ├── mood.types.ts             # Mood types
+    └── ...                       # Other type definitions
+```
+
+## 🔑 Key Features
+
+### 1. Project Management
+- Create unlimited projects
+- Switch between projects seamlessly
+- Automatic state saving (debounced every 500ms)
+- Project thumbnails (from scene images or mood images)
+- Duplicate/rename/delete projects
+
+### 2. Real-Time Scene Generation
+- Server-Sent Events (SSE) for live updates
+- Progressive workflow: Text → Image → Video
+- Polling fallback when SSE unavailable
+- Per-scene state management
+- Error handling with automatic retry
+
+### 3. Authentication (Clerk)
+- Social login (Google, GitHub, etc.)
+- Session management
+- Protected routes with middleware
+- User avatar and profile
+
+### 4. Responsive Design
+- Mobile-first approach
+- Touch-optimized carousels
+- Responsive typography (Tailwind CSS v4)
+- Accessible components (ARIA labels, keyboard navigation)
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- pnpm package manager
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env.local
+```
+
+### Environment Variables
+
+Create `.env.local`:
 
 ```env
 # OpenAI API Key (for Vercel AI SDK chat endpoint)
@@ -10,39 +193,90 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 # FastAPI Backend URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Clerk Authentication (get from clerk.dev)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/projects
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/projects
 ```
 
-## Getting Started
-
-First, install dependencies:
+### Development
 
 ```bash
-pnpm install
-```
-
-Then, run the development server:
-
-```bash
+# Run development server
 pnpm dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Building for Production
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Build the application
+pnpm build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start production server
+pnpm start
+```
 
-## Learn More
+## 🧪 Testing
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Run linter
+pnpm lint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Type check
+pnpm type-check
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📚 Documentation
 
-## Deploy on Vercel
+- **[Storyboard Components](components/storyboard/README.md)** - Scene carousel and timeline
+- **[Error Handling](components/storyboard/ERROR_HANDLING.md)** - Error handling system
+- **[State Management](#state-management-zustand)** - Store architecture (see above)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Authentication**: Clerk
+- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS v4
+- **State Management**: Zustand
+- **AI/Chat**: Vercel AI SDK with OpenAI
+- **Real-time**: Server-Sent Events (SSE)
+- **Package Manager**: pnpm
+
+## 🎨 Design System
+
+- **Colors**: CSS variables with dark/light mode support
+- **Typography**: Geist font family (optimized by next/font)
+- **Components**: shadcn/ui (customizable, accessible)
+- **Icons**: Lucide React
+- **Animations**: Tailwind CSS animations + custom keyframes
+
+## 🔒 Security
+
+- **Authentication**: Clerk handles all auth (OAuth, session management)
+- **Protected Routes**: Middleware protects `/projects` and `/project/*` routes
+- **API Keys**: Server-side only (never exposed to client)
+- **CORS**: Backend configured for frontend origin only
+
+## 🚧 Future Enhancements
+
+- Brand assets library (upload/manage brand elements)
+- Multi-user collaboration on projects
+- Backend persistence (migrate from localStorage to database)
+- Project sharing and export
+- Advanced video editing capabilities
+
+## 📝 Notes
+
+- Projects are stored in **browser localStorage** (per-device, not per-user yet)
+- Scene data is **API-backed** (fetched from backend on project load)
+- SSE connections auto-reconnect on failure
+- All state changes trigger auto-save (debounced)
+- Component-level error boundaries prevent full app crashes

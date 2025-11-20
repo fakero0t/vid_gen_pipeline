@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/appStore';
-import { useStoryboardStore } from '@/store/storyboardStore';
+import { useSceneStore } from '@/store/sceneStore';
 import { useVideoGeneration } from '@/hooks/useVideoGeneration';
 import { VideoGenerationProgress } from '@/components/video';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
   } = useAppStore();
   
   // Check if using storyboard flow instead
-  const { storyboard, scenes: storyboardScenes } = useStoryboardStore();
+  const { storyboard, scenes: storyboardScenes } = useSceneStore();
 
   const {
     jobStatus: videoStatus,
@@ -51,6 +51,27 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
   }, [videoStatus]);
 
   const [hasStarted, setHasStarted] = useState(false);
+
+  // Audio ref to stop playback when switching projects
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Stop audio when audioUrl changes or component unmounts
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      // Stop and reset audio when audioUrl changes
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    
+    // Cleanup: stop audio when component unmounts
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [audioUrl]);
 
   const selectedMood = moods.find((m) => m.id === selectedMoodId);
   
@@ -292,6 +313,7 @@ export function VideoGeneration({ onComplete, onBack }: VideoGenerationProps) {
               <span className="text-xl">🎵</span>
               <div className="flex-1">
                 <audio
+                  ref={audioRef}
                   controls
                   src={audioUrl}
                   className="w-full"

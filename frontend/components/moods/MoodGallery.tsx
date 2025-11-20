@@ -30,56 +30,55 @@ export function MoodGallery({
   const carouselRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const isUserNavigation = useRef(false);
+  const skipSyncRef = useRef(false);
 
   // Sync currentIndex with selectedMoodId (only when selectedMoodId changes externally)
   useEffect(() => {
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
     if (selectedMoodId && moods.length > 0) {
       const index = moods.findIndex(m => m.id === selectedMoodId);
       if (index !== -1 && index !== currentIndex) {
         setCurrentIndex(index);
       }
     }
-  }, [selectedMoodId, moods.length]); // Removed currentIndex from deps to prevent loop
+  }, [selectedMoodId, moods.length, currentIndex]);
+
+  // Sync selection when currentIndex changes due to user navigation
+  useEffect(() => {
+    if (isUserNavigation.current && moods.length > 0 && currentIndex >= 0) {
+      const mood = moods[currentIndex];
+      if (mood && mood.id !== selectedMoodId) {
+        skipSyncRef.current = true; // Prevent the sync effect from running
+        onSelectMood(mood.id);
+        isUserNavigation.current = false; // Reset after selection
+      } else {
+        isUserNavigation.current = false;
+      }
+    }
+  }, [currentIndex, moods, selectedMoodId, onSelectMood]);
 
   const goToPrevious = useCallback(() => {
     if (moods.length === 0) return;
-    setCurrentIndex((prev) => {
-      const newIndex = prev === 0 ? moods.length - 1 : prev - 1;
-      // Auto-select the mood when navigating
-      const newMood = moods[newIndex];
-      if (newMood) {
-        onSelectMood(newMood.id);
-      }
-      return newIndex;
-    });
-  }, [moods, onSelectMood]);
+    isUserNavigation.current = true;
+    setCurrentIndex((prev) => (prev === 0 ? moods.length - 1 : prev - 1));
+  }, [moods.length]);
 
   const goToNext = useCallback(() => {
     if (moods.length === 0) return;
-    setCurrentIndex((prev) => {
-      const newIndex = prev === moods.length - 1 ? 0 : prev + 1;
-      // Auto-select the mood when navigating
-      const newMood = moods[newIndex];
-      if (newMood) {
-        onSelectMood(newMood.id);
-      }
-      return newIndex;
-    });
-  }, [moods, onSelectMood]);
+    isUserNavigation.current = true;
+    setCurrentIndex((prev) => (prev === moods.length - 1 ? 0 : prev + 1));
+  }, [moods.length]);
 
   const goToIndex = useCallback((index: number) => {
-    if (index >= 0 && index < moods.length) {
-      setCurrentIndex((prev) => {
-        if (prev === index) return prev; // Prevent unnecessary updates
-        // Auto-select the mood when navigating
-        const newMood = moods[index];
-        if (newMood) {
-          onSelectMood(newMood.id);
-        }
-        return index;
-      });
+    if (index >= 0 && index < moods.length && index !== currentIndex) {
+      isUserNavigation.current = true;
+      setCurrentIndex(index);
     }
-  }, [moods, onSelectMood]);
+  }, [moods.length, currentIndex]);
 
   // Touch handlers for swipe support
   const handleTouchStart = (e: React.TouchEvent) => {
