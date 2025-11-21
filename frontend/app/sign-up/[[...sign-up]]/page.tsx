@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSignUp, useAuth } from "@clerk/nextjs";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, type SignUpFormData } from "@/lib/auth/validation";
@@ -25,6 +25,7 @@ export default function SignUpPage() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const { userId } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [clerkError, setClerkError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,7 +41,14 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
   });
 
-  // Don't render form if already authenticated (Clerk will handle redirect)
+  // Redirect authenticated users immediately
+  useEffect(() => {
+    if (isLoaded && userId) {
+      router.replace(callbackUrl);
+    }
+  }, [isLoaded, userId, callbackUrl, router]);
+
+  // Don't render form if already authenticated
   if (isLoaded && userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">

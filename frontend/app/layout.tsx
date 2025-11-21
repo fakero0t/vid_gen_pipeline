@@ -33,7 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/projects"
+      afterSignUpUrl="/projects"
+    >
       <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <body
           className={`antialiased font-sans ${layoutClasses.fullScreen}`}
