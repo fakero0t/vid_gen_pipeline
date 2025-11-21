@@ -37,44 +37,63 @@ export function MoodBoard({
   const canContinue = !isLoading && selectedMoodIsLoaded;
 
   return (
-    <div className={`space-y-6 w-full overflow-x-hidden ${className}`}>
+    <div className={`space-y-2 sm:space-y-3 w-full h-full flex flex-col ${className}`}>
       {/* Header */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Select a Mood Board</h2>
-        <p className="text-muted-foreground">
-          Choose the visual style direction that best represents your vision. Each mood board contains 4 sample images.
+      <div className="space-y-1 animate-fadeIn flex-shrink-0">
+        <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
+          Select your <span className="text-gradient">mood board</span>
+        </h2>
+        <p className="text-[10px] sm:text-xs text-muted-foreground max-w-2xl">
+          Choose the visual style that best represents your vision
         </p>
       </div>
 
       {/* Error display */}
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0">
+          <p className="text-[10px] font-medium text-destructive">{error}</p>
+        </div>
       )}
 
       {/* Action buttons */}
       {!hasMoods && (
-        <div className="flex gap-4 items-center">
-          <Button
+        <div className="flex gap-2 items-center animate-bounceIn flex-shrink-0">
+          <button
             onClick={onGenerate}
             disabled={isLoading}
-            size="lg"
+            className="btn-primary-bold text-xs px-3 py-1.5"
           >
-            {isLoading ? 'Generating Moods...' : 'Generate Mood Boards'}
-          </Button>
+            {isLoading ? 'Generating...' : 'Generate Mood Boards'}
+          </button>
         </div>
       )}
 
-      {/* Mood gallery */}
-      <MoodGallery
-        moods={moods}
-        selectedMoodId={selectedMoodId}
-        onSelectMood={onSelectMood}
-        isLoading={isLoading}
-        onContinue={hasMoods ? onContinue : undefined}
-        canContinue={canContinue}
-      />
+      {/* Regenerate option when moods exist */}
+      {hasMoods && !isLoading && (
+        <div className="flex gap-2 items-center animate-slideUp animation-delay-100 flex-shrink-0">
+          <button
+            onClick={onGenerate}
+            className="font-display font-bold text-[10px] px-3 py-1 rounded-full border border-foreground bg-transparent text-foreground hover:bg-secondary transition-all duration-300"
+          >
+            Regenerate
+          </button>
+          <p className="text-[10px] text-muted-foreground">
+            Not satisfied? Try again
+          </p>
+        </div>
+      )}
+
+      {/* Mood gallery - takes remaining space */}
+      <div className="flex-1 min-h-0">
+        <MoodGallery
+          moods={moods}
+          selectedMoodId={selectedMoodId}
+          onSelectMood={onSelectMood}
+          isLoading={isLoading}
+          onContinue={hasMoods ? onContinue : undefined}
+          canContinue={canContinue}
+        />
+      </div>
     </div>
   );
 }

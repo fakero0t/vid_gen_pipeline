@@ -27,11 +27,26 @@ export function MoodGallery({
   canContinue = false,
 }: MoodGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [cardWidth, setCardWidth] = useState(600);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const isUserNavigation = useRef(false);
   const skipSyncRef = useRef(false);
+
+  // Calculate card width based on viewport
+  useEffect(() => {
+    const calculateCardWidth = () => {
+      const imageWidth = window.innerWidth < 640 ? 300 : 400;
+      const textWidth = window.innerWidth < 640 ? 192 : 256;
+      setCardWidth(imageWidth + textWidth + 16); // 16px for gap
+    };
+    
+    calculateCardWidth();
+    window.addEventListener('resize', calculateCardWidth);
+    return () => window.removeEventListener('resize', calculateCardWidth);
+  }, []);
 
   // Sync currentIndex with selectedMoodId (only when selectedMoodId changes externally)
   useEffect(() => {
@@ -132,29 +147,35 @@ export function MoodGallery({
   }
 
   return (
-    <div className={`space-y-6 w-full ${className}`}>
+    <div className={`w-full h-full flex flex-col ${className}`}>
       {/* Carousel Container */}
-      <div className="relative w-full">
+      <div className="relative w-full flex-1 min-h-0 flex flex-col">
         {/* Navigation Arrows */}
         {moods.length > 1 && !isLoading && (
           <>
             <Button
               variant="outline"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background"
-              onClick={goToPrevious}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrevious();
+              }}
               aria-label="Previous mood board"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background"
-              onClick={goToNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNext();
+              }}
               aria-label="Next mood board"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </>
         )}
@@ -162,43 +183,49 @@ export function MoodGallery({
         {/* Carousel Track */}
         <div
           ref={carouselRef}
-          className="relative w-full overflow-hidden rounded-lg"
+          className="relative w-full flex-1 min-h-0 overflow-hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div
-            className="flex transition-transform duration-500 ease-in-out w-full"
-            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-          >
-            {isLoading ? (
-              // Loading skeleton - show one large card
-              <div className="w-full flex-shrink-0 min-w-0 px-4 md:px-8">
-                <div className="w-full max-w-6xl mx-auto rounded-lg border-2 border-border bg-card animate-pulse max-h-[calc(100vh-300px)] overflow-y-auto">
-                  <div className="p-6 border-b border-border">
-                    <div className="h-8 bg-muted rounded mb-3 w-3/4" />
-                    <div className="h-5 bg-muted rounded w-full" />
-                    <div className="h-5 bg-muted rounded w-5/6 mt-2" />
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {[...Array(4)].map((_, j) => (
-                        <div
-                          key={j}
-                          className="aspect-[9/16] bg-muted rounded"
-                        />
-                      ))}
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div
+              className="flex transition-transform duration-500 ease-in-out h-full items-center gap-4"
+              style={{ 
+                transform: `translateX(calc(50% - ${currentIndex * (cardWidth + 16)}px - ${cardWidth / 2}px))`
+              }}
+            >
+              {isLoading ? (
+                // Loading skeleton - show one large card
+                <div 
+                  ref={(el) => cardRefs.current[0] = el}
+                  className="flex-shrink-0 h-full flex items-center"
+                >
+                  <div className="w-auto h-[400px] sm:h-[500px] max-h-[80vh] rounded-xl border-2 border-border bg-card animate-pulse flex flex-row">
+                    <div className="p-2 w-[300px] sm:w-[400px] min-h-0 flex-shrink-0">
+                      <div className="grid grid-cols-2 gap-1.5 h-full">
+                        {[...Array(4)].map((_, j) => (
+                          <div
+                            key={j}
+                            className="bg-muted rounded-md"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-2 sm:p-3 w-48 sm:w-64 border-l border-border flex-shrink-0 flex flex-col justify-center">
+                      <div className="h-5 bg-muted rounded mb-2 w-3/4" />
+                      <div className="h-3 bg-muted rounded w-full mb-2" />
+                      <div className="h-3 bg-muted rounded w-5/6" />
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              moods.map((mood, index) => (
-                <div
-                  key={mood.id}
-                  className="w-full flex-shrink-0 min-w-0 px-4 md:px-8"
-                >
-                  <div className="w-full max-w-6xl mx-auto">
+              ) : (
+                moods.map((mood, index) => (
+                  <div
+                    key={mood.id}
+                    ref={(el) => cardRefs.current[index] = el}
+                    className="flex-shrink-0 h-full flex items-center"
+                  >
                     <MoodCard
                       mood={mood}
                       isSelected={selectedMoodId === mood.id}
@@ -206,18 +233,18 @@ export function MoodGallery({
                       isLoading={isLoading}
                     />
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
 
         {/* Thumbnail Indicators and Continue Button */}
         {!isLoading && (
-          <div className="flex items-center justify-between mt-6">
+          <div className="flex items-center justify-between mt-2 flex-shrink-0">
             <div className="flex-1" /> {/* Spacer for centering */}
             {moods.length > 1 ? (
-              <div className="flex justify-center gap-2 flex-1">
+              <div className="flex justify-center gap-1 flex-1">
                 {moods.map((mood, index) => {
                   const successfulImages = mood.images.filter(img => img.success && img.url);
                   const firstImage = successfulImages[0];
@@ -227,9 +254,9 @@ export function MoodGallery({
                       key={mood.id}
                       onClick={() => goToIndex(index)}
                       className={`
-                        relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300
+                        relative w-8 h-8 rounded-md overflow-hidden border transition-all duration-300
                         ${currentIndex === index
-                          ? 'border-primary ring-2 ring-primary ring-offset-2 scale-110'
+                          ? 'border-primary ring-1 ring-primary scale-105'
                           : 'border-border hover:border-primary/50 opacity-70 hover:opacity-100'
                         }
                       `}
@@ -241,11 +268,11 @@ export function MoodGallery({
                           alt={mood.name}
                           fill
                           className="object-cover"
-                          sizes="64px"
+                          sizes="32px"
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground">{index + 1}</span>
+                          <span className="text-[9px] text-muted-foreground">{index + 1}</span>
                         </div>
                       )}
                       {currentIndex === index && (
@@ -260,13 +287,16 @@ export function MoodGallery({
             )}
             <div className="flex-1 flex justify-end">
               {onContinue && (
-                <Button
+                <button
                   onClick={onContinue}
                   disabled={!canContinue}
-                  size="lg"
+                  className="group btn-primary-bold disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-1 text-xs px-3 py-1.5"
                 >
-                  Continue with Selected Mood
-                </Button>
+                  <span>Continue</span>
+                  <svg className="w-3 h-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
               )}
             </div>
           </div>
@@ -274,7 +304,7 @@ export function MoodGallery({
 
         {/* Mood Counter */}
         {moods.length > 1 && !isLoading && (
-          <div className="text-center mt-4 text-sm text-muted-foreground">
+          <div className="text-center mt-1 text-[10px] text-muted-foreground flex-shrink-0">
             {currentIndex + 1} of {moods.length}
           </div>
         )}

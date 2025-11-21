@@ -57,55 +57,81 @@ export function UserAvatar() {
           variant="ghost"
           size="icon"
           className={cn(
-            "relative h-10 w-10 rounded-full",
-            "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            "relative h-9 w-9 rounded-full",
+            "hover:bg-secondary transition-all duration-300",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           )}
           aria-label="User menu"
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-9 w-9 border-2 border-border">
             <AvatarImage src={user.imageUrl} alt={displayName} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-display font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
-            <p className="text-xs leading-none text-muted-foreground">{email}</p>
+      <DropdownMenuContent 
+        align="end" 
+        className={cn(
+          "w-56 rounded-xl border-2 shadow-lg",
+          "bg-card backdrop-blur-sm",
+          "animate-scaleIn"
+        )}
+        sideOffset={8}
+      >
+        <DropdownMenuLabel className="px-3 py-2.5">
+          <div className="flex flex-col space-y-0.5">
+            <p className="text-sm font-display font-bold leading-none">{displayName}</p>
+            <p className="text-xs leading-none text-muted-foreground font-sans">{email}</p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           onClick={() => router.push("/projects")}
-          className="cursor-pointer"
+          className={cn(
+            "cursor-pointer rounded-lg mx-1 my-0.5",
+            "transition-all duration-200",
+            "hover:bg-secondary"
+          )}
         >
           <Folder className="mr-2 h-4 w-4" />
-          <span>Projects</span>
+          <span className="font-sans">Projects</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => router.push("/brand-assets")}
-          className="cursor-pointer"
+          className={cn(
+            "cursor-pointer rounded-lg mx-1 my-0.5",
+            "transition-all duration-200",
+            "hover:bg-secondary"
+          )}
         >
           <Palette className="mr-2 h-4 w-4" />
-          <span>Brand Assets</span>
+          <span className="font-sans">Brand Assets</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => router.push("/character-assets")}
-          className="cursor-pointer"
+          className={cn(
+            "cursor-pointer rounded-lg mx-1 my-0.5",
+            "transition-all duration-200",
+            "hover:bg-secondary"
+          )}
         >
           <User className="mr-2 h-4 w-4" />
-          <span>Characters</span>
+          <span className="font-sans">Characters</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           onClick={handleSignOut}
-          className="cursor-pointer text-destructive focus:text-destructive"
+          variant="destructive"
+          className={cn(
+            "cursor-pointer rounded-lg mx-1 my-0.5",
+            "transition-all duration-200",
+            "hover:bg-destructive/10 dark:hover:bg-destructive/20"
+          )}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign Out</span>
+          <span className="font-sans text-destructive">Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

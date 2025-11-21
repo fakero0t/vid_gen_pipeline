@@ -221,19 +221,21 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className={cn(layoutClasses.fullScreen, 'flex flex-col pt-16')}>
-      <main className={cn(layoutClasses.scrollableContainer, 'flex-1 p-6')}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Your Projects</h1>
-              <p className="text-muted-foreground">
+    <div className={cn(layoutClasses.fullScreen, 'flex flex-col pt-14')}>
+      <main className={cn(layoutClasses.scrollableContainer, 'flex-1 p-3 sm:p-4')}>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6 animate-fadeIn">
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">
+                Your <span className="text-gradient">Projects</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Manage and view all your video generation projects
               </p>
             </div>
-            <Button onClick={handleOpenCreateModal} size="lg" disabled={isLoadingAssets}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Project
+            <Button onClick={handleOpenCreateModal} size="default" disabled={isLoadingAssets}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              Create
             </Button>
           </div>
 

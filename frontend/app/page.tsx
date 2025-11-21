@@ -27,8 +27,8 @@ export default function Home() {
 
   // Show loading state while checking auth
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-muted-foreground">Loading...</div>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="text-display-md text-foreground animate-pulse">Loading...</div>
     </div>
   );
 }

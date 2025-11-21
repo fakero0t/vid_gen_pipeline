@@ -72,11 +72,17 @@ function ChatContent() {
     <>
       <SkipToContent />
       <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        <main id="main-content" tabIndex={-1} className="outline-none pt-16">
-          <div className="flex h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn overflow-hidden">
-            <div className="w-full max-w-7xl h-full flex flex-col gap-3 sm:gap-4 md:gap-6">
-              {/* Chat Interface - Takes available space */}
-              <div className="flex-1 min-h-0 animate-slideUp">
+        <main id="main-content" tabIndex={-1} className="outline-none pt-14">
+          <div className="flex h-[calc(100vh-56px)] items-center justify-center p-2 sm:p-3 animate-fadeIn overflow-hidden">
+            <div className="w-full max-w-7xl h-full flex gap-2 sm:gap-3">
+              {/* Chat Interface - Transitions from full width to half width when brief appears */}
+              <div 
+                className={`
+                  min-h-0 animate-slideUp
+                  transition-all duration-500 ease-in-out
+                  ${activeBrief ? 'w-1/2' : 'w-full'}
+                `}
+              >
                 <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
                   <LazyComponents.ChatInterface
                     messages={messages}
@@ -89,12 +95,21 @@ function ChatContent() {
                 </Suspense>
               </div>
 
-              {/* Creative Brief Summary - Collapsible at bottom, always rendered to prevent layout shift */}
-              <div className="shrink-0 animate-slideUp animation-delay-100">
+              {/* Creative Brief Summary - Slides in from right when generated */}
+              <div 
+                className={`
+                  transition-all duration-500 ease-in-out
+                  ${activeBrief 
+                    ? 'w-1/2 opacity-100 translate-x-0' 
+                    : 'w-0 opacity-0 translate-x-full overflow-hidden'
+                  }
+                `}
+              >
                 <Suspense fallback={<LoadingFallback message="Loading summary..." />}>
                   <LazyComponents.CreativeBriefSummary
                     brief={activeBrief}
                     onContinue={handleContinueToMood}
+                    className="h-full"
                   />
                 </Suspense>
               </div>

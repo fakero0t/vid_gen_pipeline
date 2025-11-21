@@ -30,9 +30,9 @@ export function ChatInterface({
   return (
     <div
       className={cn(
-        'flex flex-col h-full bg-white dark:bg-zinc-950',
-        'border border-zinc-200 dark:border-zinc-800 rounded-lg',
-        'overflow-hidden',
+        'flex flex-col h-full bg-background',
+        'border-2 border-border rounded-3xl',
+        'overflow-hidden shadow-xl',
         className
       )}
     >
@@ -42,17 +42,15 @@ export function ChatInterface({
         className="flex-1 overflow-y-auto p-4 space-y-4"
       >
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-            <div className="rounded-full bg-zinc-100 dark:bg-zinc-800 p-4">
-              <Bot className="h-8 w-8 text-zinc-600 dark:text-zinc-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Let's create your product vision
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-6 px-4 animate-fadeIn">
+            <div className="space-y-3">
+              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight leading-tight text-balance">
+                Turn ordinary products into
+                <br />
+                <span className="text-gradient">extraordinary visuals</span>
               </h2>
-              <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
-                Start by describing your product, target audience, and what makes it special.
-                I'll help you refine your vision into a creative brief.
+              <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
+                Start by describing your product, target audience, and what makes it special
               </p>
             </div>
           </div>
@@ -68,29 +66,29 @@ export function ChatInterface({
               >
                 {message.role === 'assistant' && (
                   <div className="flex-shrink-0">
-                    <div className="rounded-full bg-zinc-100 dark:bg-zinc-800 p-2">
-                      <Bot className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                    <div className="rounded-full bg-black dark:bg-white p-1.5">
+                      <Bot className="h-4 w-4 text-white dark:text-black" />
                     </div>
                   </div>
                 )}
 
                 <div
                   className={cn(
-                    'max-w-[80%] rounded-lg px-4 py-2.5',
+                    'max-w-[75%] rounded-2xl px-3 py-2 animate-slideUp',
                     message.role === 'user'
-                      ? 'bg-zinc-950 dark:bg-zinc-50 text-white dark:text-zinc-950'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
+                      ? 'bg-black dark:bg-white text-white dark:text-black font-medium'
+                      : 'bg-secondary text-foreground'
                   )}
                 >
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap break-words m-0">
+                    <p className="whitespace-pre-wrap break-words m-0 text-sm leading-normal">
                       {message.content}
                       {message.isStreaming && (
-                        <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+                        <span className="inline-block w-1 h-3 ml-1 bg-current animate-pulse rounded-sm" />
                       )}
                     </p>
                   </div>
-                  <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  <div className="mt-1 text-[10px] opacity-60">
                     {message.timestamp.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -100,8 +98,8 @@ export function ChatInterface({
 
                 {message.role === 'user' && (
                   <div className="flex-shrink-0">
-                    <div className="rounded-full bg-zinc-950 dark:bg-zinc-50 p-2">
-                      <User className="h-5 w-5 text-white dark:text-zinc-950" />
+                    <div className="rounded-full bg-black dark:bg-white p-1.5">
+                      <User className="h-4 w-4 text-white dark:text-black" />
                     </div>
                   </div>
                 )}
@@ -110,21 +108,21 @@ export function ChatInterface({
 
             {/* Loading indicator for streaming */}
             {isStreaming && (
-              <div className="flex gap-3 justify-start">
+              <div className="flex gap-2 justify-start animate-slideUp">
                 <div className="flex-shrink-0">
-                  <div className="rounded-full bg-zinc-100 dark:bg-zinc-800 p-2">
-                    <Bot className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                  <div className="rounded-full bg-black dark:bg-white p-1.5">
+                    <Bot className="h-4 w-4 text-white dark:text-black" />
                   </div>
                 </div>
-                <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-2.5">
+                <div className="bg-secondary rounded-2xl px-3 py-2">
                   <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-zinc-400 dark:bg-zinc-500 rounded-full animate-bounce" />
+                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" />
                     <span
-                      className="w-2 h-2 bg-zinc-400 dark:bg-zinc-500 rounded-full animate-bounce"
+                      className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce"
                       style={{ animationDelay: '0.1s' }}
                     />
                     <span
-                      className="w-2 h-2 bg-zinc-400 dark:bg-zinc-500 rounded-full animate-bounce"
+                      className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce"
                       style={{ animationDelay: '0.2s' }}
                     />
                   </div>
@@ -136,8 +134,8 @@ export function ChatInterface({
 
         {/* Error Display */}
         {error && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div className="rounded-xl bg-destructive/10 border border-destructive/50 p-2 animate-slideUp">
+            <p className="text-xs font-medium text-destructive">{error}</p>
           </div>
         )}
 

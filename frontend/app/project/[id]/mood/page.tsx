@@ -78,6 +78,11 @@ export default function MoodPage() {
   const handleGenerateMoods = async () => {
     if (!creativeBrief) return;
     
+    // Clear existing moods and selection when regenerating
+    const { setMoods } = useAppStore.getState();
+    setMoods([]);
+    useAppStore.setState({ selectedMoodId: null });
+    
     const request: MoodGenerationRequest = {
       product_name: creativeBrief.product_name || 'Product',
       target_audience: creativeBrief.target_audience || 'General Audience',
@@ -102,43 +107,41 @@ export default function MoodPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
-      <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6 pt-4 sm:pt-6 md:pt-8">
-        {/* Back button */}
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 animate-slideUp"
+    <div className="h-[calc(100vh-56px)] flex flex-col p-2 sm:p-3 animate-fadeIn overflow-hidden">
+      {/* Back button */}
+      <button
+        onClick={handleBack}
+        className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 animate-slideUp mb-2 flex-shrink-0"
+      >
+        <svg
+          className="w-3 h-3"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Back to Chat
-        </button>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back to Chat
+      </button>
 
-        {/* Mood Board Component */}
-        <div className="animate-slideUp animation-delay-100">
-          <Suspense fallback={<StepSkeleton />}>
-            <MoodBoard
-              moods={moods}
-              selectedMoodId={selectedMoodId}
-              onSelectMood={selectMood}
-              onGenerate={handleGenerateMoods}
-              onContinue={handleContinue}
-              isLoading={isMoodLoading}
-              error={moodError}
-            />
-          </Suspense>
-        </div>
+      {/* Mood Board Component */}
+      <div className="flex-1 min-h-0 animate-slideUp animation-delay-100">
+        <Suspense fallback={<StepSkeleton />}>
+          <MoodBoard
+            moods={moods}
+            selectedMoodId={selectedMoodId}
+            onSelectMood={selectMood}
+            onGenerate={handleGenerateMoods}
+            onContinue={handleContinue}
+            isLoading={isMoodLoading}
+            error={moodError}
+          />
+        </Suspense>
       </div>
     </div>
   );

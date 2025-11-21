@@ -25,25 +25,27 @@ export function Navbar() {
     <nav
       className={cn(
         "fixed top-0 left-0 right-0 z-50",
-        "bg-background border-b border-border",
-        "h-16 flex items-center justify-between px-6"
+        "bg-background/80 backdrop-blur-md border-b border-border",
+        "h-14 flex items-center justify-between px-4 sm:px-6"
       )}
       aria-label="Main navigation"
     >
       {/* Logo/Brand - placeholder for now */}
       <div className="flex items-center">
-        <h1 className="text-lg font-semibold">AI Video Pipeline</h1>
+        <h1 className="font-display text-lg font-bold tracking-tight">
+          AI Video Pipeline
+        </h1>
       </div>
 
       {/* Auth section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {isSignedIn ? (
           <UserAvatar />
         ) : (
           <Button
             onClick={() => router.push("/sign-in")}
             variant="default"
-            size="default"
+            size="sm"
           >
             Sign In
           </Button>
