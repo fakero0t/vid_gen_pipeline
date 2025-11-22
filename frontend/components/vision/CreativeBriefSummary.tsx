@@ -30,11 +30,11 @@ export function CreativeBriefSummary({
         'bg-background',
         'overflow-hidden shadow-xl',
         'flex flex-col h-full',
-        !hasBrief && 'opacity-0 pointer-events-none',
+        !hasBrief && !isLoading && 'opacity-0 pointer-events-none',
         className
       )}
     >
-      {/* Header - Always visible */}
+      {/* Header - Always visible when loading or has brief */}
       <div
         className={cn(
           'flex items-center justify-between p-3 sm:p-4 border-b border-border',
@@ -83,7 +83,10 @@ export function CreativeBriefSummary({
             <div className="flex flex-col items-center justify-center h-full p-6 space-y-4">
               <Loader2 className="h-8 w-8 text-[rgb(255,81,1)] animate-spin" />
               <p className="text-sm text-muted-foreground text-center">
-                Updating creative brief with new information...
+                {hasBrief 
+                  ? 'Updating creative brief with new information...'
+                  : 'Generating creative brief from conversation...'
+                }
               </p>
             </div>
           ) : brief ? (

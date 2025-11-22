@@ -70,7 +70,15 @@ export function Navbar() {
     >
       {/* Logo/Brand - left side */}
       <div className="flex items-center flex-1">
-        <h1 className="font-display text-lg font-bold tracking-tight">
+        <h1 
+          className="font-display text-lg font-bold tracking-tight"
+          style={{
+            background: 'linear-gradient(90deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           AI Video Pipeline
         </h1>
         {/* Back button - shown on mood, scenes, and backgrounds pages */}
@@ -100,15 +108,7 @@ export function Navbar() {
       {/* Project Name - center */}
       {currentProject && (
         <div className="flex items-center justify-center flex-1">
-          <h2 
-            className="font-display text-sm sm:text-base font-bold lowercase truncate max-w-[200px] sm:max-w-[300px]"
-            style={{
-              background: 'linear-gradient(90deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
+          <h2 className="font-display text-sm sm:text-base font-bold lowercase truncate max-w-[200px] sm:max-w-[300px] text-foreground">
             {currentProject.name.toLowerCase()}
           </h2>
         </div>

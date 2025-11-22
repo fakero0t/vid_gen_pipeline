@@ -37,18 +37,18 @@ async def generate_moods(
     creative_brief: CreativeBriefInput
 ) -> MoodGenerationResponse:
     """
-    Generate 3 distinct mood boards with 4 images each from a creative brief.
+    Generate 3 distinct mood boards with 1 image each from a creative brief.
     
     This endpoint:
     1. Generates 3 distinct mood directions using AI
-    2. Generates 4 images per mood (12 total) in parallel using Replicate
+    2. Generates 1 image per mood (3 total) in parallel using Replicate
     3. Returns complete mood data with images
     
     Args:
         creative_brief: Creative brief data containing product info, audience, etc.
     
     Returns:
-        MoodGenerationResponse with 3 moods, each containing 4 images
+        MoodGenerationResponse with 3 moods, each containing 1 image
     """
     try:
         # Convert Pydantic model to dict for service
@@ -63,8 +63,8 @@ async def generate_moods(
         # Determine images per mood and resolution based on environment
         from app.config import settings
         
-        # Images per mood: Always 4 for consistent experience
-        images_per_mood = settings.IMAGES_PER_MOOD if settings.IMAGES_PER_MOOD > 0 else 4
+        # Images per mood: Always 1 for consistent experience
+        images_per_mood = settings.IMAGES_PER_MOOD if settings.IMAGES_PER_MOOD > 0 else 1
         
         # Resolution: Lower for dev (faster), higher for prod (better quality)
         if settings.IMAGE_WIDTH > 0 and settings.IMAGE_HEIGHT > 0:
@@ -81,12 +81,6 @@ async def generate_moods(
         
         # Build prompts for all images (3 moods × images_per_mood)
         all_prompts = []
-        variation_suffixes = [
-            "close-up detail shot",
-            "wide angle composition",
-            "dramatic lighting setup",
-            "minimalist frame"
-        ]
         
         for mood in mood_directions:
             base_prompt = replicate_svc.build_image_prompt(
@@ -98,11 +92,8 @@ async def generate_moods(
                 product_name=brief_dict.get("product_name")
             )
             
-            # Generate variations of the prompt for diversity
-            for i in range(images_per_mood):
-                suffix = variation_suffixes[i % len(variation_suffixes)]
-                variation_prompt = f"{base_prompt}, {suffix}"
-                all_prompts.append(variation_prompt)
+            # Generate single image per mood
+            all_prompts.append(base_prompt)
         
         # Step 3: Generate all images in parallel
         # Use 9:16 aspect ratio for vertical video

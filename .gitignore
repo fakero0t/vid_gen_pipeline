@@ -60,3 +60,7 @@ backend/uploads
 salvage_plan/
 tom_planning/
 .claude/
+
+backend/.firebaserc
+backend/firebase.json
+./backend/serviceAccountKey.json

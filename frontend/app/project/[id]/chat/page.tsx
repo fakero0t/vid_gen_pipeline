@@ -57,6 +57,10 @@ function ChatContent() {
   // that was used to generate mood boards is displayed when navigating back
   // The store version is the source of truth for persisted briefs
   const activeBrief = creativeBrief || chatBrief;
+  
+  // Show second card only when brief exists or when brief extraction has started
+  // Don't show it just when messages are being sent - only when extraction begins
+  const shouldShowBriefCard = activeBrief || isExtracting;
 
   // Update store when brief is extracted from chat (only if store doesn't have one)
   // This syncs newly extracted briefs to the store for persistence
@@ -84,7 +88,7 @@ function ChatContent() {
                 className={`
                   min-h-0 animate-slideUp
                   transition-all duration-500 ease-in-out
-                  ${activeBrief || isExtracting ? 'w-1/2' : 'w-full'}
+                  ${shouldShowBriefCard ? 'w-1/2' : 'w-full'}
                 `}
               >
                 <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
@@ -103,7 +107,7 @@ function ChatContent() {
               <div 
                 className={`
                   transition-all duration-500 ease-in-out
-                  ${activeBrief || isExtracting
+                  ${shouldShowBriefCard
                     ? 'w-1/2 opacity-100 translate-x-0' 
                     : 'w-0 opacity-0 translate-x-full overflow-hidden'
                   }
@@ -114,7 +118,7 @@ function ChatContent() {
                     brief={activeBrief}
                     onContinue={handleContinueToMood}
                     isExtracting={isExtracting}
-                    isUpdating={activeBrief ? (isChatLoading || isStreaming) : false}
+                    isUpdating={isExtracting}
                     className="h-full"
                   />
                 </Suspense>

@@ -13,6 +13,76 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { Button } from '@/components/ui/button';
 import { STEPS } from '@/lib/steps';
 
+// Cheeky loading phrases that rotate
+const LOADING_PHRASES = [
+  "Crafting your perfect mood... ✨",
+  "Gathering inspiration just for you... 🎨",
+  "Setting the vibe... 🌈",
+  "Curating your mood board masterpiece... 🎭",
+  "Hang tight, creativity in progress... 🚀",
+  "Brewing some visual magic... ☕",
+  "Channeling your aesthetic... 🔮",
+  "Weaving together your vision... 🧵",
+  "Polishing every pixel... 💎",
+  "Almost there, promise! ⏳"
+];
+
+function LoadingPhrases() {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Rotate phrases every 2.5 seconds
+    intervalRef.current = setInterval(() => {
+      setIsVisible(false);
+      
+      // After fade out, change phrase and fade in
+      setTimeout(() => {
+        setCurrentPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+        setIsVisible(true);
+      }, 400); // Match fadeOutDown animation duration
+    }, 2500);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex-shrink-0 w-full h-full flex items-center justify-center">
+      <div className="text-center px-4">
+        <div 
+          className={`
+            text-sm sm:text-base font-display font-bold
+            bg-gradient-to-r from-primary via-primary/80 to-primary
+            bg-clip-text text-transparent
+            ${isVisible ? 'animate-fadeInUp' : 'animate-fadeOutDown'}
+          `}
+        >
+          {LOADING_PHRASES[currentPhraseIndex]}
+        </div>
+        <div className="mt-6 flex justify-center gap-2">
+          {LOADING_PHRASES.map((_, index) => (
+            <div
+              key={index}
+              className={`
+                w-2 h-2 rounded-full transition-all duration-300
+                ${index === currentPhraseIndex 
+                  ? 'bg-primary scale-125 animate-gentleBounce' 
+                  : 'bg-muted-foreground/30'
+                }
+              `}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Unified Storyboard Interface Page
  *
@@ -389,13 +459,8 @@ function ScenesPageContent() {
   if (isLoading || isRecovering) {
     return (
       <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
-        <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6 pt-4 sm:pt-6 md:pt-8">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">
-              Loading Storyboard
-            </p>
-          </div>
+        <div className="w-full max-w-7xl h-full flex items-center justify-center">
+          <LoadingPhrases />
         </div>
       </div>
     );
