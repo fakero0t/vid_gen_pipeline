@@ -49,7 +49,7 @@ def create_asset_router(
         **Requirements:**
         - Single PNG or JPG image
         - Max file size: 50MB
-        - Min resolution: 512×512
+        - Min resolution: 100×100
         - Max resolution: 4096×4096
         
         **Returns:**
@@ -65,12 +65,11 @@ def create_asset_router(
                 detail="No file provided"
             )
         
-        # Check content type
-        if file.content_type not in ['image/png', 'image/jpeg']:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only PNG and JPG images are supported"
-            )
+        # Check content type (accept both image/jpeg and image/jpg, but be lenient since content-type can be unreliable)
+        # We'll rely on magic bytes validation in the service layer for actual format detection
+        if file.content_type and file.content_type not in ['image/png', 'image/jpeg', 'image/jpg']:
+            # Log warning but don't reject - let magic bytes validation handle it
+            logger.warning(f"Unexpected content type {file.content_type} for file {file.filename}, will validate via magic bytes")
         
         logger.info(f"Received {asset_type_name} asset upload: {file.filename}")
         

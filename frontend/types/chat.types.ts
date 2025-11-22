@@ -55,6 +55,8 @@ export interface CreativeBriefSummaryProps {
   brief: CreativeBrief | null;
   onEdit?: () => void;
   onContinue?: () => void;
+  isExtracting?: boolean;
+  isUpdating?: boolean; // Shows loading when new message is being processed
   className?: string;
 }
 

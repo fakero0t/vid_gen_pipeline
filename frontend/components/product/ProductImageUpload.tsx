@@ -133,7 +133,7 @@ export function ProductImageUpload({ onComplete, onBack }: ProductImageUploadPro
             </button>
             <button
               onClick={handleDelete}
-              className="px-6 py-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              className="px-6 py-3 border-2 border-[rgb(255,81,1)] bg-transparent text-[rgb(255,81,1)] rounded-full hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95 font-bold"
             >
               Delete
             </button>

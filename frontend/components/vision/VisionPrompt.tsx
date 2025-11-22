@@ -36,7 +36,7 @@ export function VisionPrompt({
   const isDisabled = disabled || isLoading || !input.trim();
 
   return (
-    <div className={cn('flex items-end gap-3 border-t border-border bg-background p-3', className)}>
+    <div className={cn('flex items-end gap-3 border-t border-[rgb(255,81,1)]/20 bg-background p-3', className)}>
       <div className="flex-1 relative flex items-end">
         <textarea
           value={input}
@@ -50,10 +50,10 @@ export function VisionPrompt({
             'bg-secondary px-4 py-2.5',
             'text-sm font-medium text-foreground',
             'placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 focus:border-foreground',
+            'focus:outline-none focus:ring-2 focus:ring-[rgb(255,81,1)]/30 focus:border-[rgb(255,81,1)]/50',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-all duration-300',
-            'hover:border-foreground/30'
+            'hover:border-[rgb(255,81,1)]/30'
           )}
           style={{
             minHeight: '40px',
@@ -67,12 +67,12 @@ export function VisionPrompt({
         className={cn(
           'flex items-center justify-center',
           'h-10 w-10 rounded-full shrink-0',
-          'bg-black dark:bg-white text-white dark:text-black',
-          'hover:scale-105 active:scale-95',
+          'bg-[rgb(255,81,1)] text-[rgb(196,230,43)]',
+          'hover:scale-105 active:scale-95 hover:bg-[rgb(255,100,20)]',
           'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100',
           'transition-all duration-300 ease-out',
           'shadow-md hover:shadow-lg',
-          'focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20'
+          'focus:outline-none focus:ring-2 focus:ring-[rgb(255,81,1)]/50'
         )}
         aria-label="Send message"
       >

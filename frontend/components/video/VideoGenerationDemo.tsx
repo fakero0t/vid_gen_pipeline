@@ -120,7 +120,7 @@ export function VideoGenerationDemo({
               <p className="text-sm text-red-700">{error}</p>
               <button
                 onClick={handleRetry}
-                className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                className="mt-3 px-4 py-2 bg-[rgb(255,81,1)] text-[rgb(196,230,43)] rounded-full text-sm font-bold transition-all duration-300 ease-out hover:bg-[rgb(255,100,20)] hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-lg"
               >
                 Retry Generation
               </button>

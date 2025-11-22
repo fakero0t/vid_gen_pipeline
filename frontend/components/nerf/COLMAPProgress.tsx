@@ -168,7 +168,7 @@ export function COLMAPProgress({ colmap, onRetry }: COLMAPProgressProps) {
             {onRetry && (
               <button
                 onClick={onRetry}
-                className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                className="ml-4 px-3 py-1 bg-[rgb(255,81,1)] hover:bg-[rgb(255,100,20)] text-[rgb(196,230,43)] text-sm rounded-full font-bold transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-lg"
               >
                 Retry
               </button>

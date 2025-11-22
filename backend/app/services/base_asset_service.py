@@ -38,7 +38,7 @@ class BaseAssetService(Generic[T, S]):
         Validation Rules:
         - File size: 0 < size <= 50MB (52,428,800 bytes exactly)
         - Format: PNG or JPEG (check magic bytes, not extension)
-        - Dimensions: 512 <= width, height <= 4096
+        - Dimensions: 100 <= width, height <= 4096
         - Image mode: RGB, RGBA, or L (grayscale)
         - Must be openable by PIL
         
@@ -57,8 +57,8 @@ class BaseAssetService(Generic[T, S]):
         
         # PNG magic bytes: \x89PNG
         is_png = file_data[:8] == b'\x89PNG\r\n\x1a\n'
-        # JPEG magic bytes: \xFF\xD8\xFF
-        is_jpeg = file_data[:3] == b'\xff\xd8\xff'
+        # JPEG magic bytes: \xFF\xD8 (third byte can vary: \xFF for JFIF, \xE0 for Exif, etc.)
+        is_jpeg = len(file_data) >= 2 and file_data[:2] == b'\xff\xd8'
         
         if not (is_png or is_jpeg):
             return False, "Only PNG and JPG images are supported (invalid file format)"
@@ -76,10 +76,10 @@ class BaseAssetService(Generic[T, S]):
         if img.format not in ['PNG', 'JPEG']:
             return False, f"Unsupported image format: {img.format}"
         
-        # Check dimensions (min 512x512, max 4096x4096)
+        # Check dimensions (min 100x100, max 4096x4096)
         width, height = img.size
-        if width < 512 or height < 512:
-            return False, f"Image must be at least 512×512 pixels (got {width}×{height})"
+        if width < 100 or height < 100:
+            return False, f"Image must be at least 100×100 pixels (got {width}×{height})"
         if width > 4096 or height > 4096:
             return False, f"Image dimensions must not exceed 4096×4096 pixels (got {width}×{height})"
         

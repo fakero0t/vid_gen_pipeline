@@ -63,9 +63,9 @@ export function UserAvatar() {
           )}
           aria-label="User menu"
         >
-          <Avatar className="h-9 w-9 border-2 border-border">
+          <Avatar className="h-9 w-9 border-2 border-[rgb(255,81,1)]/30">
             <AvatarImage src={user.imageUrl} alt={displayName} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-display font-bold">
+            <AvatarFallback className="bg-[rgb(255,81,1)] text-[rgb(196,230,43)] text-xs font-display font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>

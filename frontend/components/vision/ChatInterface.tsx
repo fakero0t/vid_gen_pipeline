@@ -31,7 +31,7 @@ export function ChatInterface({
     <div
       className={cn(
         'flex flex-col h-full bg-background',
-        'border-2 border-border rounded-3xl',
+        'border-2 border-[rgb(255,81,1)]/20 rounded-3xl',
         'overflow-hidden shadow-xl',
         className
       )}
@@ -39,7 +39,7 @@ export function ChatInterface({
       {/* Messages Container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-hidden p-4 space-y-4"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-6 px-4 animate-fadeIn">
@@ -66,8 +66,8 @@ export function ChatInterface({
               >
                 {message.role === 'assistant' && (
                   <div className="flex-shrink-0">
-                    <div className="rounded-full bg-black dark:bg-white p-1.5">
-                      <Bot className="h-4 w-4 text-white dark:text-black" />
+                    <div className="rounded-full bg-[rgb(255,81,1)] p-1.5">
+                      <Bot className="h-4 w-4 text-[rgb(196,230,43)]" />
                     </div>
                   </div>
                 )}
@@ -76,8 +76,8 @@ export function ChatInterface({
                   className={cn(
                     'max-w-[75%] rounded-2xl px-3 py-2 animate-slideUp',
                     message.role === 'user'
-                      ? 'bg-black dark:bg-white text-white dark:text-black font-medium'
-                      : 'bg-secondary text-foreground'
+                      ? 'bg-[rgb(255,81,1)] text-[rgb(196,230,43)] font-medium'
+                      : 'bg-secondary text-foreground border border-border/50'
                   )}
                 >
                   <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -98,8 +98,8 @@ export function ChatInterface({
 
                 {message.role === 'user' && (
                   <div className="flex-shrink-0">
-                    <div className="rounded-full bg-black dark:bg-white p-1.5">
-                      <User className="h-4 w-4 text-white dark:text-black" />
+                    <div className="rounded-full bg-[rgb(255,81,1)] p-1.5">
+                      <User className="h-4 w-4 text-[rgb(196,230,43)]" />
                     </div>
                   </div>
                 )}
@@ -110,19 +110,19 @@ export function ChatInterface({
             {isStreaming && (
               <div className="flex gap-2 justify-start animate-slideUp">
                 <div className="flex-shrink-0">
-                  <div className="rounded-full bg-black dark:bg-white p-1.5">
-                    <Bot className="h-4 w-4 text-white dark:text-black" />
+                  <div className="rounded-full bg-[rgb(255,81,1)] p-1.5">
+                    <Bot className="h-4 w-4 text-[rgb(196,230,43)]" />
                   </div>
                 </div>
-                <div className="bg-secondary rounded-2xl px-3 py-2">
+                <div className="bg-secondary rounded-2xl px-3 py-2 border border-border/50">
                   <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" />
+                    <span className="w-1.5 h-1.5 bg-[rgb(255,81,1)] rounded-full animate-bounce" />
                     <span
-                      className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce"
+                      className="w-1.5 h-1.5 bg-[rgb(255,81,1)] rounded-full animate-bounce"
                       style={{ animationDelay: '0.1s' }}
                     />
                     <span
-                      className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce"
+                      className="w-1.5 h-1.5 bg-[rgb(255,81,1)] rounded-full animate-bounce"
                       style={{ animationDelay: '0.2s' }}
                     />
                   </div>

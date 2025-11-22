@@ -60,11 +60,11 @@ export function useAssetUpload<T extends Asset, S extends AssetStatus>(
         clearTimeout(timeout);
         URL.revokeObjectURL(url);
         
-        // Check minimum dimensions (MUST match backend: 512x512)
-        if (img.width < 512 || img.height < 512) {
+        // Check minimum dimensions (MUST match backend: 100x100)
+        if (img.width < 100 || img.height < 100) {
           resolve({ 
             valid: false, 
-            error: `Image must be at least 512×512 pixels (got ${img.width}×${img.height})` 
+            error: `Image must be at least 100×100 pixels (got ${img.width}×${img.height})` 
           });
         } 
         // Check maximum dimensions (optional, backend will also check)

@@ -93,7 +93,7 @@ export function AssetSelectionStep({
               )}
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
-              <div className="relative w-full aspect-square mb-2 bg-muted rounded">
+              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden">
                 <Image
                   src={getImageUrl(asset.asset_id, true)}
                   alt={asset.metadata.filename || `${assetTypeLabel} asset`}
@@ -101,14 +101,20 @@ export function AssetSelectionStep({
                   className="object-contain rounded"
                 />
                 <div 
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-2 z-20 pointer-events-auto"
                   onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => handleToggleAsset(asset.asset_id)}
-                    className="bg-background"
-                  />
+                  <div className="bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded p-0.5 shadow-lg border border-border/50">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked !== isSelected) {
+                          handleToggleAsset(asset.asset_id);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               <p className="text-sm font-medium truncate" title={asset.metadata.filename}>

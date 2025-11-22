@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Edit2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Edit2, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CreativeBriefSummaryProps } from '@/types/chat.types';
 
@@ -13,10 +13,14 @@ export function CreativeBriefSummary({
   brief,
   onEdit,
   onContinue,
+  isExtracting = false,
+  isUpdating = false,
   className,
 }: CreativeBriefSummaryProps) {
   // Always render to maintain space, but hide when no brief
   const hasBrief = !!brief;
+  // Show loading if extracting or updating (new message being processed)
+  const isLoading = isExtracting || isUpdating;
 
   return (
     <div
@@ -35,18 +39,27 @@ export function CreativeBriefSummary({
         className={cn(
           'flex items-center justify-between p-3 sm:p-4 border-b border-border',
           'shrink-0',
-          !hasBrief && 'invisible'
+          !hasBrief && !isLoading && 'invisible'
         )}
       >
         <div className="flex items-center gap-2">
-          <CheckCircle2 
-            className="h-5 w-5 text-foreground animate-scaleIn" 
-          />
+          {isLoading ? (
+            <Loader2 className="h-5 w-5 text-[rgb(255,81,1)] animate-spin" />
+          ) : (
+            <CheckCircle2 
+              className="h-5 w-5 text-foreground animate-scaleIn" 
+            />
+          )}
           <h3 className="font-display text-lg font-bold text-foreground">
             Creative Brief
+            {isLoading && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                Updating...
+              </span>
+            )}
           </h3>
         </div>
-        {hasBrief && onEdit && (
+        {hasBrief && !isLoading && onEdit && (
           <button
             onClick={onEdit}
             className={cn(
@@ -62,9 +75,18 @@ export function CreativeBriefSummary({
         )}
       </div>
 
-      {/* Content - Always visible when brief exists */}
-      {hasBrief && (
+      {/* Content - Always visible when brief exists or loading */}
+      {(hasBrief || isLoading) && (
+        <>
         <div className="overflow-y-auto flex-1">
+            {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 space-y-4">
+              <Loader2 className="h-8 w-8 text-[rgb(255,81,1)] animate-spin" />
+              <p className="text-sm text-muted-foreground text-center">
+                Updating creative brief with new information...
+              </p>
+            </div>
+          ) : (
           <div className="p-3 sm:p-4 space-y-4">
             <div className="space-y-4">
               <div className="space-y-2 animate-slideUp">
@@ -145,28 +167,32 @@ export function CreativeBriefSummary({
                   ))}
                 </ul>
               </div>
+                </div>
+              </div>
+            )}
           </div>
 
-            {onContinue && (
-              <div className="pt-3 border-t border-border animate-slideUp animation-delay-400">
+          {/* Continue button - Fixed at bottom right */}
+          {onContinue && !isLoading && (
+            <div className="p-3 sm:p-4 flex justify-end shrink-0 border-t border-border">
                 <button
                   onClick={onContinue}
                   className={cn(
-                    'group flex items-center gap-2 px-4 py-2.5 rounded-full w-full',
+                  'group flex items-center gap-2 px-4 py-2.5 rounded-full w-auto',
                     'bg-black dark:bg-white text-white dark:text-black',
                     'hover:scale-[1.02] active:scale-95',
                     'font-display font-bold text-sm transition-all duration-300',
                     'shadow-md hover:shadow-lg',
-                    'focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20'
+                  'focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20',
+                  'animate-slideUp animation-delay-400'
                   )}
                 >
-                  <span className="flex-1 text-left">Continue to Mood Selection</span>
+                <span>Continue to Mood Selection</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
               </div>
             )}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

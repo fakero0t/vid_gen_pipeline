@@ -361,8 +361,9 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0 0 0);
   
-  --primary: oklch(0 0 0); /* Black primary */
-  --primary-foreground: oklch(1 0 0); /* White text on black */
+  /* Mockupper-inspired vibrant orange primary */
+  --primary: rgb(255, 81, 1); /* Vibrant orange/coral */
+  --primary-foreground: rgb(196, 230, 43); /* Yellow-green text on orange */
   
   --secondary: oklch(0.97 0 0); /* Very light gray */
   --secondary-foreground: oklch(0 0 0);
@@ -370,17 +371,19 @@
   --muted: oklch(0.95 0 0);
   --muted-foreground: oklch(0.4 0 0);
   
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0 0 0);
+  --accent: rgb(196, 230, 43); /* Yellow-green accent */
+  --accent-foreground: rgb(255, 81, 1); /* Orange text on yellow-green */
   
   --destructive: oklch(0.55 0.22 25);
   --border: oklch(0.92 0 0);
   --input: oklch(0.96 0 0);
-  --ring: oklch(0 0 0);
+  --ring: rgb(255, 81, 1); /* Orange ring */
   
-  /* Bold accent colors inspired by Mockupper */
+  /* Bold accent colors from Mockupper */
+  --accent-orange: rgb(255, 81, 1);
+  --accent-yellow-green: rgb(196, 230, 43);
+  --accent-purple: rgb(185, 116, 230);
   --accent-blue: oklch(0.55 0.2 250);
-  --accent-purple: oklch(0.55 0.2 300);
   --accent-pink: oklch(0.65 0.2 350);
   --accent-green: oklch(0.65 0.2 150);
   --accent-yellow: oklch(0.75 0.15 90);
@@ -411,8 +414,9 @@
   --popover: oklch(0.08 0 0);
   --popover-foreground: oklch(1 0 0);
   
-  --primary: oklch(1 0 0); /* White primary in dark mode */
-  --primary-foreground: oklch(0 0 0); /* Black text on white */
+  /* Mockupper-inspired vibrant colors for dark mode */
+  --primary: rgb(255, 81, 1); /* Vibrant orange/coral */
+  --primary-foreground: rgb(196, 230, 43); /* Yellow-green text on orange */
   
   --secondary: oklch(0.15 0 0);
   --secondary-foreground: oklch(1 0 0);
@@ -420,17 +424,19 @@
   --muted: oklch(0.15 0 0);
   --muted-foreground: oklch(0.6 0 0);
   
-  --accent: oklch(0.15 0 0);
-  --accent-foreground: oklch(1 0 0);
+  --accent: rgb(196, 230, 43); /* Yellow-green accent */
+  --accent-foreground: rgb(255, 81, 1); /* Orange text on yellow-green */
   
   --destructive: oklch(0.65 0.2 25);
   --border: oklch(0.2 0 0);
   --input: oklch(0.15 0 0);
-  --ring: oklch(1 0 0);
+  --ring: rgb(255, 81, 1); /* Orange ring */
   
   /* Brighter accent colors for dark mode */
+  --accent-orange: rgb(255, 81, 1);
+  --accent-yellow-green: rgb(204, 235, 49);
+  --accent-purple: rgb(185, 116, 230);
   --accent-blue: oklch(0.65 0.2 250);
-  --accent-purple: oklch(0.65 0.2 300);
   --accent-pink: oklch(0.75 0.2 350);
   --accent-green: oklch(0.75 0.2 150);
   --accent-yellow: oklch(0.85 0.15 90);
@@ -684,18 +690,35 @@
     }
   }
   
-  /* Gradient text effect */
+  /* Gradient text effect - Mockupper inspired */
   .text-gradient {
-    background: linear-gradient(135deg, #000 0%, #666 100%);
+    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(196, 230, 43) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
   .dark .text-gradient {
-    background: linear-gradient(135deg, #fff 0%, #999 100%);
+    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(196, 230, 43) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  
+  /* Mockupper-inspired texture and effects */
+  .mockupper-bg {
+    background: linear-gradient(135deg, rgba(255, 81, 1, 0.05) 0%, rgba(196, 230, 43, 0.05) 100%);
+  }
+  
+  .mockupper-border {
+    border-color: rgb(255, 81, 1);
+  }
+  
+  .mockupper-accent {
+    color: rgb(196, 230, 43);
+  }
+  
+  .mockupper-primary {
+    color: rgb(255, 81, 1);
   }
 }

@@ -52,8 +52,8 @@ class ProductImageService:
         
         # PNG magic bytes: \x89PNG
         is_png = file_data[:8] == b'\x89PNG\r\n\x1a\n'
-        # JPEG magic bytes: \xFF\xD8\xFF
-        is_jpeg = file_data[:3] == b'\xff\xd8\xff'
+        # JPEG magic bytes: \xFF\xD8 (third byte can vary: \xFF for JFIF, \xE0 for Exif, etc.)
+        is_jpeg = len(file_data) >= 2 and file_data[:2] == b'\xff\xd8'
         
         if not (is_png or is_jpeg):
             return False, "Only PNG and JPG images are supported (invalid file format)"

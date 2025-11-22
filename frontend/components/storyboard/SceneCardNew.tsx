@@ -83,9 +83,9 @@ export function SceneCardNew({
   const hasError = !!scene.error_message;
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-card border-2 border-border rounded-lg overflow-hidden shadow-lg">
+    <div className="w-full h-full max-w-4xl mx-auto bg-card border border-border rounded-lg overflow-hidden flex flex-col">
       {/* Scene number badge */}
-      <div className="absolute top-4 left-4 z-10 bg-primary text-primary-foreground rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg shadow-md">
+      <div className="absolute top-3 left-3 z-10 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shadow-md">
         {sceneNumber}
       </div>
 
@@ -104,10 +104,10 @@ export function SceneCardNew({
         </div>
       )}
 
-      <div className="p-8 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
         {/* TEXT STATE */}
         {scene.state === 'text' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Text content */}
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground">Scene Description</h3>
@@ -192,9 +192,9 @@ export function SceneCardNew({
 
         {/* IMAGE STATE */}
         {scene.state === 'image' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Image display */}
-            <div className="relative aspect-[9/16] max-h-[600px] rounded-lg overflow-hidden bg-muted border border-border">
+            <div className="relative aspect-[9/16] max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-muted border border-border">
               {isGeneratingImage ? (
                 <div className="w-full h-full flex flex-col items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
@@ -253,21 +253,32 @@ export function SceneCardNew({
             </div>
 
             {/* Duration configuration */}
-            <div className="space-y-3 pt-4 border-t border-border">
-              <h4 className="text-sm font-medium text-muted-foreground">Video Duration</h4>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  value={duration}
-                  onChange={(e) => handleDurationChange(parseFloat(e.target.value))}
-                  className="flex-1"
-                  disabled={isLoading}
-                />
-                <span className="text-sm font-medium w-16 text-right">{duration.toFixed(1)}s</span>
+            <div className="space-y-2 pt-3 border-t border-border">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
               </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="0.1"
+                value={duration}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  setDuration(newValue);
+                }}
+                onMouseUp={(e) => {
+                  const newValue = parseFloat((e.target as HTMLInputElement).value);
+                  handleDurationChange(newValue);
+                }}
+                onTouchEnd={(e) => {
+                  const newValue = parseFloat((e.target as HTMLInputElement).value);
+                  handleDurationChange(newValue);
+                }}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                disabled={isLoading}
+              />
             </div>
 
             {/* Actions */}
@@ -300,9 +311,9 @@ export function SceneCardNew({
 
         {/* VIDEO STATE */}
         {scene.state === 'video' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Video player */}
-            <div className="relative aspect-[9/16] max-h-[600px] rounded-lg overflow-hidden bg-black border border-border">
+            <div className="relative aspect-[9/16] max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-black border border-border">
               {isGeneratingVideo ? (
                 <div className="w-full h-full flex flex-col items-center justify-center text-white">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
@@ -326,7 +337,7 @@ export function SceneCardNew({
             </div>
 
             {/* Image thumbnail and text below */}
-            <div className="grid grid-cols-[120px_1fr] gap-4">
+            <div className="grid grid-cols-[100px_1fr] gap-3">
               {/* Thumbnail */}
               {scene.image_url && (
                 <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted border border-border">

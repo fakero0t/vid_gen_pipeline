@@ -58,6 +58,12 @@ function createAppStateSnapshot(): AppStateSnapshot {
   return {
     currentStep: appState.currentStep,
     creativeBrief: appState.creativeBrief,
+    chatMessages: appState.chatMessages.map(msg => ({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp.toISOString(),
+    })),
     moods: appState.moods,
     selectedMoodId: appState.selectedMoodId,
     storyboardCompleted: appState.storyboardCompleted,
@@ -78,6 +84,15 @@ function restoreAppState(snapshot: AppStateSnapshot): void {
   
   appStore.setCurrentStep(currentStep);
   appStore.setCreativeBrief(snapshot.creativeBrief);
+  // Restore chat messages, converting ISO strings back to Date objects
+  appStore.setChatMessages(
+    (snapshot.chatMessages || []).map(msg => ({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+    }))
+  );
   appStore.setMoods(snapshot.moods);
   // Set selectedMoodId - if null, clear by setting to empty string
   appStore.selectMood(snapshot.selectedMoodId || '');
