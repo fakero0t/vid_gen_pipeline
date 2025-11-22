@@ -39,6 +39,12 @@ export interface ProjectMetadata {
 export interface AppStateSnapshot {
   currentStep: StepName;
   creativeBrief: CreativeBrief | null;
+  chatMessages: Array<{
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp: string; // ISO string for serialization
+  }>;
   moods: Mood[];
   selectedMoodId: string | null;
   storyboardCompleted: boolean;

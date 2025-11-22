@@ -76,11 +76,13 @@ export function AssetList({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{title}</h2>
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 mt-4">Loading {assetType} assets...</p>
+      <div className="bg-white rounded-lg border p-4 h-full flex flex-col">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-sm text-gray-600 mt-4">Loading {assetType} assets...</p>
+          </div>
         </div>
       </div>
     );
@@ -88,16 +90,18 @@ export function AssetList({
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{title}</h2>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600">{error}</p>
-          <button
-            onClick={loadAssets}
-            className="mt-4 text-sm text-red-600 hover:text-red-800 underline"
-          >
-            Try again
-          </button>
+      <div className="bg-white rounded-lg border p-4 h-full flex flex-col">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+            <button
+              onClick={loadAssets}
+              className="mt-4 text-xs text-red-600 hover:text-red-800 underline"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -105,60 +109,64 @@ export function AssetList({
 
   if (assets.length === 0) {
     return (
-      <div className="bg-white rounded-lg border p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{title}</h2>
-        <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed rounded-lg">
-          <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <p className="text-muted-foreground text-center">
-            {emptyMessage}
-          </p>
+      <div className="bg-white rounded-lg border p-4 h-full flex flex-col">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-8 px-4 border border-dashed rounded-lg">
+            <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm text-muted-foreground text-center">
+              {emptyMessage}
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {assets.map((asset) => {
-          const isDeleting = deletingIds.has(asset.asset_id);
-          return (
-            <div
-              key={asset.asset_id}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="relative w-full aspect-square mb-4 bg-gray-50 rounded">
-                <Image
-                  src={getImageUrl(asset.asset_id, true)}
-                  alt={asset.metadata.filename || `${assetType} asset`}
-                  fill
-                  className="object-contain rounded"
-                />
+    <div className="bg-white rounded-lg border p-4 h-full flex flex-col overflow-hidden">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {assets.map((asset) => {
+            const isDeleting = deletingIds.has(asset.asset_id);
+            return (
+              <div
+                key={asset.asset_id}
+                className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+              >
+                <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded">
+                  <Image
+                    src={getImageUrl(asset.asset_id, true)}
+                    alt={asset.metadata.filename || `${assetType} asset`}
+                    fill
+                    className="object-contain rounded"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-sm text-gray-900 truncate" title={asset.metadata.filename}>
+                    {asset.metadata.filename}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {asset.dimensions.width} × {asset.dimensions.height}px
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {formatFileSize(asset.metadata.file_size)} • {asset.format.toUpperCase()}
+                  </p>
+                  <button
+                    onClick={() => handleDelete(asset.asset_id)}
+                    disabled={isDeleting}
+                    className="w-full mt-2 px-3 py-1.5 text-xs border-2 border-[rgb(255,81,1)] bg-transparent text-[rgb(255,81,1)] rounded-full hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="font-medium text-gray-900 truncate" title={asset.metadata.filename}>
-                  {asset.metadata.filename}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {asset.dimensions.width} × {asset.dimensions.height}px
-                </p>
-                <p className="text-sm text-gray-600">
-                  {formatFileSize(asset.metadata.file_size)} • {asset.format.toUpperCase()}
-                </p>
-                <button
-                  onClick={() => handleDelete(asset.asset_id)}
-                  disabled={isDeleting}
-                  className="w-full mt-4 px-4 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

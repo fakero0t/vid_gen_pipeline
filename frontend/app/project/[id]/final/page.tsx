@@ -25,7 +25,7 @@ function FinalPageContent() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+    <div className="pt-[calc(3.5rem+1.5rem)] flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
       <div className="w-full max-w-6xl animate-slideUp">
         <Suspense fallback={<StepSkeleton />}>
           <LazyComponents.FinalComposition onBack={handleBack} />

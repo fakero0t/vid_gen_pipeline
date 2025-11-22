@@ -44,16 +44,16 @@ function CharacterAssetsPageContent() {
         "flex flex-col pt-16"
       )}
     >
-      <main className={cn(layoutClasses.scrollableContainer, "flex-1 p-6")}>
-        <div className="max-w-6xl mx-auto space-y-8">
+      <main className="flex-1 flex flex-col overflow-hidden p-6">
+        <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
           {fromCreateProject && (
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4 flex-shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">
                     Character Assets Required
                   </h3>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <p className="text-xs text-blue-800 dark:text-blue-200">
                     You need at least one character asset to create a project. Upload your character assets below, then return to create your project.
                   </p>
                 </div>
@@ -61,7 +61,7 @@ function CharacterAssetsPageContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => router.push('/projects')}
-                  className="ml-4"
+                  className="ml-4 flex-shrink-0"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Projects
@@ -69,21 +69,20 @@ function CharacterAssetsPageContent() {
               </div>
             </div>
           )}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Character Assets</h1>
-            <p className="text-muted-foreground">
-              Manage your character assets for use in ads
-            </p>
+          <div className="mb-3 flex-shrink-0 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Character Assets</h1>
+            <div className="w-80">
+              <CharacterAssetUpload onUploadComplete={handleUploadComplete} />
+            </div>
           </div>
 
-          {/* Upload Section */}
-          <CharacterAssetUpload onUploadComplete={handleUploadComplete} />
-
-          {/* Asset List Section */}
-          <CharacterAssetList 
-            onAssetDeleted={handleAssetDeleted}
-            refreshTrigger={refreshTrigger}
-          />
+          {/* Asset List Section - Takes remaining space */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <CharacterAssetList 
+              onAssetDeleted={handleAssetDeleted}
+              refreshTrigger={refreshTrigger}
+            />
+          </div>
         </div>
       </main>
     </div>
@@ -94,8 +93,8 @@ export default function CharacterAssetsPage() {
   return (
     <Suspense fallback={
       <div className={cn(layoutClasses.fullScreen, "flex flex-col pt-16")}>
-        <main className={cn(layoutClasses.scrollableContainer, "flex-1 p-6")}>
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 flex flex-col overflow-hidden p-6">
+          <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading...</p>
             </div>

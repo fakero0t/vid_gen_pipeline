@@ -49,6 +49,7 @@ export function MoodGallery({
   }, []);
 
   // Sync currentIndex with selectedMoodId (only when selectedMoodId changes externally)
+  // This ensures the carousel shows the selected mood board
   useEffect(() => {
     if (skipSyncRef.current) {
       skipSyncRef.current = false;
@@ -62,35 +63,33 @@ export function MoodGallery({
     }
   }, [selectedMoodId, moods.length, currentIndex]);
 
-  // Sync selection when currentIndex changes due to user navigation
+  // Reset navigation flag - navigation arrows should NOT auto-select
+  // Selection only happens when user explicitly clicks on a card
   useEffect(() => {
-    if (isUserNavigation.current && moods.length > 0 && currentIndex >= 0) {
-      const mood = moods[currentIndex];
-      if (mood && mood.id !== selectedMoodId) {
-        skipSyncRef.current = true; // Prevent the sync effect from running
-        onSelectMood(mood.id);
-        isUserNavigation.current = false; // Reset after selection
-      } else {
-        isUserNavigation.current = false;
-      }
+    if (isUserNavigation.current) {
+      isUserNavigation.current = false;
     }
-  }, [currentIndex, moods, selectedMoodId, onSelectMood]);
+  }, [currentIndex]);
 
   const goToPrevious = useCallback(() => {
     if (moods.length === 0) return;
     isUserNavigation.current = true;
+    skipSyncRef.current = true; // Prevent sync from overriding navigation
     setCurrentIndex((prev) => (prev === 0 ? moods.length - 1 : prev - 1));
   }, [moods.length]);
 
   const goToNext = useCallback(() => {
     if (moods.length === 0) return;
     isUserNavigation.current = true;
+    skipSyncRef.current = true; // Prevent sync from overriding navigation
     setCurrentIndex((prev) => (prev === moods.length - 1 ? 0 : prev + 1));
   }, [moods.length]);
 
   const goToIndex = useCallback((index: number) => {
     if (index >= 0 && index < moods.length && index !== currentIndex) {
+      // Navigation via thumbnails should only navigate, not select
       isUserNavigation.current = true;
+      skipSyncRef.current = true; // Prevent sync from overriding navigation
       setCurrentIndex(index);
     }
   }, [moods.length, currentIndex]);
@@ -156,8 +155,9 @@ export function MoodGallery({
             <Button
               variant="outline"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 goToPrevious();
               }}
@@ -168,8 +168,9 @@ export function MoodGallery({
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 goToNext();
               }}
@@ -183,7 +184,7 @@ export function MoodGallery({
         {/* Carousel Track */}
         <div
           ref={carouselRef}
-          className="relative w-full flex-1 min-h-0 overflow-hidden"
+          className="relative w-full flex-1 min-h-0 overflow-visible"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -192,14 +193,16 @@ export function MoodGallery({
             <div
               className="flex transition-transform duration-500 ease-in-out h-full items-center gap-4"
               style={{ 
-                transform: `translateX(calc(50% - ${currentIndex * (cardWidth + 16)}px - ${cardWidth / 2}px))`
+                transform: isLoading 
+                  ? 'translateX(0)' 
+                  : `translateX(calc(50% - ${currentIndex * (cardWidth + 16)}px - ${cardWidth / 2}px))`
               }}
             >
               {isLoading ? (
-                // Loading skeleton - show one large card
+                // Loading skeleton - show one large card, always centered
                 <div 
                   ref={(el) => cardRefs.current[0] = el}
-                  className="flex-shrink-0 h-full flex items-center"
+                  className="flex-shrink-0 h-full flex items-center justify-center"
                 >
                   <div className="w-auto h-[400px] sm:h-[500px] max-h-[80vh] rounded-xl border-2 border-border bg-card animate-pulse flex flex-row">
                     <div className="p-2 w-[300px] sm:w-[400px] min-h-0 flex-shrink-0">

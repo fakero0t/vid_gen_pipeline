@@ -50,12 +50,16 @@ function ChatContent() {
     isStreaming,
     error: chatError,
     creativeBrief: chatBrief,
+    isExtracting,
   } = useVisionChat();
 
-  // Use creativeBrief from store (persisted) or from chat hook
+  // Prioritize creativeBrief from store (persisted) - this ensures the brief
+  // that was used to generate mood boards is displayed when navigating back
+  // The store version is the source of truth for persisted briefs
   const activeBrief = creativeBrief || chatBrief;
 
-  // Update store when brief is extracted from chat
+  // Update store when brief is extracted from chat (only if store doesn't have one)
+  // This syncs newly extracted briefs to the store for persistence
   useEffect(() => {
     if (chatBrief && !creativeBrief) {
       setCreativeBrief(chatBrief);
@@ -72,15 +76,15 @@ function ChatContent() {
     <>
       <SkipToContent />
       <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        <main id="main-content" tabIndex={-1} className="outline-none pt-14">
+        <main id="main-content" tabIndex={-1} className="outline-none pt-[calc(3.5rem+1.5rem)]">
           <div className="flex h-[calc(100vh-56px)] items-center justify-center p-2 sm:p-3 animate-fadeIn overflow-hidden">
             <div className="w-full max-w-7xl h-full flex gap-2 sm:gap-3">
-              {/* Chat Interface - Transitions from full width to half width when brief appears */}
+              {/* Chat Interface - Transitions from full width to half width when brief appears or extracting */}
               <div 
                 className={`
                   min-h-0 animate-slideUp
                   transition-all duration-500 ease-in-out
-                  ${activeBrief ? 'w-1/2' : 'w-full'}
+                  ${activeBrief || isExtracting ? 'w-1/2' : 'w-full'}
                 `}
               >
                 <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
@@ -95,11 +99,11 @@ function ChatContent() {
                 </Suspense>
               </div>
 
-              {/* Creative Brief Summary - Slides in from right when generated */}
+              {/* Creative Brief Summary - Slides in from right when generated or extracting */}
               <div 
                 className={`
                   transition-all duration-500 ease-in-out
-                  ${activeBrief 
+                  ${activeBrief || isExtracting
                     ? 'w-1/2 opacity-100 translate-x-0' 
                     : 'w-0 opacity-0 translate-x-full overflow-hidden'
                   }
@@ -109,6 +113,8 @@ function ChatContent() {
                   <LazyComponents.CreativeBriefSummary
                     brief={activeBrief}
                     onContinue={handleContinueToMood}
+                    isExtracting={isExtracting}
+                    isUpdating={activeBrief ? (isChatLoading || isStreaming) : false}
                     className="h-full"
                   />
                 </Suspense>

@@ -33,14 +33,14 @@ export function Checkbox({
         className={cn(
           'flex h-4 w-4 items-center justify-center rounded border-2 transition-colors',
           checked
-            ? 'border-primary bg-primary text-primary-foreground'
+            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
             : 'border-border bg-background',
           props.disabled && 'opacity-50 cursor-not-allowed',
           !props.disabled && 'cursor-pointer',
           className
         )}
       >
-        {checked && <Check className="h-3 w-3" />}
+        {checked && <Check className="h-3 w-3 stroke-[2.5]" />}
       </div>
     </label>
   );
