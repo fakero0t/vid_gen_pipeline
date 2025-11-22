@@ -82,10 +82,10 @@ export default function SignInPage() {
         // Check if session already exists before trying to set active
         // This prevents "Session already exists" errors
         try {
-          await setActive({ 
-            session: result.createdSessionId,
-            redirectUrl: callbackUrl 
-          });
+        await setActive({ 
+          session: result.createdSessionId,
+          redirectUrl: callbackUrl 
+        });
         } catch (setActiveError: any) {
           // If setActive fails because session already exists, just redirect
           if (setActiveError.errors?.[0]?.message?.toLowerCase().includes("session") && 

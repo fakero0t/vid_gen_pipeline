@@ -70,7 +70,7 @@ export function useVisionChat(): UseVisionChatReturn {
       const restoredMessages = storedMessages.map(msg => ({
         id: msg.id,
         role: msg.role,
-        parts: [{ type: 'text', text: msg.content }],
+        parts: [{ type: 'text' as const, text: msg.content }],
       }));
       setAiMessages(restoredMessages);
       hasRestoredRef.current = true;

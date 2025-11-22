@@ -86,7 +86,7 @@ export function CreativeBriefSummary({
                 Updating creative brief with new information...
               </p>
             </div>
-          ) : (
+          ) : brief ? (
           <div className="p-3 sm:p-4 space-y-4">
             <div className="space-y-4">
               <div className="space-y-2 animate-slideUp">
@@ -169,7 +169,7 @@ export function CreativeBriefSummary({
               </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Continue button - Fixed at bottom right */}

@@ -120,7 +120,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
       const request: CompositionRequest = {
         clips: clips,  // Use the clips we prepared from storyboard scenes
         audio_url: finalAudioUrl || undefined,
-        include_crossfade: true,
+        include_crossfade: false,
         optimize_size: true,
         target_size_mb: 50,
       };
@@ -287,9 +287,9 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
 
             {/* Video Preview Player */}
             {jobStatus?.video_url && (
-              <div className="max-w-md mx-auto space-y-3">
+              <div className="max-w-4xl mx-auto space-y-3">
                 <h4 className="text-lg font-semibold text-center">Preview</h4>
-                <div className="relative bg-black rounded-lg overflow-hidden shadow-xl aspect-[9/16]">
+                <div className="relative bg-black rounded-lg overflow-hidden shadow-xl aspect-video">
                   <video
                     controls
                     autoPlay
@@ -393,7 +393,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
                         video_url: scene.video_url!,
                         duration: scene.video_duration,
                       })),
-                    include_crossfade: true,
+                    include_crossfade: false,
                     optimize_size: true,
                     target_size_mb: 50,
                   };

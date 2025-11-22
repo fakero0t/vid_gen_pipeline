@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense, useState } from 'react';
+import React, { useEffect, Suspense, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { StoryboardCarousel } from '@/components/storyboard';
 import { PreviewPlayer } from '@/components/storyboard/PreviewPlayer';
@@ -80,6 +80,9 @@ function ScenesPageContent() {
   // Session recovery
   const { isRecovering } = useStoryboardRecovery();
 
+  // Track failed storyboard loads to prevent endless retries
+  const failedStoryboardIdsRef = useRef<Set<string>>(new Set());
+  
   // Initialize or load storyboard
   useEffect(() => {
     // Skip if already loading or if storyboard exists and matches
@@ -88,8 +91,36 @@ function ScenesPageContent() {
     
     // If we have a storyboardId (from URL or project), load it
     if (storyboardId) {
+      // Skip if we've already tried and failed to load this storyboard
+      if (failedStoryboardIdsRef.current.has(storyboardId)) {
+        console.log('[Page] Skipping storyboard load - already failed:', storyboardId);
+        // Clear the storyboardId from project if it's not from URL
+        if (!urlStoryboardId && currentProject?.storyboardId === storyboardId) {
+          console.log('[Page] Clearing invalid storyboardId from project');
+          const { updateProject } = useProjectStore.getState();
+          updateProject(projectId, { storyboardId: undefined });
+        }
+        return;
+      }
+      
       console.log('[Page] Loading storyboard:', storyboardId, urlStoryboardId ? '(from URL)' : '(from project)');
-      loadStoryboard(storyboardId);
+      loadStoryboard(storyboardId).catch((err) => {
+        // Mark as failed if it's a 404 or not found error
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (errorMessage.includes('404') || 
+            errorMessage.includes('not found') || 
+            errorMessage.includes('STORYBOARD_NOT_FOUND')) {
+          console.warn('[Page] Storyboard load failed, marking as failed:', storyboardId);
+          failedStoryboardIdsRef.current.add(storyboardId);
+          
+          // Clear the storyboardId from project if it's not from URL
+          if (!urlStoryboardId && currentProject?.storyboardId === storyboardId) {
+            console.log('[Page] Clearing invalid storyboardId from project');
+            const { updateProject } = useProjectStore.getState();
+            updateProject(projectId, { storyboardId: undefined });
+          }
+        }
+      });
     } 
     // Only initialize new storyboard if we don't have one and we have the required data
     else if (!storyboard && creativeBrief && selectedMoodId) {
@@ -106,7 +137,7 @@ function ScenesPageContent() {
         );
       }
     }
-  }, [storyboardId, urlStoryboardId, storyboard, creativeBrief, selectedMoodId, moods, isLoading, isRecovering, loadStoryboard, initializeStoryboard]);
+  }, [storyboardId, urlStoryboardId, storyboard, creativeBrief, selectedMoodId, moods, isLoading, isRecovering, loadStoryboard, initializeStoryboard, currentProject, projectId]);
 
   // Save storyboardId to project immediately when storyboard is created
   useEffect(() => {

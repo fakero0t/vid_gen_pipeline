@@ -48,6 +48,7 @@ class StoryboardScene(BaseModel):
     # Asset references (from project-level assets)
     brand_asset_id: Optional[str] = Field(default=None, description="Brand asset ID from project (first asset if multiple)")
     character_asset_id: Optional[str] = Field(default=None, description="Character asset ID from project (first asset if multiple)")
+    background_asset_id: Optional[str] = Field(default=None, description="Background asset ID from project")
 
     # Generation tracking
     generation_status: SceneGenerationStatus = Field(default_factory=SceneGenerationStatus)

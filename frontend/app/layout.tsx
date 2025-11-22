@@ -36,8 +36,8 @@ export default function RootLayout({
     <ClerkProvider
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      afterSignInUrl="/projects"
-      afterSignUpUrl="/projects"
+      signInFallbackRedirectUrl="/projects"
+      signUpFallbackRedirectUrl="/projects"
     >
       <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <body

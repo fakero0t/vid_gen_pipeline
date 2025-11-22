@@ -48,6 +48,7 @@ export interface StoryboardScene {
   // Asset references (from project-level assets)
   brand_asset_id?: string | null;
   character_asset_id?: string | null;
+  background_asset_id?: string | null;
 }
 
 /**

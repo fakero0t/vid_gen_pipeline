@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSceneStore } from '@/store/sceneStore';
 
 /**
@@ -35,12 +35,23 @@ export function useStoryboard() {
  */
 export function useStoryboardRecovery() {
   const store = useSceneStore();
+  const recoveryAttemptedRef = useRef(false);
 
   useEffect(() => {
-    // Only run once on mount
-    if (store.storyboard && !store.isLoading) {
+    // Only run once on mount and only if we have a storyboard
+    if (store.storyboard && !store.isLoading && !recoveryAttemptedRef.current) {
+      recoveryAttemptedRef.current = true;
       // Refresh storyboard data from backend
-      store.loadStoryboard(store.storyboard.storyboard_id);
+      store.loadStoryboard(store.storyboard.storyboard_id).catch((err) => {
+        // If storyboard not found, clear it from store to prevent retries
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (errorMessage.includes('404') || 
+            errorMessage.includes('not found') || 
+            errorMessage.includes('STORYBOARD_NOT_FOUND')) {
+          console.warn('[useStoryboardRecovery] Storyboard not found, clearing from store');
+          store.reset();
+        }
+      });
     }
   }, []); // Empty dependency array - only run on mount
 

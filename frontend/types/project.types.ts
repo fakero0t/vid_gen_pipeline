@@ -15,6 +15,7 @@ export interface Project {
   storyboardId?: string; // Reference to storyboard (not full state)
   brandAssetIds?: string[]; // Array of selected brand asset IDs (optional for backward compatibility)
   characterAssetIds?: string[]; // Array of selected character asset IDs (optional for backward compatibility)
+  backgroundAssetIds?: string[]; // Array of selected background asset IDs (optional for backward compatibility)
   appState: AppStateSnapshot; // Full snapshot of appStore state
 }
 
@@ -47,6 +48,8 @@ export interface AppStateSnapshot {
   }>;
   moods: Mood[];
   selectedMoodId: string | null;
+  backgroundAssets?: any[]; // BackgroundAssetStatus[] - stored in appState
+  selectedBackgroundIds?: string[]; // Stored in appState
   storyboardCompleted: boolean;
   audioUrl: string | null;
   compositionJobId: string | null;
@@ -60,6 +63,7 @@ export interface CreateProjectRequest {
   name?: string; // Optional - will auto-generate if not provided
   brandAssetIds?: string[]; // Array of selected brand asset IDs
   characterAssetIds?: string[]; // Array of selected character asset IDs
+  backgroundAssetIds?: string[]; // Array of selected background asset IDs
 }
 
 /**
@@ -71,4 +75,5 @@ export interface UpdateProjectRequest {
   storyboardId?: string;
   brandAssetIds?: string[];
   characterAssetIds?: string[];
+  backgroundAssetIds?: string[];
 }

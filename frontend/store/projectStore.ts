@@ -66,6 +66,8 @@ function createAppStateSnapshot(): AppStateSnapshot {
     })),
     moods: appState.moods,
     selectedMoodId: appState.selectedMoodId,
+    backgroundAssets: appState.backgroundAssets || [],
+    selectedBackgroundIds: appState.selectedBackgroundIds || [],
     storyboardCompleted: appState.storyboardCompleted,
     audioUrl: appState.audioUrl,
     compositionJobId: appState.compositionJobId,
@@ -96,6 +98,8 @@ function restoreAppState(snapshot: AppStateSnapshot): void {
   appStore.setMoods(snapshot.moods);
   // Set selectedMoodId - if null, clear by setting to empty string
   appStore.selectMood(snapshot.selectedMoodId || '');
+  appStore.setBackgroundAssets(snapshot.backgroundAssets || []);
+  appStore.setSelectedBackgroundIds(snapshot.selectedBackgroundIds || []);
   appStore.setStoryboardCompleted(snapshot.storyboardCompleted);
   // Always set audioUrl, even if null, to clear previous project's audio
   appStore.setAudioUrl(snapshot.audioUrl || null);
@@ -124,6 +128,7 @@ export const useProjectStore = create<ProjectStoreState>()(
           updatedAt: now,
           brandAssetIds: request?.brandAssetIds || [],
           characterAssetIds: request?.characterAssetIds || [],
+          backgroundAssetIds: request?.backgroundAssetIds || [],
           appState: createAppStateSnapshot(),
         };
 
@@ -252,7 +257,10 @@ export const useProjectStore = create<ProjectStoreState>()(
           console.log('[ProjectStore] Loading storyboard for project:', project.storyboardId);
           useSceneStore.getState().loadStoryboard(project.storyboardId).catch(err => {
             // If storyboard not found, clear the reference
-            if (err instanceof Error && err.message === 'STORYBOARD_NOT_FOUND') {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            if (errorMessage.includes('STORYBOARD_NOT_FOUND') || 
+                errorMessage.includes('404') || 
+                errorMessage.includes('not found')) {
               console.warn('[ProjectStore] Storyboard not found, clearing reference from project');
               get().updateProject(id, { storyboardId: undefined });
             } else {
@@ -404,7 +412,10 @@ if (typeof window !== 'undefined') {
           useSceneStore.getState().loadStoryboard(currentProject.storyboardId).catch(err => {
             // If storyboard not found, clear the reference
             const projectStore = useProjectStore.getState();
-            if (err instanceof Error && err.message === 'STORYBOARD_NOT_FOUND') {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            if (errorMessage.includes('STORYBOARD_NOT_FOUND') || 
+                errorMessage.includes('404') || 
+                errorMessage.includes('not found')) {
               console.warn('[ProjectStore] Storyboard not found on restore, clearing reference');
               projectStore.updateProject(currentProject.id, { storyboardId: undefined });
             } else {

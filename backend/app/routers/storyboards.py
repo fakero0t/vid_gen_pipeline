@@ -434,6 +434,11 @@ class EnableCharacterAssetRequest(BaseModel):
     character_asset_id: str
 
 
+class EnableBackgroundAssetRequest(BaseModel):
+    """Request to enable background asset for a scene."""
+    background_asset_id: str
+
+
 @router.post("/{storyboard_id}/scenes/{scene_id}/brand-asset")
 async def enable_brand_asset(
     storyboard_id: str,
@@ -594,11 +599,108 @@ async def enable_character_asset(
         )
 
 
-@router.delete("/{storyboard_id}/scenes/{scene_id}/character-asset")
-async def disable_character_asset(
+@router.post("/{storyboard_id}/scenes/{scene_id}/background-asset")
+async def enable_background_asset(
+    storyboard_id: str,
+    scene_id: str,
+    request: EnableBackgroundAssetRequest
+):
+    """
+    Enable background asset for a scene.
+    
+    This marks the scene to include the background asset in image generation.
+    If the scene already has an image, it will need to be regenerated.
+    """
+    try:
+        # Validate background asset exists
+        from ..services.background_service import get_background_service
+        background_service = get_background_service()
+        background_asset = background_service.get_asset(request.background_asset_id)
+        
+        if not background_asset:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Background asset {request.background_asset_id} not found"
+            )
+        
+        # Get scene
+        scene = db.get_scene(scene_id)
+        if not scene:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Scene {scene_id} not found"
+            )
+        
+        # Update scene
+        scene.background_asset_id = request.background_asset_id
+        
+        # If scene already has an image, mark for regeneration
+        if scene.image_url:
+            scene.generation_status.image = "pending"
+            scene.image_url = None
+        
+        # Save scene
+        db.update_scene(scene_id, scene)
+        
+        return {
+            "success": True,
+            "scene": scene,
+            "message": "Background asset enabled"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to enable background asset: {str(e)}"
+        )
+
+
+@router.delete("/{storyboard_id}/scenes/{scene_id}/background-asset")
+async def disable_background_asset(
     storyboard_id: str,
     scene_id: str
 ):
+    """
+    Disable background asset for a scene.
+    
+    Removes background asset from the scene. If the scene has an image with background asset,
+    it will need to be regenerated.
+    """
+    try:
+        # Get scene
+        scene = db.get_scene(scene_id)
+        if not scene:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Scene {scene_id} not found"
+            )
+        
+        # Update scene
+        scene.background_asset_id = None
+        
+        # If scene has an image, mark for regeneration
+        if scene.image_url:
+            scene.generation_status.image = "pending"
+            scene.image_url = None
+        
+        # Save scene
+        db.update_scene(scene_id, scene)
+        
+        return {
+            "success": True,
+            "scene": scene,
+            "message": "Background asset disabled"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to disable background asset: {str(e)}"
+        )
     """
     Disable character asset for a scene.
     
@@ -661,6 +763,7 @@ async def generate_image_task(scene_id: str):
         print(f"  - Storyboard ID: {scene.storyboard_id}")
         print(f"  - Brand Asset ID: {scene.brand_asset_id or '(none)'}")
         print(f"  - Character Asset ID: {scene.character_asset_id or '(none)'}")
+        print(f"  - Background Asset ID: {scene.background_asset_id or '(none)'}")
         print(f"  - Product Composite: {scene.use_product_composite}")
 
         # Update status to generating
@@ -759,10 +862,10 @@ async def generate_image_task(scene_id: str):
                     scene_text=scene.text,
                     style_prompt=scene.style_prompt,
                     product_image_path=str(product_image_path),
-                    width=1080,
-                    height=1920
+                    width=1920,
+                    height=1080
                 )
-        elif scene.brand_asset_id or scene.character_asset_id:
+        elif scene.brand_asset_id or scene.character_asset_id or scene.background_asset_id:
             logger.info("  → Using ASSET-BASED path (nano-banana-pro)")
             # Asset-based generation using nano-banana-pro
             logger.info("="*80)
@@ -779,23 +882,59 @@ async def generate_image_task(scene_id: str):
             replicate_service = get_replicate_service()
             brand_service = get_brand_service()
             character_service = get_character_service()
+            from ..services.background_service import get_background_service
+            background_service = get_background_service()
             
             # Get asset image URLs and metadata
             brand_asset_image_url = None
             brand_asset_filename = None
             character_asset_image_url = None
             character_asset_filename = None
+            background_asset_image_url = None
+            background_asset_filename = None
             
             if scene.brand_asset_id:
                 logger.info("🏷️  BRAND ASSET:")
                 logger.info(f"  Asset ID: {scene.brand_asset_id}")
                 brand_asset = brand_service.get_brand_asset(scene.brand_asset_id)
                 if brand_asset:
-                    # Use public URL if available (for external APIs), otherwise fall back to full URL
-                    brand_asset_image_url = brand_asset.public_url or settings.to_full_url(brand_asset.url)
+                    # Try to get public URL, upload to ImgBB if missing
+                    brand_asset_image_url = brand_asset.public_url
+                    if not brand_asset_image_url:
+                        logger.warning(f"  ⚠️  Brand asset missing public_url, attempting ImgBB upload...")
+                        try:
+                            from ..services.imgbb_service import get_imgbb_service
+                            imgbb_service = get_imgbb_service()
+                            if imgbb_service:
+                                asset_path = brand_service.get_asset_path(scene.brand_asset_id, thumbnail=False)
+                                if asset_path and asset_path.exists():
+                                    brand_asset_image_url = imgbb_service.upload_image(asset_path)
+                                    if brand_asset_image_url:
+                                        logger.info(f"  ✓ Successfully uploaded brand asset to ImgBB: {brand_asset_image_url}")
+                                        # Update metadata with new public_url
+                                        import json
+                                        metadata_path = brand_service.upload_dir / scene.brand_asset_id / "metadata.json"
+                                        if metadata_path.exists():
+                                            with open(metadata_path, 'r') as f:
+                                                metadata = json.load(f)
+                                            metadata['public_url'] = brand_asset_image_url
+                                            with open(metadata_path, 'w') as f:
+                                                json.dump(metadata, f, indent=2)
+                                    else:
+                                        logger.warning(f"  ⚠️  ImgBB upload failed, will use localhost URL")
+                                else:
+                                    logger.warning(f"  ⚠️  Brand asset file not found at {asset_path}")
+                        except Exception as e:
+                            logger.warning(f"  ⚠️  Error uploading brand asset to ImgBB: {e}")
+                    
+                    # Fall back to localhost URL if still no public URL
+                    if not brand_asset_image_url:
+                        brand_asset_image_url = settings.to_full_url(brand_asset.url)
+                        logger.info(f"  ⚠️  Using localhost URL (will be converted to base64): {brand_asset_image_url}")
+                    
                     brand_asset_filename = brand_asset.metadata.get("filename", "brand asset")
                     logger.info(f"  Filename: {brand_asset_filename}")
-                    logger.info(f"  URL: {brand_asset_image_url}")
+                    logger.info(f"  Final URL: {brand_asset_image_url[:100] if len(brand_asset_image_url) > 100 else brand_asset_image_url}")
                     logger.info(f"  Using public URL: {bool(brand_asset.public_url)}")
                 else:
                     logger.warning(f"  ⚠️  WARNING: Brand asset {scene.brand_asset_id} not found")
@@ -814,6 +953,20 @@ async def generate_image_task(scene_id: str):
                 else:
                     logger.warning(f"  ⚠️  WARNING: Character asset {scene.character_asset_id} not found")
             
+            if scene.background_asset_id:
+                logger.info("🖼️  BACKGROUND ASSET:")
+                logger.info(f"  Asset ID: {scene.background_asset_id}")
+                background_asset = background_service.get_asset(scene.background_asset_id)
+                if background_asset:
+                    # Use public URL if available (for external APIs), otherwise fall back to full URL
+                    background_asset_image_url = background_asset.public_url or settings.to_full_url(background_asset.url)
+                    background_asset_filename = background_asset.metadata.get("filename", "background asset")
+                    logger.info(f"  Filename: {background_asset_filename}")
+                    logger.info(f"  URL: {background_asset_image_url}")
+                    logger.info(f"  Using public URL: {bool(background_asset.public_url)}")
+                else:
+                    logger.warning(f"  ⚠️  WARNING: Background asset {scene.background_asset_id} not found")
+            
             # Generate image with assets using nano-banana-pro
             # 16:9 aspect ratio, 1K resolution (1920x1080), PNG format
             logger.info("🚀 Calling generate_scene_with_assets()...")
@@ -822,8 +975,10 @@ async def generate_image_task(scene_id: str):
                 style_prompt=scene.style_prompt,
                 brand_asset_image_url=brand_asset_image_url,
                 character_asset_image_url=character_asset_image_url,
+                background_asset_image_url=background_asset_image_url,
                 brand_asset_filename=brand_asset_filename,
                 character_asset_filename=character_asset_filename,
+                background_asset_filename=background_asset_filename,
                 width=1920,
                 height=1080
             )
@@ -832,35 +987,28 @@ async def generate_image_task(scene_id: str):
             logger.info("="*80)
         
         else:
-            print(f"  → Using STANDARD path (flux-schnell)")
-            # Standard scene generation (existing logic)
-            # Generate image using Replicate
-            # Using Flux model for high-quality image generation
-            prompt = f"{scene.text}. Style: {scene.style_prompt}"
-            print(f"[Image Generation] Generating image for scene {scene_id} with prompt: {prompt[:100]}...")
-
-            # Create Replicate client with token
-            client = replicate.Client(api_token=replicate_token)
+            logger.info("  → Using STANDARD path (nano-banana-pro)")
+            # Standard scene generation using nano-banana-pro (no assets)
+            # Use generate_scene_with_assets with empty control images
+            logger.info("="*80)
+            logger.info("🍌 GENERATING SCENE USING google/nano-banana-pro (NO ASSETS)")
+            logger.info("="*80)
             
-            output = await asyncio.to_thread(
-                client.run,
-                "black-forest-labs/flux-schnell",
-                input={
-                    "prompt": prompt,
-                    "width": 1080,
-                    "height": 1920,
-                    "num_outputs": 1,
-                }
+            # Initialize replicate service
+            replicate_service = get_replicate_service()
+            
+            image_url = await replicate_service.generate_scene_with_assets(
+                scene_text=scene.text,
+                style_prompt=scene.style_prompt,
+                brand_asset_image_url=None,
+                character_asset_image_url=None,
+                background_asset_image_url=None,
+                brand_asset_filename=None,
+                character_asset_filename=None,
+                background_asset_filename=None,
+                width=1920,
+                height=1080
             )
-
-            print(f"[Image Generation] Replicate returned output for scene {scene_id}: {output}")
-
-            # Extract image URL from output
-            if not output or len(output) == 0:
-                raise Exception("No image generated")
-            
-            image_url = str(output[0]) if hasattr(output[0], '__str__') else output[0]
-            print(f"[Image Generation] Extracted image URL for scene {scene_id}: {image_url}")
         
         # Update scene with result (common for both paths)
         # Update scene with image URL

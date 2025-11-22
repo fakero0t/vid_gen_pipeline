@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { getBrandAssetImageUrl } from '@/lib/api/brand';
 import { getCharacterAssetImageUrl } from '@/lib/api/character';
+import { getBackgroundImageUrl } from '@/lib/api/background';
 import type { StoryboardScene } from '@/types/storyboard.types';
 
 interface SceneAssetDisplayProps {
@@ -12,8 +13,9 @@ interface SceneAssetDisplayProps {
 export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
   const hasBrandAsset = !!scene.brand_asset_id;
   const hasCharacterAsset = !!scene.character_asset_id;
+  const hasBackgroundAsset = !!scene.background_asset_id;
 
-  if (!hasBrandAsset && !hasCharacterAsset) {
+  if (!hasBrandAsset && !hasCharacterAsset && !hasBackgroundAsset) {
     return null;
   }
 
@@ -23,9 +25,9 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
       <div className="flex flex-wrap gap-3">
         {hasBrandAsset && (
           <div className="flex items-center gap-2">
-            <div className="relative w-10 h-10 rounded border bg-background overflow-hidden">
+            <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
               <Image
-                src={getBrandAssetImageUrl(scene.brand_asset_id!, true)}
+                src={getBrandAssetImageUrl(scene.brand_asset_id!, false)}
                 alt="Brand asset"
                 fill
                 className="object-contain"
@@ -36,15 +38,28 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
         )}
         {hasCharacterAsset && (
           <div className="flex items-center gap-2">
-            <div className="relative w-10 h-10 rounded border bg-background overflow-hidden">
+            <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
               <Image
-                src={getCharacterAssetImageUrl(scene.character_asset_id!, true)}
+                src={getCharacterAssetImageUrl(scene.character_asset_id!, false)}
                 alt="Character asset"
                 fill
                 className="object-contain"
               />
             </div>
             <span className="text-xs text-muted-foreground">Character</span>
+          </div>
+        )}
+        {hasBackgroundAsset && (
+          <div className="flex items-center gap-2">
+            <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
+              <Image
+                src={getBackgroundImageUrl(scene.background_asset_id!, false)}
+                alt="Background asset"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">Background</span>
           </div>
         )}
       </div>

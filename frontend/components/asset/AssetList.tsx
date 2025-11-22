@@ -137,24 +137,15 @@ export function AssetList({
                 key={asset.asset_id}
                 className="border rounded-lg p-3 hover:shadow-md transition-shadow"
               >
-                <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded">
+                <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded min-h-[300px]">
                   <Image
-                    src={getImageUrl(asset.asset_id, true)}
+                    src={getImageUrl(asset.asset_id, false)}
                     alt={asset.metadata.filename || `${assetType} asset`}
                     fill
                     className="object-contain rounded"
                   />
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-sm text-gray-900 truncate" title={asset.metadata.filename}>
-                    {asset.metadata.filename}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {asset.dimensions.width} × {asset.dimensions.height}px
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {formatFileSize(asset.metadata.file_size)} • {asset.format.toUpperCase()}
-                  </p>
                   <button
                     onClick={() => handleDelete(asset.asset_id)}
                     disabled={isDeleting}

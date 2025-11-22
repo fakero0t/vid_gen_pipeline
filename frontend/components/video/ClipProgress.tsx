@@ -146,7 +146,7 @@ export function ClipProgress({ clip, sceneDescription }: ClipProgressProps) {
             <video
               controls
               preload="metadata"
-              className="w-full aspect-[9/16] object-contain"
+              className="w-full aspect-video object-contain"
               style={{ maxHeight: '300px' }}
             >
               <source src={clip.video_url} type="video/mp4" />

@@ -6,6 +6,7 @@
 export const STEPS = {
   CHAT: 'chat',
   MOOD: 'mood',
+  BACKGROUNDS: 'backgrounds',
   SCENES: 'scenes',
   FINAL: 'final',
 } as const;
@@ -18,6 +19,7 @@ export type StepName = typeof STEPS[keyof typeof STEPS];
 export const STEP_ORDER: StepName[] = [
   STEPS.CHAT,
   STEPS.MOOD,
+  STEPS.BACKGROUNDS,
   STEPS.SCENES,
   STEPS.FINAL,
 ];
@@ -28,6 +30,7 @@ export const STEP_ORDER: StepName[] = [
 export const STEP_LABELS: Record<StepName, string> = {
   [STEPS.CHAT]: 'Vision & Brief',
   [STEPS.MOOD]: 'Mood Selection',
+  [STEPS.BACKGROUNDS]: 'Background Selection',
   [STEPS.SCENES]: 'Storyboard',
   [STEPS.FINAL]: 'Final Composition',
 };

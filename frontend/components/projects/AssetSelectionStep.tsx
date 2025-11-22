@@ -79,7 +79,7 @@ export function AssetSelectionStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto">
         {assets.map((asset) => {
           const isSelected = selectedIds.includes(asset.asset_id);
           return (
@@ -93,9 +93,9 @@ export function AssetSelectionStep({
               )}
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
-              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden">
+              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden min-h-[200px]">
                 <Image
-                  src={getImageUrl(asset.asset_id, true)}
+                  src={getImageUrl(asset.asset_id, false)}
                   alt={asset.metadata.filename || `${assetTypeLabel} asset`}
                   fill
                   className="object-contain rounded"
@@ -117,9 +117,6 @@ export function AssetSelectionStep({
                   </div>
                 </div>
               </div>
-              <p className="text-sm font-medium truncate" title={asset.metadata.filename}>
-                {asset.metadata.filename}
-              </p>
             </div>
           );
         })}

@@ -53,6 +53,8 @@ interface SceneState {
   disableBrandAsset: (sceneId: string) => Promise<void>;
   enableCharacterAsset: (sceneId: string, characterAssetId: string) => Promise<void>;
   disableCharacterAsset: (sceneId: string) => Promise<void>;
+  enableBackgroundAsset: (sceneId: string, backgroundAssetId: string) => Promise<void>;
+  disableBackgroundAsset: (sceneId: string) => Promise<void>;
 
   // Actions - SSE
   connectSSE: (storyboardId: string) => void;
@@ -724,6 +726,78 @@ export const useSceneStore = create<SceneState>((set, get) => ({
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Failed to disable character asset',
+            isSaving: false,
+          });
+          throw error;
+        }
+      },
+
+      // Enable background asset for a scene
+      enableBackgroundAsset: async (sceneId, backgroundAssetId) => {
+        set({ isSaving: true, error: null });
+        try {
+          const storyboard = get().storyboard;
+          if (!storyboard) {
+            throw new Error('No storyboard loaded');
+          }
+          
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const response = await fetch(
+            `${API_URL}/api/storyboards/${storyboard.storyboard_id}/scenes/${sceneId}/background-asset`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ background_asset_id: backgroundAssetId }),
+            }
+          );
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to enable background asset');
+          }
+          
+          const data = await response.json();
+          
+          // Update scene in state
+          get().updateScene(sceneId, data.scene);
+          set({ isSaving: false });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to enable background asset',
+            isSaving: false,
+          });
+          throw error;
+        }
+      },
+
+      // Disable background asset for a scene
+      disableBackgroundAsset: async (sceneId) => {
+        set({ isSaving: true, error: null });
+        try {
+          const storyboard = get().storyboard;
+          if (!storyboard) {
+            throw new Error('No storyboard loaded');
+          }
+          
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const response = await fetch(
+            `${API_URL}/api/storyboards/${storyboard.storyboard_id}/scenes/${sceneId}/background-asset`,
+            { method: 'DELETE' }
+          );
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to disable background asset');
+          }
+          
+          const data = await response.json();
+          
+          // Update scene in state
+          get().updateScene(sceneId, data.scene);
+          set({ isSaving: false });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to disable background asset',
             isSaving: false,
           });
           throw error;

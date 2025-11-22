@@ -283,7 +283,7 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
         </div>
 
         {/* Preview Area */}
-        <div className="relative aspect-[9/16] max-h-[600px] bg-black">
+        <div className="relative aspect-video max-h-[600px] bg-black">
           {currentPreview.type === 'video' && currentPreview.url && !videoError ? (
             <>
               <video

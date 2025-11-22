@@ -194,7 +194,7 @@ export function SceneCardNew({
         {scene.state === 'image' && (
           <div className="space-y-4">
             {/* Image display */}
-            <div className="relative aspect-[9/16] max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-muted border border-border">
+            <div className="relative aspect-video max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-muted border border-border">
               {isGeneratingImage ? (
                 <div className="w-full h-full flex flex-col items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
@@ -208,7 +208,7 @@ export function SceneCardNew({
                   }
                   alt={`Scene ${sceneNumber}`}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   sizes="(max-width: 768px) 100vw, 800px"
                 />
               ) : (
@@ -313,7 +313,7 @@ export function SceneCardNew({
         {scene.state === 'video' && (
           <div className="space-y-4">
             {/* Video player */}
-            <div className="relative aspect-[9/16] max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-black border border-border">
+            <div className="relative aspect-video max-h-[600px] sm:max-h-[700px] rounded-lg overflow-hidden bg-black border border-border">
               {isGeneratingVideo ? (
                 <div className="w-full h-full flex flex-col items-center justify-center text-white">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
@@ -324,7 +324,7 @@ export function SceneCardNew({
                 <video
                   src={scene.video_url}
                   controls
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   poster={scene.image_url || undefined}
                 >
                   Your browser does not support the video tag.
@@ -340,7 +340,7 @@ export function SceneCardNew({
             <div className="grid grid-cols-[100px_1fr] gap-3">
               {/* Thumbnail */}
               {scene.image_url && (
-                <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted border border-border">
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted border border-border">
                   <Image
                     src={scene.image_url}
                     alt={`Scene ${sceneNumber} thumbnail`}
