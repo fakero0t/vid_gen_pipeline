@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { layoutClasses } from '@/lib/layout';
 import { cn, formatDistanceToNow } from '@/lib/utils';
 import { useProjectStore } from '@/store/projectStore';
@@ -25,6 +26,7 @@ import type { CharacterAssetStatus } from '@/types/character.types';
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { userId } = useAuth();
   const { projects, getProjectMetadata, createProject, deleteProject, renameProject, duplicateProject } = useProjectStore();
   const [isMounted, setIsMounted] = useState(false);
   const [projectMetadata, setProjectMetadata] = useState<ReturnType<typeof getProjectMetadata>>([]);
@@ -70,11 +72,15 @@ export default function ProjectsPage() {
     setSelectedCharacterAssetIds([]);
     setProjectName('');
     
+    if (!userId) {
+      return;
+    }
+
     try {
       // Fetch both asset types
       const [brands, characters] = await Promise.all([
-        listBrandAssets(),
-        listCharacterAssets(),
+        listBrandAssets(userId),
+        listCharacterAssets(userId),
       ]);
       
       setBrandAssets(brands);

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration';
 import { useAppStore } from '@/store/appStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -11,6 +12,76 @@ import { listBackgroundAssets } from '@/lib/api/background';
 import type { BackgroundGenerationRequest } from '@/types/background.types';
 import { STEPS } from '@/lib/steps';
 
+// Cheeky loading phrases that rotate
+const LOADING_PHRASES = [
+  "Crafting your perfect mood... ✨",
+  "Gathering inspiration just for you... 🎨",
+  "Setting the vibe... 🌈",
+  "Curating your mood board masterpiece... 🎭",
+  "Hang tight, creativity in progress... 🚀",
+  "Brewing some visual magic... ☕",
+  "Channeling your aesthetic... 🔮",
+  "Weaving together your vision... 🧵",
+  "Polishing every pixel... 💎",
+  "Almost there, promise! ⏳"
+];
+
+function LoadingPhrases() {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Rotate phrases every 2.5 seconds
+    intervalRef.current = setInterval(() => {
+      setIsVisible(false);
+      
+      // After fade out, change phrase and fade in
+      setTimeout(() => {
+        setCurrentPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+        setIsVisible(true);
+      }, 400); // Match fadeOutDown animation duration
+    }, 2500);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex-shrink-0 w-full h-full flex items-center justify-center">
+      <div className="text-center px-4">
+        <div 
+          className={`
+            text-sm sm:text-base font-display font-bold
+            bg-gradient-to-r from-primary via-primary/80 to-primary
+            bg-clip-text text-transparent
+            ${isVisible ? 'animate-fadeInUp' : 'animate-fadeOutDown'}
+          `}
+        >
+          {LOADING_PHRASES[currentPhraseIndex]}
+        </div>
+        <div className="mt-6 flex justify-center gap-2">
+          {LOADING_PHRASES.map((_, index) => (
+            <div
+              key={index}
+              className={`
+                w-2 h-2 rounded-full transition-all duration-300
+                ${index === currentPhraseIndex 
+                  ? 'bg-primary scale-125 animate-gentleBounce' 
+                  : 'bg-muted-foreground/30'
+                }
+              `}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Background selection page - allows users to select background images
  * for their video generation pipeline.
@@ -18,6 +89,7 @@ import { STEPS } from '@/lib/steps';
 export default function BackgroundsPage() {
   const router = useRouter();
   const params = useParams();
+  const { userId } = useAuth();
   const projectId = params.id as string;
   const {
     creativeBrief,
@@ -60,9 +132,9 @@ export default function BackgroundsPage() {
     const project = getCurrentProject();
     const projectBackgroundAssetIds = project?.backgroundAssetIds || [];
     
-    if (projectBackgroundAssetIds.length > 0 && backgroundAssets.length === 0 && !isBackgroundLoading) {
+    if (projectBackgroundAssetIds.length > 0 && backgroundAssets.length === 0 && !isBackgroundLoading && userId) {
       // Try to load existing background assets
-      listBackgroundAssets()
+      listBackgroundAssets(userId)
         .then(allBackgrounds => {
           // Filter to only show assets that are in the project
           const projectBackgrounds = allBackgrounds.filter(asset => 
@@ -156,95 +228,94 @@ export default function BackgroundsPage() {
   const canContinue = backgroundAssets.length > 0 && selectedBackgroundIds.length > 0;
 
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col p-2 sm:p-3 animate-fadeIn overflow-hidden">
-      {/* Back button */}
-      <button
-        onClick={handleBack}
-        className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 animate-slideUp mb-2 flex-shrink-0"
-      >
-        <svg
-          className="w-3 h-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Back to Mood Selection
-      </button>
+    <div className="min-h-screen pt-[calc(3.5rem+1.5rem)] pb-4 sm:pb-6 flex flex-col">
+      <main className="flex-1 flex flex-col animate-fadeIn overflow-visible">
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          {/* Top bar with Back button and Title */}
+          <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2">
+            <div className="w-full max-w-7xl relative flex items-center">
+              {/* Back button - left */}
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 animate-slideUp flex-shrink-0"
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to Mood Selection
+              </button>
+              {/* Title - centered */}
+              <h2 className="absolute left-1/2 -translate-x-1/2 text-base sm:text-lg font-display font-bold tracking-tight">
+                Select your <span className="text-gradient">background images</span>
+              </h2>
+            </div>
+          </div>
 
-      {/* Header */}
-      <div className="space-y-1 animate-slideUp flex-shrink-0 mb-4">
-        <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
-          Select your <span className="text-gradient">background images</span>
-        </h2>
-        <p className="text-[10px] sm:text-xs text-muted-foreground max-w-2xl">
-          Choose one or more background images to use in your scenes. These will be available when creating scenes.
-        </p>
-      </div>
+          {/* Mood Board Component - centered, full width available, overflow allowed */}
+          <div className="flex-1 min-h-0 w-full flex justify-center animate-slideUp animation-delay-100 overflow-visible">
+            <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 overflow-visible">
+              <Suspense fallback={<StepSkeleton />}>
+                {/* Error display */}
+                {backgroundError && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-4">
+                    <p className="text-[10px] font-medium text-destructive">{backgroundError}</p>
+                  </div>
+                )}
 
-      {/* Error display */}
-      {backgroundError && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-4">
-          <p className="text-[10px] font-medium text-destructive">{backgroundError}</p>
+                {/* Description text - centered */}
+                {!isBackgroundLoading && backgroundAssets.length > 0 && (
+                  <div className="text-center mb-4 animate-fadeIn">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      Choose one or more background images to use in your scenes. These will be available when creating scenes.
+                    </p>
+                  </div>
+                )}
+
+                {/* Loading or Gallery */}
+                {isBackgroundLoading ? (
+                  <div className="flex-1 min-h-0">
+                    <LoadingPhrases />
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1 min-h-0 overflow-auto">
+                      <BackgroundGallery
+                        backgrounds={backgroundAssets}
+                        selectedIds={selectedBackgroundIds}
+                        onSelect={handleBackgroundSelect}
+                        isLoading={isBackgroundLoading}
+                      />
+                    </div>
+
+                    {/* Continue button */}
+                    {backgroundAssets.length > 0 && (
+                      <div className="flex justify-end mt-4 flex-shrink-0 animate-slideUp animation-delay-200">
+                        <button
+                          onClick={handleContinue}
+                          disabled={!canContinue || isBackgroundLoading}
+                          className="btn-primary-bold text-xs px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Continue to Scenes
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Suspense>
+            </div>
+          </div>
         </div>
-      )}
-
-      {/* Action buttons */}
-      {backgroundAssets.length === 0 && (
-        <div className="flex gap-2 items-center animate-bounceIn flex-shrink-0 mb-4">
-          <button
-            onClick={handleGenerateBackgrounds}
-            disabled={isBackgroundLoading}
-            className="btn-primary-bold text-xs px-3 py-1.5"
-          >
-            {isBackgroundLoading ? 'Generating...' : 'Generate Background Images'}
-          </button>
-        </div>
-      )}
-
-      {/* Regenerate option when backgrounds exist */}
-      {backgroundAssets.length > 0 && !isBackgroundLoading && (
-        <div className="flex gap-2 items-center animate-slideUp flex-shrink-0 mb-4">
-          <button
-            onClick={handleGenerateBackgrounds}
-            disabled={isBackgroundLoading}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Regenerate
-          </button>
-        </div>
-      )}
-
-      {/* Background Gallery */}
-      <div className="flex-1 min-h-0 animate-slideUp animation-delay-100 overflow-auto">
-        <Suspense fallback={<StepSkeleton />}>
-          <BackgroundGallery
-            backgrounds={backgroundAssets}
-            selectedIds={selectedBackgroundIds}
-            onSelect={handleBackgroundSelect}
-            isLoading={isBackgroundLoading}
-          />
-        </Suspense>
-      </div>
-
-      {/* Continue button */}
-      {backgroundAssets.length > 0 && (
-        <div className="flex justify-end mt-4 flex-shrink-0 animate-slideUp animation-delay-200">
-          <button
-            onClick={handleContinue}
-            disabled={!canContinue || isBackgroundLoading}
-            className="btn-primary-bold text-xs px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Continue to Scenes
-          </button>
-        </div>
-      )}
+      </main>
     </div>
   );
 }

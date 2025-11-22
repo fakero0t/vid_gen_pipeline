@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { BackgroundAssetStatus } from '@/types/background.types';
 import { getBackgroundImageUrl } from '@/lib/api/background';
@@ -21,17 +22,10 @@ export function BackgroundGallery({
   isLoading = false,
   className = '',
 }: BackgroundGalleryProps) {
+  const { userId } = useAuth();
+  // Loading state is now handled by the page component with LoadingPhrases
   if (isLoading) {
-    return (
-      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="aspect-video rounded-lg bg-muted animate-pulse"
-          />
-        ))}
-      </div>
-    );
+    return null;
   }
 
   if (backgrounds.length === 0) {
@@ -60,13 +54,15 @@ export function BackgroundGallery({
             `}
             onClick={() => onSelect(background.asset_id, !isSelected)}
           >
-            <Image
-              src={getBackgroundImageUrl(background.asset_id, false)}
-              alt={`Background ${background.asset_id}`}
-              fill
-              className="object-contain"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
+            {userId && (
+              <Image
+                src={getBackgroundImageUrl(background.asset_id, userId, false)}
+                alt={`Background ${background.asset_id}`}
+                fill
+                className="object-contain"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              />
+            )}
             
             {/* Selection overlay */}
             <div

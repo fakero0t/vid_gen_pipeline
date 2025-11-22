@@ -7,8 +7,9 @@ import { useState } from 'react';
 import type { Asset, AssetStatus } from '@/types/asset.types';
 
 interface UseAssetUploadConfig<T extends Asset, S extends AssetStatus> {
-  uploadFn: (file: File, onProgress?: (progress: number) => void) => Promise<T>;
-  deleteFn: (assetId: string) => Promise<void>;
+  uploadFn: (file: File, userId: string, onProgress?: (progress: number) => void) => Promise<T>;
+  deleteFn: (assetId: string, userId: string) => Promise<void>;
+  userId: string;
 }
 
 export function useAssetUpload<T extends Asset, S extends AssetStatus>(
@@ -111,7 +112,7 @@ export function useAssetUpload<T extends Asset, S extends AssetStatus>(
       }
       
       // Upload with progress tracking
-      const result = await config.uploadFn(file, (progress) => {
+      const result = await config.uploadFn(file, config.userId, (progress) => {
         setUploadProgress(progress);
       });
       
@@ -129,7 +130,7 @@ export function useAssetUpload<T extends Asset, S extends AssetStatus>(
 
   const deleteAsset = async (assetId: string) => {
     try {
-      await config.deleteFn(assetId);
+      await config.deleteFn(assetId, config.userId);
       if (uploadedAsset?.asset_id === assetId) {
         setUploadedAsset(null);
       }

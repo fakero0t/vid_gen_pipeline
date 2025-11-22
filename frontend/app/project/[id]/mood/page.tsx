@@ -144,12 +144,13 @@ export default function MoodPage() {
   };
 
   return (
-    <div className="min-h-screen pt-[calc(3.5rem+1.5rem)] flex flex-col">
+    <div className="min-h-screen pt-[calc(3.5rem+1.5rem)] pb-4 sm:pb-6 flex flex-col">
       <main className="flex-1 flex flex-col animate-fadeIn overflow-visible">
         <div className="flex-1 flex flex-col min-h-0 w-full">
-          {/* Back button - centered with padding */}
+          {/* Top bar with Back button and Title */}
           <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2">
-            <div className="w-full max-w-7xl">
+            <div className="w-full max-w-7xl relative flex items-center">
+              {/* Back button - left */}
               <button
                 onClick={handleBack}
                 className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 animate-slideUp flex-shrink-0"
@@ -169,6 +170,10 @@ export default function MoodPage() {
                 </svg>
                 Back to Chat
               </button>
+              {/* Title - centered */}
+              <h2 className="absolute left-1/2 -translate-x-1/2 text-base sm:text-lg font-display font-bold tracking-tight">
+                Select your <span className="text-gradient">mood board</span>
+              </h2>
             </div>
           </div>
 

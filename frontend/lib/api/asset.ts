@@ -10,8 +10,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export async function uploadAsset(
   apiPrefix: string,
   file: File,
+  userId: string,
   onProgress?: (progress: number) => void
 ): Promise<Asset> {
+  if (!userId) {
+    throw new Error('User ID is required to upload assets');
+  }
+
   const formData = new FormData();
   formData.append('file', file);
 
@@ -51,12 +56,22 @@ export async function uploadAsset(
     });
 
     xhr.open('POST', `${API_URL}/api/${apiPrefix}/upload`);
+    // Add user_id header for backend authentication
+    xhr.setRequestHeader('X-User-Id', userId);
     xhr.send(formData);
   });
 }
 
-export async function getAsset(apiPrefix: string, assetId: string): Promise<AssetStatus> {
-  const response = await fetch(`${API_URL}/api/${apiPrefix}/${assetId}`);
+export async function getAsset(apiPrefix: string, assetId: string, userId: string): Promise<AssetStatus> {
+  if (!userId) {
+    throw new Error('User ID is required to access assets');
+  }
+
+  const response = await fetch(`${API_URL}/api/${apiPrefix}/${assetId}`, {
+    headers: {
+      'X-User-Id': userId,
+    },
+  });
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Failed to get asset' }));
@@ -66,8 +81,16 @@ export async function getAsset(apiPrefix: string, assetId: string): Promise<Asse
   return response.json();
 }
 
-export async function listAssets(apiPrefix: string): Promise<AssetStatus[]> {
-  const response = await fetch(`${API_URL}/api/${apiPrefix}`);
+export async function listAssets(apiPrefix: string, userId: string): Promise<AssetStatus[]> {
+  if (!userId) {
+    throw new Error('User ID is required to list assets');
+  }
+
+  const response = await fetch(`${API_URL}/api/${apiPrefix}`, {
+    headers: {
+      'X-User-Id': userId,
+    },
+  });
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Failed to list assets' }));
@@ -77,9 +100,16 @@ export async function listAssets(apiPrefix: string): Promise<AssetStatus[]> {
   return response.json();
 }
 
-export async function deleteAsset(apiPrefix: string, assetId: string): Promise<void> {
+export async function deleteAsset(apiPrefix: string, assetId: string, userId: string): Promise<void> {
+  if (!userId) {
+    throw new Error('User ID is required to delete assets');
+  }
+
   const response = await fetch(`${API_URL}/api/${apiPrefix}/${assetId}`, {
     method: 'DELETE',
+    headers: {
+      'X-User-Id': userId,
+    },
   });
   
   if (!response.ok) {
@@ -88,9 +118,14 @@ export async function deleteAsset(apiPrefix: string, assetId: string): Promise<v
   }
 }
 
-export function getAssetImageUrl(apiPrefix: string, assetId: string, thumbnail: boolean = false): string {
+export function getAssetImageUrl(apiPrefix: string, assetId: string, userId: string, thumbnail: boolean = false): string {
+  if (!userId) {
+    throw new Error('User ID is required to access asset images');
+  }
+
   const endpoint = thumbnail ? 'thumbnail' : 'image';
-  return `${API_URL}/api/${apiPrefix}/${assetId}/${endpoint}`;
+  // Include user_id as query parameter for img src tags (can't send headers)
+  return `${API_URL}/api/${apiPrefix}/${assetId}/${endpoint}?user_id=${encodeURIComponent(userId)}`;
 }
 
 

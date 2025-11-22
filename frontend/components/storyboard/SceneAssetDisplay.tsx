@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs';
 import { getBrandAssetImageUrl } from '@/lib/api/brand';
 import { getCharacterAssetImageUrl } from '@/lib/api/character';
 import { getBackgroundImageUrl } from '@/lib/api/background';
@@ -11,6 +12,7 @@ interface SceneAssetDisplayProps {
 }
 
 export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
+  const { userId } = useAuth();
   const hasBrandAsset = !!scene.brand_asset_id;
   const hasCharacterAsset = !!scene.character_asset_id;
   const hasBackgroundAsset = !!scene.background_asset_id;
@@ -23,11 +25,11 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
     <div className="flex flex-col gap-3 p-4 bg-muted/50 rounded-lg border">
       <h4 className="text-sm font-semibold text-foreground">Assets Used</h4>
       <div className="flex flex-wrap gap-3">
-        {hasBrandAsset && (
+        {hasBrandAsset && userId && (
           <div className="flex items-center gap-2">
             <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
               <Image
-                src={getBrandAssetImageUrl(scene.brand_asset_id!, false)}
+                src={getBrandAssetImageUrl(scene.brand_asset_id!, userId, false)}
                 alt="Brand asset"
                 fill
                 className="object-contain"
@@ -36,11 +38,11 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
             <span className="text-xs text-muted-foreground">Brand</span>
           </div>
         )}
-        {hasCharacterAsset && (
+        {hasCharacterAsset && userId && (
           <div className="flex items-center gap-2">
             <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
               <Image
-                src={getCharacterAssetImageUrl(scene.character_asset_id!, false)}
+                src={getCharacterAssetImageUrl(scene.character_asset_id!, userId, false)}
                 alt="Character asset"
                 fill
                 className="object-contain"
@@ -49,11 +51,11 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
             <span className="text-xs text-muted-foreground">Character</span>
           </div>
         )}
-        {hasBackgroundAsset && (
+        {hasBackgroundAsset && userId && (
           <div className="flex items-center gap-2">
             <div className="relative w-64 h-64 rounded border bg-background overflow-hidden">
               <Image
-                src={getBackgroundImageUrl(scene.background_asset_id!, false)}
+                src={getBackgroundImageUrl(scene.background_asset_id!, userId, false)}
                 alt="Background asset"
                 fill
                 className="object-contain"

@@ -208,6 +208,37 @@
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gentleBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
@@ -271,6 +302,18 @@
   animation: elasticIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
 }
 
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-fadeOutDown {
+  animation: fadeOutDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-gentleBounce {
+  animation: gentleBounce 2s ease-in-out infinite;
+}
+
 /* Animation delays for staggered effects */
 .animation-delay-100 {
   animation-delay: 0.1s;
@@ -295,6 +338,16 @@
 /* Smooth transitions for interactive elements */
 .transition-smooth {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide scrollbar but maintain scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }
 
 /* Backdrop blur support */
@@ -692,14 +745,14 @@
   
   /* Gradient text effect - Mockupper inspired */
   .text-gradient {
-    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(196, 230, 43) 100%);
+    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
   .dark .text-gradient {
-    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(196, 230, 43) 100%);
+    background: linear-gradient(135deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

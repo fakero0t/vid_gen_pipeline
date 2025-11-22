@@ -5,24 +5,25 @@ const API_PREFIX = 'brand';
 
 export async function uploadBrandAsset(
   file: File,
+  userId: string,
   onProgress?: (progress: number) => void
 ): Promise<BrandAsset> {
-  return assetAPI.uploadAsset(API_PREFIX, file, onProgress);
+  return assetAPI.uploadAsset(API_PREFIX, file, userId, onProgress);
 }
 
-export async function getBrandAsset(assetId: string): Promise<BrandAssetStatus> {
-  return assetAPI.getAsset(API_PREFIX, assetId);
+export async function getBrandAsset(assetId: string, userId: string): Promise<BrandAssetStatus> {
+  return assetAPI.getAsset(API_PREFIX, assetId, userId);
 }
 
-export async function listBrandAssets(): Promise<BrandAssetStatus[]> {
-  return assetAPI.listAssets(API_PREFIX);
+export async function listBrandAssets(userId: string): Promise<BrandAssetStatus[]> {
+  return assetAPI.listAssets(API_PREFIX, userId);
 }
 
-export async function deleteBrandAsset(assetId: string): Promise<void> {
-  return assetAPI.deleteAsset(API_PREFIX, assetId);
+export async function deleteBrandAsset(assetId: string, userId: string): Promise<void> {
+  return assetAPI.deleteAsset(API_PREFIX, assetId, userId);
 }
 
-export function getBrandAssetImageUrl(assetId: string, thumbnail: boolean = false): string {
-  return assetAPI.getAssetImageUrl(API_PREFIX, assetId, thumbnail);
+export function getBrandAssetImageUrl(assetId: string, userId: string, thumbnail: boolean = false): string {
+  return assetAPI.getAssetImageUrl(API_PREFIX, assetId, userId, thumbnail);
 }
 

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.routers import moods, scenes, video, audio, composition, storyboards, upload, nerf, product, admin, brand, character, backgrounds
+from app.routers import moods, scenes, video, audio, composition, storyboards, upload, nerf, product, admin, brand, character, backgrounds, whisper
 
 # Configure logging
 logging.basicConfig(
@@ -54,6 +54,7 @@ app.include_router(product.router)
 app.include_router(brand.router)
 app.include_router(character.router)
 app.include_router(backgrounds.router)
+app.include_router(whisper.router)  # Whisper speech-to-text
 app.include_router(admin.router)  # Admin metrics and monitoring
 
 

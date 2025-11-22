@@ -38,16 +38,6 @@ export function MoodBoard({
 
   return (
     <div className={`space-y-2 sm:space-y-3 w-full h-full flex flex-col ${className}`}>
-      {/* Header */}
-      <div className="space-y-1 animate-fadeIn flex-shrink-0">
-        <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
-          Select your <span className="text-gradient">mood board</span>
-        </h2>
-        <p className="text-[10px] sm:text-xs text-muted-foreground max-w-2xl">
-          Choose the visual style that best represents your vision
-        </p>
-      </div>
-
       {/* Error display */}
       {error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0">
@@ -55,18 +45,6 @@ export function MoodBoard({
         </div>
       )}
 
-      {/* Action buttons */}
-      {!hasMoods && (
-        <div className="flex gap-2 items-center animate-bounceIn flex-shrink-0">
-          <button
-            onClick={onGenerate}
-            disabled={isLoading}
-            className="btn-primary-bold text-xs px-3 py-1.5"
-          >
-            {isLoading ? 'Generating...' : 'Generate Mood Boards'}
-          </button>
-        </div>
-      )}
 
       {/* Regenerate option when moods exist */}
       {hasMoods && !isLoading && (

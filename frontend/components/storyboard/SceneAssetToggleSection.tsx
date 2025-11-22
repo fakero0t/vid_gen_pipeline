@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useProjectStore } from '@/store/projectStore';
 import { useSceneStore } from '@/store/sceneStore';
@@ -18,6 +19,7 @@ interface SceneAssetToggleSectionProps {
 }
 
 export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps) {
+  const { userId } = useAuth();
   const { getCurrentProject } = useProjectStore();
   const { enableBrandAsset, disableBrandAsset, enableCharacterAsset, disableCharacterAsset, enableBackgroundAsset, disableBackgroundAsset } = useSceneStore();
   
@@ -41,7 +43,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     if (projectBrandAssetIds.length === 0) return;
     
     setIsLoadingBrand(true);
-    listBrandAssets()
+    listBrandAssets(userId!)
       .then(allBrandAssets => {
         // Filter to only show assets that are in the project
         const projectBrandAssets = allBrandAssets.filter(asset => 
@@ -62,7 +64,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     if (projectCharacterAssetIds.length === 0) return;
     
     setIsLoadingCharacter(true);
-    listCharacterAssets()
+    listCharacterAssets(userId!)
       .then(allCharacterAssets => {
         // Filter to only show assets that are in the project
         const projectCharacterAssets = allCharacterAssets.filter(asset => 
@@ -83,7 +85,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     if (projectBackgroundAssetIds.length === 0) return;
     
     setIsLoadingBackground(true);
-    listBackgroundAssets()
+    listBackgroundAssets(userId!)
       .then(allBackgroundAssets => {
         // Filter to only show assets that are in the project
         const projectBackgroundAssets = allBackgroundAssets.filter(asset => 
@@ -206,12 +208,14 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                       disabled={isTogglingBrand}
                     />
                     <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      <Image
-                        src={getBrandAssetImageUrl(asset.asset_id, false)}
-                        alt={asset.metadata?.filename || 'Brand asset'}
-                        fill
-                        className="object-contain"
-                      />
+                      {userId && (
+                        <Image
+                          src={getBrandAssetImageUrl(asset.asset_id, userId, false)}
+                          alt={asset.metadata?.filename || 'Brand asset'}
+                          fill
+                          className="object-contain"
+                        />
+                      )}
                     </div>
                   </label>
                 );
@@ -244,12 +248,14 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                       disabled={isTogglingCharacter}
                     />
                     <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      <Image
-                        src={getCharacterAssetImageUrl(asset.asset_id, false)}
-                        alt={asset.metadata?.filename || 'Character asset'}
-                        fill
-                        className="object-contain"
-                      />
+                      {userId && (
+                        <Image
+                          src={getCharacterAssetImageUrl(asset.asset_id, userId, false)}
+                          alt={asset.metadata?.filename || 'Character asset'}
+                          fill
+                          className="object-contain"
+                        />
+                      )}
                     </div>
                   </label>
                 );
@@ -282,12 +288,14 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                       disabled={isTogglingBackground}
                     />
                     <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      <Image
-                        src={getBackgroundImageUrl(asset.asset_id, false)}
-                        alt={asset.metadata?.filename || 'Background asset'}
-                        fill
-                        className="object-contain"
-                      />
+                      {userId && (
+                        <Image
+                          src={getBackgroundImageUrl(asset.asset_id, userId, false)}
+                          alt={asset.metadata?.filename || 'Background asset'}
+                          fill
+                          className="object-contain"
+                        />
+                      )}
                     </div>
                   </label>
                 );

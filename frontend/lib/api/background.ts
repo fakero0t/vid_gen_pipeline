@@ -23,19 +23,19 @@ export async function generateBackgrounds(
   return response.json();
 }
 
-export async function getBackgroundAsset(assetId: string): Promise<BackgroundAssetStatus> {
-  return assetAPI.getAsset(API_PREFIX, assetId);
+export async function getBackgroundAsset(assetId: string, userId: string): Promise<BackgroundAssetStatus> {
+  return assetAPI.getAsset(API_PREFIX, assetId, userId);
 }
 
-export async function listBackgroundAssets(): Promise<BackgroundAssetStatus[]> {
-  return assetAPI.listAssets(API_PREFIX);
+export async function listBackgroundAssets(userId: string): Promise<BackgroundAssetStatus[]> {
+  return assetAPI.listAssets(API_PREFIX, userId);
 }
 
-export async function deleteBackgroundAsset(assetId: string): Promise<void> {
-  return assetAPI.deleteAsset(API_PREFIX, assetId);
+export async function deleteBackgroundAsset(assetId: string, userId: string): Promise<void> {
+  return assetAPI.deleteAsset(API_PREFIX, assetId, userId);
 }
 
-export function getBackgroundImageUrl(assetId: string, thumbnail: boolean = false): string {
-  return assetAPI.getAssetImageUrl(API_PREFIX, assetId, thumbnail);
+export function getBackgroundImageUrl(assetId: string, userId: string, thumbnail: boolean = false): string {
+  return assetAPI.getAssetImageUrl(API_PREFIX, assetId, userId, thumbnail);
 }
 

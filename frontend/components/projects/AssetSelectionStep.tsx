@@ -1,8 +1,7 @@
 'use client';
 
-'use client';
-
 import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs';
 import type { AssetStatus } from '@/types/asset.types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -15,7 +14,7 @@ interface AssetSelectionStepProps {
   onBack?: () => void;
   isLoading: boolean;
   assets: AssetStatus[];
-  getImageUrl: (assetId: string, thumbnail: boolean) => string;
+  getImageUrl: (assetId: string, userId: string, thumbnail: boolean) => string;
 }
 
 export function AssetSelectionStep({
@@ -28,6 +27,7 @@ export function AssetSelectionStep({
   assets,
   getImageUrl,
 }: AssetSelectionStepProps) {
+  const { userId } = useAuth();
   const assetTypeLabel = assetType === 'brand' ? 'Brand' : 'Character';
   const isRequired = true; // Both are required
   const hasSelection = selectedIds.length > 0;
@@ -94,12 +94,14 @@ export function AssetSelectionStep({
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
               <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden min-h-[200px]">
-                <Image
-                  src={getImageUrl(asset.asset_id, false)}
-                  alt={asset.metadata.filename || `${assetTypeLabel} asset`}
-                  fill
-                  className="object-contain rounded"
-                />
+                {userId && (
+                  <Image
+                    src={getImageUrl(asset.asset_id, userId, false)}
+                    alt={asset.metadata.filename || `${assetTypeLabel} asset`}
+                    fill
+                    className="object-contain rounded"
+                  />
+                )}
                 <div 
                   className="absolute top-2 right-2 z-20 pointer-events-auto"
                   onClick={(e) => e.stopPropagation()}

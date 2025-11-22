@@ -39,14 +39,20 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
   return (
     <div
       className={`
-        relative rounded-xl transition-all duration-500 cursor-pointer w-auto h-[400px] sm:h-[500px] max-h-[80vh] flex flex-row
-        border-2 hover:shadow-lg bg-card overflow-hidden
+        relative rounded-xl transition-all duration-300 cursor-pointer w-full h-full flex flex-col
+        border-2 bg-card overflow-hidden
+        hover:scale-[1.02] hover:-translate-y-1
         ${isSelected 
-          ? 'border-primary shadow-lg ring-2 ring-primary/20' 
+          ? 'border-primary ring-2 ring-primary/20' 
           : 'border-border hover:border-primary/50'
         }
         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
       `}
+      style={{
+        boxShadow: isSelected 
+          ? '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1)' 
+          : '0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      }}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -61,9 +67,9 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
     >
       {/* Selection indicator */}
       {isSelected && (
-        <div className="absolute top-1.5 right-1.5 z-10 bg-primary text-primary-foreground rounded-full p-1 shadow-md animate-scaleIn">
+        <div className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg animate-scaleIn">
           <svg
-            className="w-3 h-3"
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -78,30 +84,30 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
         </div>
       )}
 
-      {/* Image grid - Left side, takes priority */}
-      <div className="p-2 w-[300px] sm:w-[400px] min-h-0 bg-gradient-to-b from-card to-card/50 overflow-hidden flex-shrink-0">
+      {/* Image grid - Takes up almost all space */}
+      <div className="flex-1 min-h-0 p-2 overflow-hidden">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-1.5 h-full">
+          <div className="grid grid-cols-2 gap-2 h-full">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="bg-muted rounded-md animate-pulse"
+                className="bg-muted rounded-lg animate-pulse"
               />
             ))}
           </div>
         ) : successfulImages.length > 0 ? (
-          <div className="grid grid-cols-2 gap-1.5 h-full">
+          <div className="grid grid-cols-2 gap-2 h-full">
             {successfulImages.slice(0, 4).map((image, idx) => (
               <div
                 key={`${image.url}-${idx}`}
-                className="relative rounded-md overflow-hidden bg-muted shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 border border-border"
+                className="relative rounded-lg overflow-hidden bg-muted"
               >
                 <Image
                   src={image.url}
                   alt={`${mood.name} mood image ${idx + 1}`}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 50vw, 25vw"
+                  sizes="50vw"
                   unoptimized
                   onError={(e) => {
                     console.error(`Failed to load image ${idx + 1} for ${mood.name}:`, image.url);
@@ -111,12 +117,11 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
             ))}
           </div>
         ) : mood.images.length > 0 ? (
-          // Show images even if they're not marked as successful, or show error state
-          <div className="grid grid-cols-2 gap-1.5 h-full">
+          <div className="grid grid-cols-2 gap-2 h-full">
             {mood.images.slice(0, 4).map((image, idx) => (
               <div
                 key={idx}
-                className="relative rounded-md overflow-hidden bg-muted"
+                className="relative rounded-lg overflow-hidden bg-muted"
               >
                 {image.url ? (
                   <Image
@@ -124,7 +129,7 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
                     alt={`${mood.name} mood image ${idx + 1}`}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 640px) 50vw, 25vw"
+                    sizes="50vw"
                     unoptimized
                     onError={(e) => {
                       console.error(`Failed to load image ${idx + 1}:`, image.url);
@@ -139,58 +144,29 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
             ))}
           </div>
         ) : (
-          <div className="bg-muted rounded-md flex items-center justify-center text-muted-foreground text-[10px] h-full">
+          <div className="bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-[10px] h-full">
             No images available
           </div>
         )}
       </div>
 
-      {/* Text content - Right side, vertically centered */}
-      <div className="p-2 sm:p-3 flex-shrink-0 w-48 sm:w-64 border-l border-border bg-card flex flex-col justify-center">
-        <h3 className="font-display text-base font-bold mb-1.5 tracking-tight">{mood.name}</h3>
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          {mood.description}
-        </p>
-        
-        {/* Style keywords and Color palette */}
-        {(mood.style_keywords.length > 0 || mood.color_palette.length > 0) && (
-          <div className="flex flex-wrap gap-1.5 items-center">
-            {/* Style keywords */}
-            {mood.style_keywords.length > 0 && (
-              <>
-                {mood.style_keywords.slice(0, 3).map((keyword, idx) => (
-                  <span
-                    key={idx}
-                    className="text-[10px] font-bold px-2 py-0.5 bg-secondary rounded-full text-foreground border border-border"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-                {mood.style_keywords.length > 3 && (
-                  <span className="text-[10px] font-bold px-1 text-muted-foreground">
-                    +{mood.style_keywords.length - 3}
-                  </span>
-                )}
-              </>
-            )}
-            
-            {/* Color palette */}
-            {mood.color_palette.length > 0 && (
-              <div className="flex gap-1 mt-1.5">
-                {mood.color_palette.slice(0, 4).map((color, idx) => (
-                  <div
-                    key={idx}
-                    className="w-3 h-3 rounded-full border border-border/50 shadow-sm"
-                    style={{
-                      backgroundColor: color.startsWith('#') ? color : `var(--${color})`,
-                    }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+      {/* Text content - Minimal space at bottom */}
+      <div className="px-3 py-2 bg-card/95 backdrop-blur-sm border-t border-border flex-shrink-0">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight truncate flex-shrink-0">{mood.name}</h3>
+          {mood.style_keywords.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 flex-1">
+              {mood.style_keywords.map((keyword, idx) => (
+                <span
+                  key={idx}
+                  className="text-[10px] font-medium px-2 py-1 bg-secondary rounded-full text-foreground whitespace-nowrap flex-shrink-0"
+                >
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

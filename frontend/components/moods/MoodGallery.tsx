@@ -7,6 +7,76 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
+// Cheeky loading phrases that rotate
+const LOADING_PHRASES = [
+  "Crafting your perfect mood... ✨",
+  "Gathering inspiration just for you... 🎨",
+  "Setting the vibe... 🌈",
+  "Curating your mood board masterpiece... 🎭",
+  "Hang tight, creativity in progress... 🚀",
+  "Brewing some visual magic... ☕",
+  "Channeling your aesthetic... 🔮",
+  "Weaving together your vision... 🧵",
+  "Polishing every pixel... 💎",
+  "Almost there, promise! ⏳"
+];
+
+function LoadingPhrases() {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Rotate phrases every 2.5 seconds
+    intervalRef.current = setInterval(() => {
+      setIsVisible(false);
+      
+      // After fade out, change phrase and fade in
+      setTimeout(() => {
+        setCurrentPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+        setIsVisible(true);
+      }, 400); // Match fadeOutDown animation duration
+    }, 2500);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex-shrink-0 w-full h-full flex items-center justify-center">
+      <div className="text-center px-4">
+        <div 
+          className={`
+            text-sm sm:text-base font-display font-bold
+            bg-gradient-to-r from-primary via-primary/80 to-primary
+            bg-clip-text text-transparent
+            ${isVisible ? 'animate-fadeInUp' : 'animate-fadeOutDown'}
+          `}
+        >
+          {LOADING_PHRASES[currentPhraseIndex]}
+        </div>
+        <div className="mt-6 flex justify-center gap-2">
+          {LOADING_PHRASES.map((_, index) => (
+            <div
+              key={index}
+              className={`
+                w-2 h-2 rounded-full transition-all duration-300
+                ${index === currentPhraseIndex 
+                  ? 'bg-primary scale-125 animate-gentleBounce' 
+                  : 'bg-muted-foreground/30'
+                }
+              `}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface MoodGalleryProps {
   moods: Mood[];
   selectedMoodId: string | null;
@@ -35,12 +105,10 @@ export function MoodGallery({
   const isUserNavigation = useRef(false);
   const skipSyncRef = useRef(false);
 
-  // Calculate card width based on viewport
+  // Calculate card width based on viewport - full width
   useEffect(() => {
     const calculateCardWidth = () => {
-      const imageWidth = window.innerWidth < 640 ? 300 : 400;
-      const textWidth = window.innerWidth < 640 ? 192 : 256;
-      setCardWidth(imageWidth + textWidth + 16); // 16px for gap
+      setCardWidth(window.innerWidth);
     };
     
     calculateCardWidth();
@@ -148,14 +216,14 @@ export function MoodGallery({
   return (
     <div className={`w-full h-full flex flex-col ${className}`}>
       {/* Carousel Container */}
-      <div className="relative w-full flex-1 min-h-0 flex flex-col">
-        {/* Navigation Arrows */}
+      <div className="relative w-full flex-1 min-h-0 flex flex-col overflow-visible">
+        {/* Navigation Arrows - Full screen prominent */}
         {moods.length > 1 && !isLoading && (
           <>
             <Button
               variant="outline"
               size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-background/90 backdrop-blur-md shadow-lg hover:bg-background hover:scale-110 transition-all duration-300 border-2"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -163,12 +231,12 @@ export function MoodGallery({
               }}
               aria-label="Previous mood board"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-6 w-6" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all duration-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-background/90 backdrop-blur-md shadow-lg hover:bg-background hover:scale-110 transition-all duration-300 border-2"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -176,7 +244,7 @@ export function MoodGallery({
               }}
               aria-label="Next mood board"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-6 w-6" />
             </Button>
           </>
         )}
@@ -184,50 +252,31 @@ export function MoodGallery({
         {/* Carousel Track */}
         <div
           ref={carouselRef}
-          className="relative w-full flex-1 min-h-0 overflow-visible"
+          className="relative w-full flex-1 min-h-0 overflow-hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-full h-full py-2">
             <div
-              className="flex transition-transform duration-500 ease-in-out h-full items-center gap-4"
+              className="flex transition-transform duration-500 ease-in-out h-full"
               style={{ 
                 transform: isLoading 
                   ? 'translateX(0)' 
-                  : `translateX(calc(50% - ${currentIndex * (cardWidth + 16)}px - ${cardWidth / 2}px))`
+                  : `translateX(calc(-${currentIndex * 100}%))`
               }}
             >
               {isLoading ? (
-                // Loading skeleton - show one large card, always centered
-                <div 
-                  ref={(el) => { cardRefs.current[0] = el; }}
-                  className="flex-shrink-0 h-full flex items-center justify-center"
-                >
-                  <div className="w-auto h-[400px] sm:h-[500px] max-h-[80vh] rounded-xl border-2 border-border bg-card animate-pulse flex flex-row">
-                    <div className="p-2 w-[300px] sm:w-[400px] min-h-0 flex-shrink-0">
-                      <div className="grid grid-cols-2 gap-1.5 h-full">
-                        {[...Array(4)].map((_, j) => (
-                          <div
-                            key={j}
-                            className="bg-muted rounded-md"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="p-2 sm:p-3 w-48 sm:w-64 border-l border-border flex-shrink-0 flex flex-col justify-center">
-                      <div className="h-5 bg-muted rounded mb-2 w-3/4" />
-                      <div className="h-3 bg-muted rounded w-full mb-2" />
-                      <div className="h-3 bg-muted rounded w-5/6" />
-                    </div>
-                  </div>
+                // Loading phrases with animation
+                <div className="flex-shrink-0 w-full h-full">
+                  <LoadingPhrases />
                 </div>
               ) : (
                 moods.map((mood, index) => (
                   <div
                     key={mood.id}
                     ref={(el) => { cardRefs.current[index] = el; }}
-                    className="flex-shrink-0 h-full flex items-center"
+                    className="flex-shrink-0 w-full h-full px-2 pt-4 pb-2"
                   >
                     <MoodCard
                       mood={mood}
@@ -244,7 +293,7 @@ export function MoodGallery({
 
         {/* Thumbnail Indicators and Continue Button */}
         {!isLoading && (
-          <div className="flex items-center justify-between mt-2 flex-shrink-0">
+          <div className="flex items-center justify-between mt-2 px-4 sm:px-6 lg:px-8 flex-shrink-0">
             <div className="flex-1" /> {/* Spacer for centering */}
             {moods.length > 1 ? (
               <div className="flex justify-center gap-1 flex-1">
@@ -305,12 +354,6 @@ export function MoodGallery({
           </div>
         )}
 
-        {/* Mood Counter */}
-        {moods.length > 1 && !isLoading && (
-          <div className="text-center mt-1 text-[10px] text-muted-foreground flex-shrink-0">
-            {currentIndex + 1} of {moods.length}
-          </div>
-        )}
       </div>
     </div>
   );

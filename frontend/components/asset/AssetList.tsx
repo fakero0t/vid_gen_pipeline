@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs';
 import type { AssetStatus } from '@/types/asset.types';
 
 interface AssetListProps {
@@ -10,9 +11,9 @@ interface AssetListProps {
   emptyMessage: string;
   onAssetDeleted?: (assetId: string) => void;
   refreshTrigger?: number;
-  listFn: () => Promise<AssetStatus[]>;
-  deleteFn: (assetId: string) => Promise<void>;
-  getImageUrl: (assetId: string, thumbnail: boolean) => string;
+  listFn: (userId: string) => Promise<AssetStatus[]>;
+  deleteFn: (assetId: string, userId: string) => Promise<void>;
+  getImageUrl: (assetId: string, userId: string, thumbnail: boolean) => string;
 }
 
 export function AssetList({
@@ -25,16 +26,18 @@ export function AssetList({
   deleteFn,
   getImageUrl,
 }: AssetListProps) {
+  const { userId } = useAuth();
   const [assets, setAssets] = useState<AssetStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const loadAssets = async () => {
+    if (!userId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const assetList = await listFn();
+      const assetList = await listFn(userId);
       setAssets(assetList);
     } catch (err: any) {
       setError(err.message || `Failed to load ${assetType} assets`);
@@ -44,17 +47,20 @@ export function AssetList({
   };
 
   useEffect(() => {
-    loadAssets();
-  }, [refreshTrigger]);
+    if (userId) {
+      loadAssets();
+    }
+  }, [refreshTrigger, userId]);
 
   const handleDelete = async (assetId: string) => {
+    if (!userId) return;
     if (!confirm(`Are you sure you want to delete this ${assetType} asset?`)) {
       return;
     }
 
     setDeletingIds(prev => new Set(prev).add(assetId));
     try {
-      await deleteFn(assetId);
+      await deleteFn(assetId, userId);
       setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
       onAssetDeleted?.(assetId);
     } catch (err: any) {
@@ -138,12 +144,14 @@ export function AssetList({
                 className="border rounded-lg p-3 hover:shadow-md transition-shadow"
               >
                 <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded min-h-[300px]">
-                  <Image
-                    src={getImageUrl(asset.asset_id, false)}
-                    alt={asset.metadata.filename || `${assetType} asset`}
-                    fill
-                    className="object-contain rounded"
-                  />
+                  {userId && (
+                    <Image
+                      src={getImageUrl(asset.asset_id, userId, false)}
+                      alt={asset.metadata.filename || `${assetType} asset`}
+                      fill
+                      className="object-contain rounded"
+                    />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <button

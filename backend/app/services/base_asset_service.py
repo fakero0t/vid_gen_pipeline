@@ -137,7 +137,8 @@ class BaseAssetService(Generic[T, S]):
     def save_asset(
         self, 
         file_data: bytes, 
-        filename: str
+        filename: str,
+        user_id: Optional[str] = None
     ) -> T:
         """
         Save asset with thumbnail generation.
@@ -272,7 +273,8 @@ class BaseAssetService(Generic[T, S]):
             "has_alpha": has_alpha,  # boolean
             "uploaded_at": uploaded_at,  # ISO 8601 format
             "public_url": public_url,  # Public URL from ImgBB
-            "public_thumbnail_url": public_thumbnail_url  # Public thumbnail URL from ImgBB
+            "public_thumbnail_url": public_thumbnail_url,  # Public thumbnail URL from ImgBB
+            "user_id": user_id  # User ID for asset isolation
         }
         
         metadata_path = asset_dir / "metadata.json"
@@ -294,8 +296,8 @@ class BaseAssetService(Generic[T, S]):
             uploaded_at=uploaded_at
         )
     
-    def get_asset(self, asset_id: str) -> Optional[S]:
-        """Get asset metadata and URLs."""
+    def get_asset(self, asset_id: str, user_id: Optional[str] = None) -> Optional[S]:
+        """Get asset metadata and URLs. Optionally verify ownership."""
         asset_dir = self.upload_dir / asset_id
         metadata_path = asset_dir / "metadata.json"
         
@@ -304,6 +306,12 @@ class BaseAssetService(Generic[T, S]):
         
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
+        
+        # Verify ownership if user_id is provided
+        if user_id is not None:
+            asset_user_id = metadata.get("user_id")
+            if asset_user_id and asset_user_id != user_id:
+                return None  # Asset belongs to a different user
         
         return self.status_class(
             asset_id=asset_id,
@@ -318,8 +326,8 @@ class BaseAssetService(Generic[T, S]):
             metadata=metadata
         )
     
-    def list_assets(self) -> List[S]:
-        """List all assets."""
+    def list_assets(self, user_id: Optional[str] = None) -> List[S]:
+        """List assets. If user_id is provided, only return assets for that user."""
         assets = []
         
         if not self.upload_dir.exists():
@@ -331,7 +339,7 @@ class BaseAssetService(Generic[T, S]):
                 continue
             
             asset_id = asset_dir.name
-            asset = self.get_asset(asset_id)
+            asset = self.get_asset(asset_id, user_id=user_id)
             if asset:
                 assets.append(asset)
         
@@ -340,12 +348,22 @@ class BaseAssetService(Generic[T, S]):
         
         return assets
     
-    def delete_asset(self, asset_id: str) -> bool:
-        """Remove asset directory and all files."""
+    def delete_asset(self, asset_id: str, user_id: Optional[str] = None) -> bool:
+        """Remove asset directory and all files. Optionally verify ownership."""
         asset_dir = self.upload_dir / asset_id
         
         if not asset_dir.exists():
             return False
+        
+        # Verify ownership if user_id is provided
+        if user_id is not None:
+            metadata_path = asset_dir / "metadata.json"
+            if metadata_path.exists():
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                asset_user_id = metadata.get("user_id")
+                if asset_user_id and asset_user_id != user_id:
+                    return False  # Asset belongs to a different user
         
         # Remove all files in directory
         import shutil
