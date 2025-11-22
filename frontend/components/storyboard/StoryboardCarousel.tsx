@@ -210,7 +210,7 @@ export function StoryboardCarousel({
   }
 
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="h-full flex flex-col w-full px-4 sm:px-6">
       {/* Top bar with timeline, audio - compact */}
       <div className="flex-shrink-0 py-2 border-b border-border">
         <div className="flex items-center justify-between gap-3">
@@ -230,7 +230,7 @@ export function StoryboardCarousel({
 
           {/* Compact audio */}
           {/* Compact Audio Component */}
-          <div className="flex-1 min-w-0 max-w-xs">
+          <div className="flex-1 min-w-0">
             {audioUrl ? (
               <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-1.5">
                 <span className="text-green-600 dark:text-green-400 text-xs">✓</span>
@@ -311,7 +311,7 @@ export function StoryboardCarousel({
               return (
                 <div
                   key={scene.id}
-                  className="w-full h-full flex-shrink-0 overflow-y-auto"
+                  className="w-full h-full flex-shrink-0"
                   style={{ minWidth: '100%' }}
                 >
                   {isGeneratingScene ? (
@@ -352,7 +352,6 @@ export function StoryboardCarousel({
             size="sm"
             onClick={onGenerateFinalVideo}
             disabled={!allScenesReady || isLoading}
-            className="h-8"
           >
             Generate Final Video
             <svg className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

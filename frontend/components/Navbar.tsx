@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/auth/UserAvatar";
 import { AuthLoadingSkeleton } from "@/components/auth/AuthLoadingSkeleton";
 import { useProjectStore } from "@/store/projectStore";
+import { useAppStore } from "@/store/appStore";
+import { STEPS } from "@/lib/steps";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,16 +15,44 @@ import { cn } from "@/lib/utils";
  * Shows loading skeleton while auth is loading, then conditionally renders
  * sign-in button or user avatar based on authentication status
  * Displays current project name in the center when on a project page
+ * Shows back button on mood and scenes pages
  */
 export function Navbar() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const { getCurrentProject } = useProjectStore();
+  const { setCurrentStep } = useAppStore();
 
   // Check if we're on a project page
   const isProjectPage = pathname?.startsWith("/project/");
   const currentProject = isProjectPage ? getCurrentProject() : null;
+  const projectId = isProjectPage ? pathname.split("/")[2] : null;
+
+  // Check if we're on mood, scenes, or backgrounds page to show back button
+  const isMoodPage = pathname?.includes("/mood");
+  const isScenesPage = pathname?.includes("/scenes");
+  const isBackgroundsPage = pathname?.includes("/backgrounds");
+
+  const handleBack = () => {
+    if (isMoodPage && projectId) {
+      setCurrentStep(STEPS.CHAT);
+      router.push(`/project/${projectId}/chat`);
+    } else if (isScenesPage && projectId) {
+      setCurrentStep(STEPS.BACKGROUNDS);
+      router.push(`/project/${projectId}/backgrounds`);
+    } else if (isBackgroundsPage && projectId) {
+      setCurrentStep(STEPS.MOOD);
+      router.push(`/project/${projectId}/mood`);
+    }
+  };
+
+  const getBackButtonText = () => {
+    if (isMoodPage) return "Back to Chat";
+    if (isScenesPage) return "Back to Background Selection";
+    if (isBackgroundsPage) return "Back to Mood Selection";
+    return "";
+  };
 
   // Show loading skeleton while Clerk is checking auth status
   if (!isLoaded) {
@@ -43,6 +73,28 @@ export function Navbar() {
         <h1 className="font-display text-lg font-bold tracking-tight">
           AI Video Pipeline
         </h1>
+        {/* Back button - shown on mood, scenes, and backgrounds pages */}
+        {(isMoodPage || isScenesPage || isBackgroundsPage) && (
+          <button
+            onClick={handleBack}
+            className="ml-6 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 flex-shrink-0"
+          >
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            {getBackButtonText()}
+          </button>
+        )}
       </div>
 
       {/* Project Name - center */}

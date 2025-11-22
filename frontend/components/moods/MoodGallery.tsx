@@ -214,7 +214,7 @@ export function MoodGallery({
   }
 
   return (
-    <div className={`w-full h-full flex flex-col ${className}`}>
+    <div className={`w-full h-full flex flex-col overflow-visible ${className}`}>
       {/* Carousel Container */}
       <div className="relative w-full flex-1 min-h-0 flex flex-col overflow-visible">
         {/* Navigation Arrows - Full screen prominent */}
@@ -257,7 +257,7 @@ export function MoodGallery({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div className="relative w-full h-full py-2">
+          <div className="relative w-full h-full py-4">
             <div
               className="flex transition-transform duration-500 ease-in-out h-full"
               style={{ 
@@ -276,7 +276,7 @@ export function MoodGallery({
                   <div
                     key={mood.id}
                     ref={(el) => { cardRefs.current[index] = el; }}
-                    className="flex-shrink-0 w-full h-full px-2 pt-4 pb-2"
+                    className="flex-shrink-0 w-full h-full px-4"
                   >
                     <MoodCard
                       mood={mood}

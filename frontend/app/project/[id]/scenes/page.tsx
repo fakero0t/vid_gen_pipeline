@@ -479,18 +479,7 @@ function ScenesPageContent() {
       <div className="flex-shrink-0 px-4 sm:px-6 py-2 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push(`/project/${projectId}/mood`)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </button>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">Scene Storyboard</h1>
-            </div>
+            <h1 className="text-lg font-bold leading-tight">Scene Storyboard</h1>
           </div>
           
           <div className="flex items-center gap-2">
@@ -506,7 +495,6 @@ function ScenesPageContent() {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 px-3 text-xs"
               onClick={() => setIsPreviewOpen(true)}
               disabled={isSaving || isRegeneratingAll || scenes.length === 0}
             >
@@ -518,13 +506,12 @@ function ScenesPageContent() {
             </Button>
             <Button
               size="sm"
-              variant="destructive"
-              className="h-8 px-3 text-xs"
+              variant="default"
               onClick={handleRegenerateAll}
               disabled={isSaving || isRegeneratingAll}
             >
               {isRegeneratingAll ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                <div className="w-3.5 h-3.5 border-2 border-[rgb(196,230,43)] border-t-transparent rounded-full animate-spin mr-1.5" />
               ) : (
                 <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

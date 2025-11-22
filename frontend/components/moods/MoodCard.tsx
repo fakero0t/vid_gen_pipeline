@@ -39,19 +39,31 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
   return (
     <div
       className={`
-        relative rounded-xl transition-all duration-300 cursor-pointer w-full h-full flex flex-col
+        relative rounded-xl transition-all duration-300 ease-out cursor-pointer w-full h-full flex flex-col
         border-2 bg-card overflow-hidden
-        hover:scale-[1.02] hover:-translate-y-1
         ${isSelected 
-          ? 'border-primary ring-2 ring-primary/20' 
-          : 'border-border hover:border-primary/50'
+          ? 'border-primary ring-2 ring-primary/20 scale-[1.01]' 
+          : 'border-border hover:border-primary/50 hover:scale-[1.02] hover:-translate-y-2'
         }
         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
       `}
       style={{
         boxShadow: isSelected 
           ? '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1)' 
-          : '0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          : '0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        ...(!isSelected && {
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        })
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected && !isLoading) {
+          e.currentTarget.style.boxShadow = '0 12px 40px -8px rgba(0, 0, 0, 0.2), 0 8px 16px -4px rgba(0, 0, 0, 0.12)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected && !isLoading) {
+          e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+        }
       }}
       onClick={handleClick}
       role="button"

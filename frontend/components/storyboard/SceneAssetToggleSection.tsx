@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@clerk/nextjs';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -181,128 +181,238 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     return null;
   }
 
+  // Memoized asset image component to prevent re-renders
+  const AssetImage = memo(({ 
+    assetId, 
+    imageUrl, 
+    alt, 
+    isSelected 
+  }: { 
+    assetId: string; 
+    imageUrl: string; 
+    alt: string; 
+    isSelected: boolean;
+  }) => (
+    <Image
+      key={assetId}
+      src={imageUrl}
+      alt={alt}
+      fill
+      className="object-contain"
+      unoptimized
+      priority={false}
+    />
+  ));
+  AssetImage.displayName = 'AssetImage';
+
+  // Carousel component for assets - memoized to prevent recreation
+  const AssetCarousel = memo(({ 
+    assets, 
+    selectedId, 
+    onToggle, 
+    getImageUrl, 
+    isLoading, 
+    isToggling,
+    label,
+    userId
+  }: { 
+    assets: (BrandAssetStatus | CharacterAssetStatus | BackgroundAssetStatus)[]; 
+    selectedId: string | null;
+    onToggle: (checked: boolean, assetId: string) => void;
+    getImageUrl: (assetId: string, userId: string, thumbnail: boolean) => string;
+    isLoading: boolean;
+    isToggling: boolean;
+    label: string;
+    userId: string | null | undefined;
+  }) => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
+    const [showRightArrow, setShowRightArrow] = useState(false);
+    const scrollCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Debounced scroll check to prevent excessive re-renders
+    const checkScroll = useCallback(() => {
+      if (scrollCheckTimeoutRef.current) {
+        clearTimeout(scrollCheckTimeoutRef.current);
+      }
+      scrollCheckTimeoutRef.current = setTimeout(() => {
+        if (!scrollContainerRef.current) return;
+        const container = scrollContainerRef.current;
+        const newShowLeft = container.scrollLeft > 0;
+        const newShowRight = container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
+        
+        // Only update state if values actually changed
+        setShowLeftArrow(prev => prev !== newShowLeft ? newShowLeft : prev);
+        setShowRightArrow(prev => prev !== newShowRight ? newShowRight : prev);
+      }, 50);
+    }, []);
+
+    // Check if scrolling is needed - optimized to prevent flicker
+    useEffect(() => {
+      // Initial check after DOM is ready
+      const timeoutId = setTimeout(checkScroll, 100);
+      const container = scrollContainerRef.current;
+      
+      if (container) {
+        container.addEventListener('scroll', checkScroll, { passive: true });
+        window.addEventListener('resize', checkScroll, { passive: true });
+        
+        return () => {
+          clearTimeout(timeoutId);
+          if (scrollCheckTimeoutRef.current) {
+            clearTimeout(scrollCheckTimeoutRef.current);
+          }
+          container.removeEventListener('scroll', checkScroll);
+          window.removeEventListener('resize', checkScroll);
+        };
+      }
+      return () => {
+        clearTimeout(timeoutId);
+        if (scrollCheckTimeoutRef.current) {
+          clearTimeout(scrollCheckTimeoutRef.current);
+        }
+      };
+    }, [checkScroll, assets.length]);
+
+    const scroll = useCallback((direction: 'left' | 'right') => {
+      if (!scrollContainerRef.current) return;
+      const container = scrollContainerRef.current;
+      const scrollAmount = 200;
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }, []);
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
+          <div className="text-xs text-muted-foreground">Loading...</div>
+        </div>
+      );
+    }
+
+    if (assets.length === 0) {
+      return (
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
+          <div className="text-xs text-muted-foreground italic">No assets available</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-3">
+        <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
+        <div className="relative flex-1 min-w-0">
+          {/* Left Arrow */}
+          {showLeftArrow && (
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full w-6 h-6 flex items-center justify-center hover:bg-background shadow-md"
+              aria-label="Scroll left"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          
+          {/* Scrollable Container */}
+          <div
+            ref={scrollContainerRef}
+            className="flex items-center gap-2 overflow-x-auto scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {assets.map((asset) => {
+              const isSelected = selectedId === asset.asset_id;
+              const imageUrl = userId ? getImageUrl(asset.asset_id, userId, true) : '';
+              return (
+                <button
+                  key={asset.asset_id}
+                  onClick={() => onToggle(!isSelected, asset.asset_id)}
+                  disabled={isToggling}
+                  className="relative w-16 h-16 flex-shrink-0 rounded border-2 bg-background overflow-hidden cursor-pointer hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor: isSelected ? 'rgb(255, 81, 1)' : undefined
+                  }}
+                >
+                  {imageUrl && (
+                    <AssetImage
+                      assetId={asset.asset_id}
+                      imageUrl={imageUrl}
+                      alt={asset.metadata?.filename || `${label} asset`}
+                      isSelected={isSelected}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Arrow */}
+          {showRightArrow && (
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full w-6 h-6 flex items-center justify-center hover:bg-background shadow-md"
+              aria-label="Scroll right"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  });
+  AssetCarousel.displayName = 'AssetCarousel';
+
   return (
-    <div className="flex flex-col gap-4 p-4 bg-muted/50 rounded-lg border">
+    <div className="flex flex-col gap-3 p-4 bg-muted/50 rounded-lg border min-w-[400px]">
       <h4 className="text-sm font-semibold text-foreground">Assets</h4>
       
-      {/* Brand Asset Toggle */}
+      {/* Brand Asset Carousel */}
       {projectBrandAssetIds.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Brand Asset</label>
-          {isLoadingBrand ? (
-            <div className="text-xs text-muted-foreground">Loading brand assets...</div>
-          ) : brandAssets.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">No brand assets available</div>
-          ) : (
-            <div className="space-y-2">
-              {brandAssets.map((asset) => {
-                const isSelected = scene.brand_asset_id === asset.asset_id;
-                return (
-                  <label
-                    key={asset.asset_id}
-                    className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleBrandToggle(checked === true, asset.asset_id)}
-                      disabled={isTogglingBrand}
-                    />
-                    <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      {userId && (
-                        <Image
-                          src={getBrandAssetImageUrl(asset.asset_id, userId, false)}
-                          alt={asset.metadata?.filename || 'Brand asset'}
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <AssetCarousel
+          assets={brandAssets}
+          selectedId={scene.brand_asset_id}
+          onToggle={handleBrandToggle}
+          getImageUrl={getBrandAssetImageUrl}
+          isLoading={isLoadingBrand}
+          isToggling={isTogglingBrand}
+          label="Brand Asset"
+          userId={userId}
+        />
       )}
 
-      {/* Character Asset Toggle */}
+      {/* Character Asset Carousel */}
       {projectCharacterAssetIds.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Character Asset</label>
-          {isLoadingCharacter ? (
-            <div className="text-xs text-muted-foreground">Loading character assets...</div>
-          ) : characterAssets.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">No character assets available</div>
-          ) : (
-            <div className="space-y-2">
-              {characterAssets.map((asset) => {
-                const isSelected = scene.character_asset_id === asset.asset_id;
-                return (
-                  <label
-                    key={asset.asset_id}
-                    className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleCharacterToggle(checked === true, asset.asset_id)}
-                      disabled={isTogglingCharacter}
-                    />
-                    <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      {userId && (
-                        <Image
-                          src={getCharacterAssetImageUrl(asset.asset_id, userId, false)}
-                          alt={asset.metadata?.filename || 'Character asset'}
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <AssetCarousel
+          assets={characterAssets}
+          selectedId={scene.character_asset_id}
+          onToggle={handleCharacterToggle}
+          getImageUrl={getCharacterAssetImageUrl}
+          isLoading={isLoadingCharacter}
+          isToggling={isTogglingCharacter}
+          label="Character Asset"
+          userId={userId}
+        />
       )}
 
-      {/* Background Asset Toggle */}
+      {/* Background Asset Carousel */}
       {projectBackgroundAssetIds.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Background Asset</label>
-          {isLoadingBackground ? (
-            <div className="text-xs text-muted-foreground">Loading background assets...</div>
-          ) : backgroundAssets.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">No background assets available</div>
-          ) : (
-            <div className="space-y-2">
-              {backgroundAssets.map((asset) => {
-                const isSelected = scene.background_asset_id === asset.asset_id;
-                return (
-                  <label
-                    key={asset.asset_id}
-                    className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleBackgroundToggle(checked === true, asset.asset_id)}
-                      disabled={isTogglingBackground}
-                    />
-                    <div className="relative w-80 h-80 flex-shrink-0 rounded border bg-background overflow-hidden">
-                      {userId && (
-                        <Image
-                          src={getBackgroundImageUrl(asset.asset_id, userId, false)}
-                          alt={asset.metadata?.filename || 'Background asset'}
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <AssetCarousel
+          assets={backgroundAssets}
+          selectedId={scene.background_asset_id}
+          onToggle={handleBackgroundToggle}
+          getImageUrl={getBackgroundImageUrl}
+          isLoading={isLoadingBackground}
+          isToggling={isTogglingBackground}
+          label="Background Asset"
+          userId={userId}
+        />
       )}
     </div>
   );

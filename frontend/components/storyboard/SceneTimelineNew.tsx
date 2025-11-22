@@ -314,7 +314,7 @@ export function SceneTimelineNew({
       )}
 
       {/* Compact horizontal timeline - just scene numbers */}
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center justify-between flex-wrap">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -324,7 +324,7 @@ export function SceneTimelineNew({
             items={localOrder}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-evenly flex-1 min-w-0">
               {localOrder.map((sceneId, index) => {
                 const scene = scenes.find(s => s.id === sceneId);
                 if (!scene) return null;
@@ -354,7 +354,7 @@ export function SceneTimelineNew({
         {canAdd && onAddScene && (
           <button
             onClick={onAddScene}
-            className="w-8 h-8 rounded-md border-2 border-dashed border-border hover:border-primary hover:bg-primary/10 flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="w-8 h-8 rounded-md border-2 border-dashed border-border hover:border-primary hover:bg-primary/10 flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-4"
             aria-label="Add new scene"
             title={sceneOrder.length >= 20 ? 'Maximum 20 scenes reached' : 'Add new scene'}
           >

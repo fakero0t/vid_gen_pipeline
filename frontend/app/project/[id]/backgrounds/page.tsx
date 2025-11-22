@@ -219,43 +219,17 @@ export default function BackgroundsPage() {
     router.push(`/project/${projectId}/scenes`);
   };
 
-  const handleBack = () => {
-    // Navigate back to mood
-    setCurrentStep(STEPS.MOOD);
-    router.push(`/project/${projectId}/mood`);
-  };
-
   const canContinue = backgroundAssets.length > 0 && selectedBackgroundIds.length > 0;
 
   return (
     <div className="min-h-screen pt-[calc(3.5rem+1.5rem)] pb-4 sm:pb-6 flex flex-col">
       <main className="flex-1 flex flex-col animate-fadeIn overflow-visible">
         <div className="flex-1 flex flex-col min-h-0 w-full">
-          {/* Top bar with Back button and Title */}
+          {/* Top bar with Title */}
           <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2">
-            <div className="w-full max-w-7xl relative flex items-center">
-              {/* Back button - left */}
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 animate-slideUp flex-shrink-0"
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                Back to Mood Selection
-              </button>
+            <div className="w-full max-w-7xl flex items-center justify-center">
               {/* Title - centered */}
-              <h2 className="absolute left-1/2 -translate-x-1/2 text-base sm:text-lg font-display font-bold tracking-tight">
+              <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
                 Select your <span className="text-gradient">background images</span>
               </h2>
             </div>
