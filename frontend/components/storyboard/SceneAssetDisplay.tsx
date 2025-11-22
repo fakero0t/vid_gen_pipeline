@@ -57,13 +57,13 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
             <span className="text-xs font-medium text-muted-foreground">{asset.label}</span>
             <div className="border-2 rounded-lg p-1.5 border-primary shadow-sm">
               <div className="relative w-16 h-16 bg-muted rounded overflow-hidden">
-                <Image
+              <Image
                   src={asset.imageUrl}
                   alt={`${asset.label} asset`}
-                  fill
+                fill
                   className="object-cover rounded"
-                />
-              </div>
+              />
+            </div>
             </div>
           </div>
         ))}

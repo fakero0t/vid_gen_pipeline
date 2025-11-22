@@ -223,11 +223,11 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
       <div className="space-y-1">
         <h5 className="text-xs font-semibold text-foreground">{label}</h5>
         <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
-          {assets.map((asset) => {
-            const isSelected = selectedId === asset.asset_id;
-            return (
+            {assets.map((asset) => {
+              const isSelected = selectedId === asset.asset_id;
+              return (
               <div
-                key={asset.asset_id}
+                  key={asset.asset_id}
                 className={cn(
                   'border-2 rounded p-1 cursor-pointer transition-all',
                   isSelected
@@ -236,7 +236,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                   isToggling && 'opacity-50 cursor-not-allowed'
                 )}
                 onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
-              >
+                >
                 <div className="relative w-full aspect-square bg-muted rounded overflow-hidden">
                   {userId && (
                     <Image
@@ -246,10 +246,10 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                       className="object-cover rounded"
                     />
                   )}
-                </div>
+                  </div>
               </div>
-            );
-          })}
+              );
+            })}
         </div>
       </div>
     );

@@ -258,31 +258,35 @@ export function SceneCardNew({
 
               {/* Duration configuration */}
               <div className="space-y-2 pt-4 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                  <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                <div className="flex justify-center">
+                  <div className="w-1/2 flex items-center justify-between">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                    <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  step="0.1"
-                  value={duration}
-                  onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-                    setDuration(newValue);
-                  }}
-                  onMouseUp={(e) => {
-                    const newValue = parseFloat((e.target as HTMLInputElement).value);
-                    handleDurationChange(newValue);
-                  }}
-                  onTouchEnd={(e) => {
-                    const newValue = parseFloat((e.target as HTMLInputElement).value);
-                    handleDurationChange(newValue);
-                  }}
-                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
-                  disabled={isLoading}
-                />
+                <div className="flex justify-center">
+                  <input
+                    type="range"
+                    min="1"
+                    max="8"
+                    step="0.1"
+                    value={duration}
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      setDuration(newValue);
+                    }}
+                    onMouseUp={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    onTouchEnd={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    className="w-1/2 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
               {/* Actions */}

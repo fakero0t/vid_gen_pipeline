@@ -5,9 +5,6 @@ import type { Storyboard, StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
 import { SceneTimelineNew } from './SceneTimelineNew';
 import { SceneCardNew } from './SceneCardNew';
-import { useAppStore } from '@/store/appStore';
-import { useAudioGeneration } from '@/hooks/useAudioGeneration';
-import type { AudioGenerationRequest } from '@/types/audio.types';
 
 interface StoryboardCarouselProps {
   storyboard: Storyboard;
@@ -51,32 +48,6 @@ export function StoryboardCarousel({
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
 
-  // Get audio URL and mood data from app store
-  const { audioUrl, creativeBrief, moods, selectedMoodId } = useAppStore();
-  
-  // Audio generation hook
-  const { generateAudio, isLoading: isGeneratingAudio, error: audioError } = useAudioGeneration();
-
-  // Audio ref to stop playback when switching projects
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Stop audio when audioUrl changes or component unmounts
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      // Stop and reset audio when audioUrl changes
-      audio.pause();
-      audio.currentTime = 0;
-    }
-    
-    // Cleanup: stop audio when component unmounts
-    return () => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    };
-  }, [audioUrl]);
 
   // Initialize current scene ID on mount
   useEffect(() => {
@@ -172,34 +143,6 @@ export function StoryboardCarousel({
   };
 
 
-  // Handle regenerate audio
-  const handleRegenerateAudio = async () => {
-    if (!creativeBrief || !selectedMoodId || !moods.length) {
-      console.error('Missing required data for audio generation');
-      return;
-    }
-
-    // Find mood - check both id and mood_id for compatibility
-    const selectedMood = moods.find((m) => (m as any).mood_id === selectedMoodId || m.id === selectedMoodId);
-    if (!selectedMood) {
-      console.error('Selected mood not found');
-      return;
-    }
-
-    // Use style_name if available, otherwise use name
-    const moodName = (selectedMood as any).style_name || selectedMood.name;
-
-    const audioRequest: AudioGenerationRequest = {
-      mood_name: moodName,
-      mood_description: selectedMood.aesthetic_direction || '',
-      emotional_tone: creativeBrief.emotional_tone || [],
-      aesthetic_direction: selectedMood.aesthetic_direction || '',
-      style_keywords: selectedMood.style_keywords || [],
-      duration: 30,
-    };
-
-    await generateAudio(audioRequest);
-  };
 
   if (!currentScene) {
     return (
@@ -211,9 +154,9 @@ export function StoryboardCarousel({
 
   return (
     <div className="h-full flex flex-col w-full px-4 sm:px-6">
-      {/* Top bar with timeline, audio - compact */}
+      {/* Top bar with timeline - compact */}
       <div className="flex-shrink-0 py-2 border-b border-border">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-start">
           {/* Compact Timeline */}
           <div className="flex-shrink-0">
             <SceneTimelineNew
@@ -227,69 +170,6 @@ export function StoryboardCarousel({
               isGenerating={isAnySceneGenerating}
             />
           </div>
-
-          {/* Compact audio */}
-          {/* Compact Audio Component */}
-          <div className="flex-1 min-w-0 h-9 flex-shrink-0">
-            {audioUrl ? (
-              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-1.5 h-full">
-                <span className="text-green-600 dark:text-green-400 text-xs flex-shrink-0">✓</span>
-                <audio
-                  ref={audioRef}
-                  controls
-                  src={audioUrl}
-                  className="flex-1 h-7 min-w-0"
-                  preload="metadata"
-                  style={{ accentColor: '#22c55e' }}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs flex-shrink-0"
-                  onClick={handleRegenerateAudio}
-                  disabled={isGeneratingAudio || isLoading || !creativeBrief || !selectedMoodId}
-                  title="Regenerate audio"
-                >
-                  {isGeneratingAudio ? (
-                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-md px-3 py-1.5 h-full">
-                {isGeneratingAudio ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground">Generating audio...</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground">No audio</span>
-                  </>
-                )}
-                {!isGeneratingAudio && creativeBrief && selectedMoodId && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs ml-auto flex-shrink-0"
-                    onClick={handleRegenerateAudio}
-                    disabled={isLoading}
-                  >
-                    Generate
-                  </Button>
-                )}
-              </div>
-            )}
-            {audioError && (
-              <div className="text-xs text-destructive mt-1">{audioError}</div>
-            )}
-          </div>
-
         </div>
       </div>
 
