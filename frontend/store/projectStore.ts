@@ -4,6 +4,8 @@ import type { Project, ProjectMetadata, AppStateSnapshot, CreateProjectRequest, 
 import { migrateNumericStep } from '@/lib/steps';
 import { useAppStore } from './appStore';
 import { useSceneStore } from './sceneStore';
+import { saveProjectToFirestore, canUseFirestore } from '@/lib/firebase';
+import { getCurrentUserId } from '@/lib/auth/api';
 
 const PROJECTS_STORAGE_KEY = 'jant-vid-pipe-projects';
 const CURRENT_PROJECT_STORAGE_KEY = 'jant-vid-pipe-current-project-id';
@@ -107,6 +109,80 @@ function restoreAppState(snapshot: AppStateSnapshot): void {
   appStore.setCompositionJobId(snapshot.compositionJobId || null);
   // Always set finalVideo, even if null
   appStore.setFinalVideo(snapshot.finalVideo || null);
+}
+
+/**
+ * Sync projects from Firestore on mount
+ * Merges Firestore projects with localStorage, migrates localStorage-only projects
+ */
+async function syncProjectsFromFirestore(
+  userId: string,
+  localProjects: Project[]
+): Promise<Project[]> {
+  try {
+    console.log('[ProjectStore] Loading projects from Firestore...');
+    
+    // Load all projects from Firestore
+    const { loadProjectsFromFirestore, batchSaveProjectsToFirestore } = await import('@/lib/firebase');
+    const firestoreProjects = await loadProjectsFromFirestore(userId);
+    
+    console.log('[ProjectStore] Loaded from Firestore:', firestoreProjects.length, 'projects');
+    console.log('[ProjectStore] Local projects:', localProjects.length, 'projects');
+    
+    // Create a map of Firestore projects by ID for easy lookup
+    const firestoreMap = new Map(firestoreProjects.map(p => [p.id, p]));
+    const localMap = new Map(localProjects.map(p => [p.id, p]));
+    
+    // Find projects that exist in localStorage but not in Firestore (need migration)
+    const projectsToMigrate: Project[] = [];
+    for (const localProject of localProjects) {
+      if (!firestoreMap.has(localProject.id)) {
+        projectsToMigrate.push(localProject);
+      }
+    }
+    
+    // Migrate localStorage-only projects to Firestore
+    if (projectsToMigrate.length > 0) {
+      console.log('[ProjectStore] Migrating', projectsToMigrate.length, 'projects to Firestore...');
+      const migrated = await batchSaveProjectsToFirestore(userId, projectsToMigrate);
+      console.log('[ProjectStore] ✓ Migrated', migrated, 'projects to Firestore');
+    }
+    
+    // Merge: Firestore projects take precedence, plus any newly migrated projects
+    // Use Firestore version if project exists in both (it's the source of truth)
+    const mergedProjects: Project[] = [];
+    const allProjectIds = new Set([
+      ...firestoreMap.keys(),
+      ...localMap.keys()
+    ]);
+    
+    for (const projectId of allProjectIds) {
+      const firestoreProject = firestoreMap.get(projectId);
+      const localProject = localMap.get(projectId);
+      
+      if (firestoreProject) {
+        // Firestore version exists - use it (source of truth)
+        mergedProjects.push(firestoreProject);
+      } else if (localProject) {
+        // Only in localStorage (just migrated)
+        mergedProjects.push(localProject);
+      }
+    }
+    
+    // Sort by updatedAt (most recent first)
+    mergedProjects.sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+    
+    console.log('[ProjectStore] ✓ Synced:', mergedProjects.length, 'total projects');
+    return mergedProjects;
+    
+  } catch (error) {
+    console.error('[ProjectStore] Failed to sync from Firestore:', error);
+    console.log('[ProjectStore] Falling back to localStorage projects');
+    // On error, return localStorage projects (fallback)
+    return localProjects;
+  }
 }
 
 export const useProjectStore = create<ProjectStoreState>()(
@@ -285,22 +361,49 @@ export const useProjectStore = create<ProjectStoreState>()(
 
         const updatedProjects = [...state.projects];
         const projectName = updatedProjects[projectIndex].name;
-        updatedProjects[projectIndex] = {
+        const updatedProject = {
           ...updatedProjects[projectIndex],
           appState: appStateSnapshot,
           storyboardId,
           updatedAt: new Date().toISOString(),
         };
+        updatedProjects[projectIndex] = updatedProject;
 
+        // Save to localStorage (existing behavior via persist middleware)
         set({ projects: updatedProjects });
         
-        console.log('[ProjectStore] Auto-saved project:', { 
+        console.log('[ProjectStore] Auto-saved to localStorage:', { 
           id: state.currentProjectId, 
           name: projectName,
           hasCreativeBrief: !!appStateSnapshot.creativeBrief,
           moodsCount: appStateSnapshot.moods.length,
           currentStep: appStateSnapshot.currentStep
         });
+
+        // NEW: Also save to Firestore (non-blocking)
+        if (typeof window !== 'undefined') {
+          const userId = getCurrentUserId();
+          
+          if (!userId) {
+            console.log('[ProjectStore] Skipping Firestore sync (user not authenticated)');
+            return;
+          }
+
+          if (!canUseFirestore()) {
+            console.log('[ProjectStore] Skipping Firestore sync (Firestore not available)');
+            return;
+          }
+
+          // Async Firestore save (don't await - non-blocking)
+          saveProjectToFirestore(userId, updatedProject)
+            .then(() => {
+              console.log('[ProjectStore] ✓ Synced to Firestore:', updatedProject.id);
+            })
+            .catch((error) => {
+              console.error('[ProjectStore] Failed to sync to Firestore:', error);
+              // Don't throw - localStorage save already succeeded
+            });
+        }
       },
 
       scheduleAutoSave: () => {
@@ -439,5 +542,44 @@ if (typeof window !== 'undefined') {
   
   // Also try immediately in case hydration already happened
   initializeCurrentProject();
+
+  // Sync projects from Firestore on mount
+  const syncFromFirestore = async () => {
+    // Wait for auth to be ready
+    const checkAuth = () => {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.log('[ProjectStore] Skipping Firestore sync (user not authenticated)');
+        return;
+      }
+      
+      if (!canUseFirestore()) {
+        console.log('[ProjectStore] Skipping Firestore sync (Firestore not available)');
+        return;
+      }
+      
+      // Get current localStorage projects
+      const { projects: localProjects } = useProjectStore.getState();
+      
+      // Sync with Firestore
+      syncProjectsFromFirestore(userId, localProjects)
+        .then((mergedProjects) => {
+          // Update store with merged projects
+          useProjectStore.setState({ projects: mergedProjects });
+          console.log('[ProjectStore] ✓ Store updated with Firestore projects');
+        })
+        .catch((error) => {
+          console.error('[ProjectStore] Firestore sync failed:', error);
+          // Store already has localStorage projects, so app continues working
+        });
+    };
+    
+    // Delay check to allow auth to initialize
+    // Firebase Auth needs a moment to restore session
+    setTimeout(checkAuth, 500);
+  };
+
+  // Run sync on mount
+  syncFromFirestore();
 }
 

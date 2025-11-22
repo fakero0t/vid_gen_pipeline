@@ -50,7 +50,8 @@ export async function saveProjectToFirestore(
   const projectRef = doc(db, `users/${userId}/projects/${project.id}`);
 
   // Convert Date objects to ISO strings for Firestore
-  const firestoreProject = {
+  // Firestore doesn't accept undefined values - convert to null or omit
+  const firestoreProject: any = {
     ...project,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
@@ -58,6 +59,9 @@ export async function saveProjectToFirestore(
     brandAssetIds: project.brandAssetIds || [],
     characterAssetIds: project.characterAssetIds || [],
     backgroundAssetIds: project.backgroundAssetIds || [],
+    // Convert undefined to null for optional fields
+    storyboardId: project.storyboardId ?? null,
+    thumbnail: project.thumbnail ?? null,
   };
 
   await setDoc(projectRef, firestoreProject, { merge: true });
