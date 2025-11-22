@@ -2,10 +2,12 @@ import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 
 /**
- * Firebase configuration
- * Uses environment variables for security
+ * Firebase Configuration
+ * 
+ * Web app configuration for Firebase client SDK.
+ * Environment variables are loaded from .env.local
  */
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -13,6 +15,19 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+/**
+ * Check if Firebase is configured
+ */
+export function isFirebaseConfigured(): boolean {
+  return !!(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.storageBucket &&
+    firebaseConfig.appId
+  );
+}
 
 /**
  * Initialize Firebase app
@@ -34,4 +49,3 @@ export const auth = getAuth(app);
  * Export the app instance for other Firebase services
  */
 export default app;
-
