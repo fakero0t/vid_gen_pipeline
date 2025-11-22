@@ -9,21 +9,21 @@ import { useAppStore } from '@/store/appStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useSceneStore } from '@/store/sceneStore';
 import { ToastProvider, useToast } from '@/components/ui/Toast';
-import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { Button } from '@/components/ui/button';
 import { STEPS } from '@/lib/steps';
+import { useAudioGeneration } from '@/hooks/useAudioGeneration';
+import type { AudioGenerationRequest } from '@/types/audio.types';
 
-// Cheeky loading phrases that rotate
+// Storyboard-specific loading phrases that rotate
 const LOADING_PHRASES = [
-  "Crafting your perfect mood... ✨",
-  "Gathering inspiration just for you... 🎨",
-  "Setting the vibe... 🌈",
-  "Curating your mood board masterpiece... 🎭",
-  "Hang tight, creativity in progress... 🚀",
-  "Brewing some visual magic... ☕",
-  "Channeling your aesthetic... 🔮",
-  "Weaving together your vision... 🧵",
-  "Polishing every pixel... 💎",
+  "Planning your storyboard... 📝",
+  "Crafting scene narratives... 🎬",
+  "Designing your story flow... 🎭",
+  "Building scene sequences... 🎞️",
+  "Creating visual storyboards... ✨",
+  "Almost ready with your scenes... 🚀",
+  "Weaving scenes together... 🧵",
+  "Polishing storyboard details... 💎",
   "Almost there, promise! ⏳"
 ];
 
@@ -99,8 +99,56 @@ function ScenesPageContent() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // App-level state for creative brief and mood
-  const { creativeBrief, moods, selectedMoodId, setCurrentStep, setStoryboardCompleted } = useAppStore();
+  const { creativeBrief, moods, selectedMoodId, audioUrl, setCurrentStep, setStoryboardCompleted } = useAppStore();
   const { loadProject, getCurrentProject, currentProjectId } = useProjectStore();
+  
+  // Audio generation hook
+  const { generateAudio, isLoading: isGeneratingAudio, error: audioError } = useAudioGeneration();
+  
+  // Audio ref to stop playback when switching projects
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // Stop audio when audioUrl changes or component unmounts
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [audioUrl]);
+  
+  // Handle regenerate audio
+  const handleRegenerateAudio = async () => {
+    if (!creativeBrief || !selectedMoodId || !moods.length) {
+      console.error('Missing required data for audio generation');
+      return;
+    }
+
+    const selectedMood = moods.find((m) => (m as any).mood_id === selectedMoodId || m.id === selectedMoodId);
+    if (!selectedMood) {
+      console.error('Selected mood not found');
+      return;
+    }
+
+    const moodName = (selectedMood as any).style_name || selectedMood.name;
+
+    const audioRequest: AudioGenerationRequest = {
+      mood_name: moodName,
+      mood_description: selectedMood.aesthetic_direction || '',
+      emotional_tone: creativeBrief.emotional_tone || [],
+      aesthetic_direction: selectedMood.aesthetic_direction || '',
+      style_keywords: selectedMood.style_keywords || [],
+      duration: 30,
+    };
+
+    await generateAudio(audioRequest);
+  };
   
   // Get storyboardId from URL or from current project
   const currentProject = getCurrentProject();
@@ -152,6 +200,30 @@ function ScenesPageContent() {
 
   // Session recovery
   const { isRecovering } = useStoryboardRecovery();
+
+  // Show toast for audio errors
+  useEffect(() => {
+    if (audioError) {
+      addToast({
+        type: 'error',
+        message: audioError,
+        duration: 5000,
+      });
+    }
+  }, [audioError, addToast]);
+  
+  // Show toast for storyboard errors
+  useEffect(() => {
+    if (error && storyboard) {
+      addToast({
+        type: 'error',
+        message: error,
+        duration: 5000,
+      });
+      // Clear error after showing toast
+      useSceneStore.getState().setError(null);
+    }
+  }, [error, storyboard, addToast]);
 
   // Track failed storyboard loads to prevent endless retries
   const failedStoryboardIdsRef = useRef<Set<string>>(new Set());
@@ -543,46 +615,93 @@ function ScenesPageContent() {
       {/* Compact header bar */}
       <div className="flex-shrink-0 px-4 sm:px-6 py-2 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold leading-tight">Scene Storyboard</h1>
+          {/* Audio Component */}
+          <div className="flex-1 min-w-0 h-9 flex-shrink-0 max-w-md">
+            {audioUrl ? (
+              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-1.5 h-full">
+                <span className="text-green-600 dark:text-green-400 text-xs flex-shrink-0">✓</span>
+                <audio
+                  ref={audioRef}
+                  controls
+                  src={audioUrl}
+                  className="flex-1 h-7 min-w-0"
+                  preload="metadata"
+                  style={{ accentColor: '#22c55e' }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs flex-shrink-0"
+                  onClick={handleRegenerateAudio}
+                  disabled={isGeneratingAudio || isLoading || !creativeBrief || !selectedMoodId}
+                  title="Regenerate audio"
+                >
+                  {isGeneratingAudio ? (
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-md px-3 py-1.5 h-full">
+                {isGeneratingAudio ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">Generating audio...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">No audio</span>
+                  </>
+                )}
+                {!isGeneratingAudio && creativeBrief && selectedMoodId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs ml-auto flex-shrink-0"
+                    onClick={handleRegenerateAudio}
+                    disabled={isLoading}
+                  >
+                    Generate
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
-            {error && (
-              <div className="flex-1 max-w-md mr-2">
-                <ErrorAlert
-                  error={error}
-                  onDismiss={() => useSceneStore.getState().setError(null)}
-                  showRetry={false}
-                />
-              </div>
-            )}
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setIsPreviewOpen(true)}
-              disabled={isSaving || isRegeneratingAll || scenes.length === 0}
-            >
-              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Preview
-            </Button>
-            <Button
-              size="sm"
-              variant="default"
               onClick={handleRegenerateAll}
               disabled={isSaving || isRegeneratingAll}
+              className="h-7 text-xs px-2"
             >
               {isRegeneratingAll ? (
-                <div className="w-3.5 h-3.5 border-2 border-[rgb(196,230,43)] border-t-transparent rounded-full animate-spin mr-1.5" />
+                <div className="w-3 h-3 border-2 border-[rgb(196,230,43)] border-t-transparent rounded-full animate-spin mr-1" />
               ) : (
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               )}
               Regenerate All
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setIsPreviewOpen(true)}
+              disabled={isSaving || isRegeneratingAll || scenes.length === 0}
+              className="h-7 text-xs px-2"
+            >
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Preview
             </Button>
           </div>
         </div>

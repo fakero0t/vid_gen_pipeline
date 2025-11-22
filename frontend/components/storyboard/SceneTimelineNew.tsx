@@ -121,14 +121,14 @@ function SortableSceneButton({
     <div
       ref={setNodeRef}
       style={style}
-      className="relative group flex items-center gap-1"
+      className="relative group flex items-center gap-1 flex-shrink-0"
     >
       {/* Drag handle - only visible on hover */}
       {canDrag && (
         <div
           {...attributes}
           {...listeners}
-          className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
+          className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
           aria-label={`Drag to reorder scene ${index + 1}`}
           title="Drag to reorder"
         >
@@ -139,9 +139,9 @@ function SortableSceneButton({
       <button
         onClick={onClick}
         className={`
-          w-8 h-8 rounded-md border-2 transition-all duration-200 flex items-center justify-center relative
-          hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-          ${isActive ? 'border-primary shadow-md scale-110 ring-2 ring-primary/20' : 'border-transparent'}
+          w-8 h-8 rounded-md border-2 transition-colors duration-200 flex items-center justify-center relative flex-shrink-0
+          hover:ring-2 hover:ring-primary/30 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
+          ${isActive ? 'border-primary shadow-md ring-2 ring-primary/20' : 'border-transparent'}
           ${isSceneGenerating ? 'animate-pulse' : ''}
           cursor-pointer
           ${isDragging ? 'z-50' : ''}
@@ -324,7 +324,7 @@ export function SceneTimelineNew({
             items={localOrder}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="flex items-center justify-evenly flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {localOrder.map((sceneId, index) => {
                 const scene = scenes.find(s => s.id === sceneId);
                 if (!scene) return null;

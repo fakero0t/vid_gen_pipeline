@@ -37,7 +37,7 @@ export function BackgroundGallery({
   }
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`} style={{ gridAutoRows: 'minmax(250px, 1fr)' }}>
       {backgrounds.map((background) => {
         const isSelected = selectedIds.includes(background.asset_id);
         
@@ -45,7 +45,7 @@ export function BackgroundGallery({
           <div
             key={background.asset_id}
             className={`
-              relative aspect-video rounded-lg overflow-hidden border-2 transition-all
+              relative rounded-xl overflow-hidden border-2 transition-all
               ${isSelected 
                 ? 'border-primary ring-2 ring-primary/20' 
                 : 'border-border hover:border-primary/50'
@@ -59,7 +59,7 @@ export function BackgroundGallery({
                 src={getBackgroundImageUrl(background.asset_id, userId, false)}
                 alt={`Background ${background.asset_id}`}
                 fill
-                className="object-contain"
+                className="object-cover"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               />
             )}

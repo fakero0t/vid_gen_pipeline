@@ -79,9 +79,9 @@ function ChatContent() {
   return (
     <>
       <SkipToContent />
-      <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        <main id="main-content" tabIndex={-1} className="outline-none pt-[calc(3.5rem+1.5rem)]">
-          <div className="flex h-[calc(100vh-56px)] items-center justify-center p-2 sm:p-3 animate-fadeIn overflow-hidden">
+      <div className="h-screen bg-zinc-50 dark:bg-black overflow-hidden">
+        <main id="main-content" tabIndex={-1} className="outline-none pt-14 h-full">
+          <div className="flex h-full items-center justify-center p-2 sm:p-3 animate-fadeIn overflow-hidden">
             <div className="w-full max-w-7xl h-full flex gap-2 sm:gap-3">
               {/* Chat Interface - Transitions from full width to half width when brief appears or extracting */}
               <div 

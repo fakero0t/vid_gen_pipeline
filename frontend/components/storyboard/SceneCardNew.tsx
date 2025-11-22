@@ -99,13 +99,13 @@ export function SceneCardNew({
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 space-y-3">
+      <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 space-y-3 overflow-visible">
         {/* TEXT STATE */}
         {scene.state === 'text' && (
-          <div className="flex-1 min-h-0 flex gap-4">
-            {/* Left: Assets sections (where image will appear) - takes up left half */}
-            <div className="w-1/2 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scrollbar-hide">
-              <div className="flex-shrink-0">
+          <div className="flex-1 min-h-0 flex gap-4 overflow-visible">
+            {/* Left: Assets sections - 2/3 width */}
+            <div className="w-2/3 flex-shrink-0 flex flex-col h-full min-w-0 gap-2 justify-between overflow-visible">
+              <div className="flex-1 min-h-0 overflow-visible">
                 <SceneAssetToggleSection scene={scene} />
               </div>
               <div className="flex-shrink-0">
@@ -120,24 +120,31 @@ export function SceneCardNew({
               )}
             </div>
 
-            {/* Right: Scene description and controls (where post-generate controls will appear) */}
-            <div className="flex-1 min-w-0 flex flex-col space-y-4">
-              {/* Scene Description */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Scene Description</h3>
+            {/* Right: Scene description and controls - 1/3 width */}
+            <div className="w-1/3 flex-shrink-0 flex flex-col h-full min-w-0 justify-between">
+              {/* Scene Description - takes available space */}
+              <div className="flex-1 min-h-0 flex flex-col space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 flex-shrink-0">
+                  Scene Description
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={handleEditTextClick} disabled={isLoading} title="Edit text">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </Button>
+                </h3>
                 {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="flex-1 min-h-0 flex flex-col space-y-2">
                     <textarea
                       value={editedText}
                       onChange={(e) => setEditedText(e.target.value)}
-                      className="w-full min-h-[120px] p-4 border-2 border-primary rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="flex-1 min-h-0 p-3 text-sm border-2 border-primary rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                       disabled={isLoading}
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveText} disabled={isLoading}>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button size="sm" className="h-8 text-xs px-3" onClick={handleSaveText} disabled={isLoading}>
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
+                      <Button size="sm" variant="outline" className="h-8 text-xs px-3" onClick={() => {
                         setEditedText(scene.text);
                         setIsEditing(false);
                       }} disabled={isLoading}>
@@ -146,37 +153,31 @@ export function SceneCardNew({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button size="sm" variant="outline" onClick={handleEditTextClick} disabled={isLoading}>
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading}>
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <>
+                    <p className="text-base leading-relaxed flex-1 min-h-0 overflow-y-auto pr-2">{scene.text}</p>
+                    <div className="flex gap-1.5 flex-shrink-0 pt-2">
+                      <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading} className="flex-1 h-8 text-xs">
+                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         Regenerate
                       </Button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 pt-3 border-t border-border">
-                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="lg" className="w-full">
+              <div className="flex flex-col gap-2 pt-4 flex-shrink-0">
+                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="sm" className="w-full h-9 text-xs">
                   {isGeneratingImage ? (
                     <>
-                      <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Generating Image...
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       Approve & Generate Image
@@ -191,15 +192,15 @@ export function SceneCardNew({
         {/* IMAGE STATE */}
         {scene.state === 'image' && (
           <div className="flex-1 min-h-0 flex gap-4">
-            {/* Left: Image preview */}
-            <div className="flex-1 min-w-0 relative rounded-lg overflow-hidden bg-muted border border-border flex items-center justify-center p-4">
+            {/* Left: Image preview - 2/3 width */}
+            <div className="w-2/3 flex-shrink-0 relative rounded-lg overflow-hidden flex items-center justify-center">
               {isGeneratingImage ? (
-                <div className="w-full h-full flex flex-col items-center justify-center">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
                   <p className="text-sm text-muted-foreground">Generating image...</p>
                 </div>
               ) : scene.image_url ? (
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative w-full h-full">
                   <Image
                     src={scene.image_url.startsWith('http') 
                       ? scene.image_url 
@@ -207,35 +208,42 @@ export function SceneCardNew({
                     }
                     alt={`Scene ${sceneNumber}`}
                     fill
-                    className="object-contain"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 800px"
                   />
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center bg-muted/50">
                   <p className="text-muted-foreground">No image generated</p>
                 </div>
               )}
             </div>
 
-            {/* Right: Controls and text */}
-            <div className="flex-1 min-w-0 flex flex-col space-y-4">
-              {/* Scene Description */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Scene Description</h3>
+            {/* Right: Controls and text - 1/3 width */}
+            <div className="w-1/3 flex-shrink-0 flex flex-col h-full min-w-0 justify-between">
+              {/* Scene Description - takes available space */}
+              <div className="flex-1 min-h-0 flex flex-col space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 flex-shrink-0">
+                  Scene Description
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </Button>
+                </h3>
                 {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="flex-1 min-h-0 flex flex-col space-y-2">
                     <textarea
                       value={editedText}
                       onChange={(e) => setEditedText(e.target.value)}
-                      className="w-full min-h-[120px] p-4 border-2 border-primary rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="flex-1 min-h-0 p-3 text-sm border-2 border-primary rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                       disabled={isLoading}
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveText} disabled={isLoading}>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button size="sm" className="h-8 text-xs px-3" onClick={handleSaveText} disabled={isLoading}>
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
+                      <Button size="sm" variant="outline" className="h-8 text-xs px-3" onClick={() => {
                         setEditedText(scene.text);
                         setIsEditing(false);
                       }} disabled={isLoading}>
@@ -244,64 +252,61 @@ export function SceneCardNew({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
-                    <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </Button>
-                  </div>
+                  <p className="text-base leading-relaxed flex-1 min-h-0 overflow-y-auto pr-2">{scene.text}</p>
                 )}
               </div>
 
               {/* Duration configuration */}
-              <div className="space-y-2 pt-3 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                  <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+              <div className="space-y-2 pt-4 flex-shrink-0">
+                <div className="flex justify-center">
+                  <div className="w-1/2 flex items-center justify-between">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                    <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  step="0.1"
-                  value={duration}
-                  onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-                    setDuration(newValue);
-                  }}
-                  onMouseUp={(e) => {
-                    const newValue = parseFloat((e.target as HTMLInputElement).value);
-                    handleDurationChange(newValue);
-                  }}
-                  onTouchEnd={(e) => {
-                    const newValue = parseFloat((e.target as HTMLInputElement).value);
-                    handleDurationChange(newValue);
-                  }}
-                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
-                  disabled={isLoading}
-                />
+                <div className="flex justify-center">
+                  <input
+                    type="range"
+                    min="1"
+                    max="8"
+                    step="0.1"
+                    value={duration}
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      setDuration(newValue);
+                    }}
+                    onMouseUp={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    onTouchEnd={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    className="w-1/2 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 pt-3 border-t border-border">
-                <Button size="sm" variant="outline" onClick={onRegenerateImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-full">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex flex-row gap-2 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={onRegenerateImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="flex-1 h-9 text-xs">
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Regenerate Image
                 </Button>
 
-                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="lg" className="w-full">
+                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="sm" className="flex-1 h-9 text-xs">
                   {isGeneratingVideo ? (
                     <>
-                      <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Generating Video...
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       Approve & Generate Video
@@ -454,11 +459,7 @@ function ProductToggleSection({ scene }: { scene: StoryboardScene }) {
   };
 
   if (!uploadedProduct) {
-    return (
-      <div className="text-sm text-muted-foreground italic">
-        Upload a product to enable compositing
-      </div>
-    );
+    return null;
   }
 
   return (

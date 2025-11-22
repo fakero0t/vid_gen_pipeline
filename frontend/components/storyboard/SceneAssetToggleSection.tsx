@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useProjectStore } from '@/store/projectStore';
 import { useSceneStore } from '@/store/sceneStore';
 import { listBrandAssets, getBrandAssetImageUrl } from '@/lib/api/brand';
 import { listCharacterAssets, getCharacterAssetImageUrl } from '@/lib/api/character';
 import { listBackgroundAssets, getBackgroundImageUrl } from '@/lib/api/background';
+import { cn } from '@/lib/utils';
 import type { StoryboardScene } from '@/types/storyboard.types';
 import type { BrandAssetStatus } from '@/types/brand.types';
 import type { CharacterAssetStatus } from '@/types/character.types';
@@ -181,32 +181,8 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     return null;
   }
 
-  // Memoized asset image component to prevent re-renders
-  const AssetImage = memo(({ 
-    assetId, 
-    imageUrl, 
-    alt, 
-    isSelected 
-  }: { 
-    assetId: string; 
-    imageUrl: string; 
-    alt: string; 
-    isSelected: boolean;
-  }) => (
-    <Image
-      key={assetId}
-      src={imageUrl}
-      alt={alt}
-      fill
-      className="object-contain"
-      unoptimized
-      priority={false}
-    />
-  ));
-  AssetImage.displayName = 'AssetImage';
-
-  // Carousel component for assets - memoized to prevent recreation
-  const AssetCarousel = memo(({ 
+  // Asset grid component - uses same style as project creation modal
+  const AssetGrid = ({ 
     assets, 
     selectedId, 
     onToggle, 
@@ -225,69 +201,10 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     label: string;
     userId: string | null | undefined;
   }) => {
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
-    const [showRightArrow, setShowRightArrow] = useState(false);
-    const scrollCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Debounced scroll check to prevent excessive re-renders
-    const checkScroll = useCallback(() => {
-      if (scrollCheckTimeoutRef.current) {
-        clearTimeout(scrollCheckTimeoutRef.current);
-      }
-      scrollCheckTimeoutRef.current = setTimeout(() => {
-        if (!scrollContainerRef.current) return;
-        const container = scrollContainerRef.current;
-        const newShowLeft = container.scrollLeft > 0;
-        const newShowRight = container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
-        
-        // Only update state if values actually changed
-        setShowLeftArrow(prev => prev !== newShowLeft ? newShowLeft : prev);
-        setShowRightArrow(prev => prev !== newShowRight ? newShowRight : prev);
-      }, 50);
-    }, []);
-
-    // Check if scrolling is needed - optimized to prevent flicker
-    useEffect(() => {
-      // Initial check after DOM is ready
-      const timeoutId = setTimeout(checkScroll, 100);
-      const container = scrollContainerRef.current;
-      
-      if (container) {
-        container.addEventListener('scroll', checkScroll, { passive: true });
-        window.addEventListener('resize', checkScroll, { passive: true });
-        
-        return () => {
-          clearTimeout(timeoutId);
-          if (scrollCheckTimeoutRef.current) {
-            clearTimeout(scrollCheckTimeoutRef.current);
-          }
-          container.removeEventListener('scroll', checkScroll);
-          window.removeEventListener('resize', checkScroll);
-        };
-      }
-      return () => {
-        clearTimeout(timeoutId);
-        if (scrollCheckTimeoutRef.current) {
-          clearTimeout(scrollCheckTimeoutRef.current);
-        }
-      };
-    }, [checkScroll, assets.length]);
-
-    const scroll = useCallback((direction: 'left' | 'right') => {
-      if (!scrollContainerRef.current) return;
-      const container = scrollContainerRef.current;
-      const scrollAmount = 200;
-      container.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }, []);
-
     if (isLoading) {
       return (
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
+        <div className="space-y-1">
+          <h5 className="text-xs font-semibold text-foreground">{label}</h5>
           <div className="text-xs text-muted-foreground">Loading...</div>
         </div>
       );
@@ -295,87 +212,57 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
 
     if (assets.length === 0) {
       return (
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
+        <div className="space-y-1">
+          <h5 className="text-xs font-semibold text-foreground">{label}</h5>
           <div className="text-xs text-muted-foreground italic">No assets available</div>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center gap-3">
-        <label className="text-xs font-medium text-muted-foreground w-24 flex-shrink-0">{label}</label>
-        <div className="relative flex-1 min-w-0">
-          {/* Left Arrow */}
-          {showLeftArrow && (
-            <button
-              onClick={() => scroll('left')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full w-6 h-6 flex items-center justify-center hover:bg-background shadow-md"
-              aria-label="Scroll left"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
-          
-          {/* Scrollable Container */}
-          <div
-            ref={scrollContainerRef}
-            className="flex items-center gap-2 overflow-x-auto scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
+      <div className="space-y-1">
+        <h5 className="text-xs font-semibold text-foreground">{label}</h5>
+        <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
             {assets.map((asset) => {
               const isSelected = selectedId === asset.asset_id;
-              const imageUrl = userId ? getImageUrl(asset.asset_id, userId, true) : '';
               return (
-                <button
+              <div
                   key={asset.asset_id}
-                  onClick={() => onToggle(!isSelected, asset.asset_id)}
-                  disabled={isToggling}
-                  className="relative w-16 h-16 flex-shrink-0 rounded border-2 bg-background overflow-hidden cursor-pointer hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    borderColor: isSelected ? 'rgb(255, 81, 1)' : undefined
-                  }}
+                className={cn(
+                  'border-2 rounded p-1 cursor-pointer transition-all',
+                  isSelected
+                    ? 'border-primary shadow-sm'
+                    : 'border-border hover:border-primary/50 hover:shadow-sm',
+                  isToggling && 'opacity-50 cursor-not-allowed'
+                )}
+                onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
                 >
-                  {imageUrl && (
-                    <AssetImage
-                      assetId={asset.asset_id}
-                      imageUrl={imageUrl}
+                <div className="relative w-full aspect-square bg-muted rounded overflow-hidden">
+                  {userId && (
+                    <Image
+                      src={getImageUrl(asset.asset_id, userId, false)}
                       alt={asset.metadata?.filename || `${label} asset`}
-                      isSelected={isSelected}
+                      fill
+                      className="object-cover rounded"
                     />
                   )}
-                </button>
+                  </div>
+              </div>
               );
             })}
-          </div>
-
-          {/* Right Arrow */}
-          {showRightArrow && (
-            <button
-              onClick={() => scroll('right')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full w-6 h-6 flex items-center justify-center hover:bg-background shadow-md"
-              aria-label="Scroll right"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
     );
-  });
-  AssetCarousel.displayName = 'AssetCarousel';
+  };
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-muted/50 rounded-lg border min-w-[400px]">
-      <h4 className="text-sm font-semibold text-foreground">Assets</h4>
+    <div className="flex flex-col gap-2 p-2 bg-muted/50 rounded-lg border min-w-[400px] h-full overflow-y-auto">
+      <h4 className="text-xs font-semibold text-foreground flex-shrink-0">Assets</h4>
       
-      {/* Brand Asset Carousel */}
+      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-visible">
+      {/* Brand Asset Grid */}
       {projectBrandAssetIds.length > 0 && (
-        <AssetCarousel
+        <AssetGrid
           assets={brandAssets}
           selectedId={scene.brand_asset_id ?? null}
           onToggle={handleBrandToggle}
@@ -387,9 +274,9 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
         />
       )}
 
-      {/* Character Asset Carousel */}
+      {/* Character Asset Grid */}
       {projectCharacterAssetIds.length > 0 && (
-        <AssetCarousel
+        <AssetGrid
           assets={characterAssets}
           selectedId={scene.character_asset_id ?? null}
           onToggle={handleCharacterToggle}
@@ -401,9 +288,9 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
         />
       )}
 
-      {/* Background Asset Carousel */}
+      {/* Background Asset Grid */}
       {projectBackgroundAssetIds.length > 0 && (
-        <AssetCarousel
+        <AssetGrid
           assets={backgroundAssets}
           selectedId={scene.background_asset_id ?? null}
           onToggle={handleBackgroundToggle}
@@ -414,6 +301,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
           userId={userId}
         />
       )}
+      </div>
     </div>
   );
 }

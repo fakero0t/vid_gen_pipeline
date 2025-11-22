@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import type { AssetStatus } from '@/types/asset.types';
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 interface AssetSelectionStepProps {
@@ -86,38 +85,22 @@ export function AssetSelectionStep({
             <div
               key={asset.asset_id}
               className={cn(
-                'border rounded-lg p-3 cursor-pointer transition-all',
+                'border-2 rounded-lg p-3 cursor-pointer transition-all',
                 isSelected
-                  ? 'border-primary bg-primary/5 shadow-md'
+                  ? 'border-primary shadow-md'
                   : 'border-border hover:border-primary/50 hover:shadow-sm'
               )}
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
-              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden min-h-[200px]">
+              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden">
                 {userId && (
                   <Image
                     src={getImageUrl(asset.asset_id, userId, false)}
                     alt={asset.metadata.filename || `${assetTypeLabel} asset`}
                     fill
-                    className="object-contain rounded"
+                    className="object-cover rounded"
                   />
                 )}
-                <div 
-                  className="absolute top-2 right-2 z-20 pointer-events-auto"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <div className="bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded p-0.5 shadow-lg border border-border/50">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => {
-                        if (checked !== isSelected) {
-                          handleToggleAsset(asset.asset_id);
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           );

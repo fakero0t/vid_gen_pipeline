@@ -76,6 +76,18 @@ export function VisionPrompt({
     };
   }, [isListening, stopListening]);
 
+  // Restore focus when input becomes enabled again after being disabled
+  const prevIsLoadingRef = useRef(isLoading);
+  useEffect(() => {
+    // If we transition from loading (disabled) to not loading (enabled), restore focus
+    if (prevIsLoadingRef.current && !isLoading && !disabled) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, disabled]);
+
   const handleSubmit = () => {
     const trimmedInput = input.trim();
     if (trimmedInput && !disabled && !isLoading) {
@@ -86,6 +98,10 @@ export function VisionPrompt({
       }
       onSend(trimmedInput);
       setInput('');
+      // Maintain focus after sending
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     }
   };
 

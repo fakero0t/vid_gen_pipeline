@@ -108,17 +108,17 @@ export function AssetUpload<T extends Asset>({
   // Success state
   if (uploadedAsset) {
     return (
-      <div className="bg-white rounded-lg border p-2">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="inline-flex items-center justify-center w-5 h-5 bg-green-100 rounded-full flex-shrink-0">
-            <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-card rounded-xl border-2 border-border p-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center justify-center w-5 h-5 bg-primary/10 rounded-full flex-shrink-0">
+            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-xs text-gray-600 flex-1 truncate">Uploaded successfully</p>
+          <p className="text-xs text-muted-foreground flex-1 truncate">Uploaded successfully</p>
           <button
             onClick={handleReset}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            className="text-xs text-primary hover:text-primary/80 font-display font-bold transition-colors"
           >
             Upload Another
           </button>
@@ -130,17 +130,17 @@ export function AssetUpload<T extends Asset>({
   // Upload in progress
   if (isUploading) {
     return (
-      <div className="bg-white rounded-lg border p-2">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="bg-card rounded-xl border-2 border-border p-2 shadow-sm">
+        <div className="flex items-center gap-2">
           <div className="flex-1">
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <div className="w-full bg-muted rounded-full h-1.5">
               <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                className="bg-primary h-1.5 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
           </div>
-          <p className="text-xs text-gray-600 whitespace-nowrap">{Math.round(uploadProgress)}%</p>
+          <p className="text-xs text-muted-foreground whitespace-nowrap font-display font-bold">{Math.round(uploadProgress)}%</p>
         </div>
       </div>
     );
@@ -149,25 +149,25 @@ export function AssetUpload<T extends Asset>({
   // File selected but not uploaded
   if (selectedFile && previewUrl) {
     return (
-      <div className="bg-white rounded-lg border p-2">
+      <div className="bg-card rounded-xl border-2 border-border p-2 shadow-sm">
         {error && (
-          <div className="mb-2 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+          <div className="mb-2 p-1.5 bg-destructive/10 border border-destructive/50 rounded-lg text-xs text-destructive">
             {error}
           </div>
         )}
 
         <div className="flex items-center gap-2 mb-2">
-          <div className="relative w-10 h-10 flex-shrink-0 bg-gray-50 rounded">
+          <div className="relative w-10 h-10 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
             <Image
               src={previewUrl}
               alt="Preview"
               fill
-              className="object-contain rounded"
+              className="object-cover rounded-lg"
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-xs text-gray-900 truncate">{selectedFile.name}</p>
-            <p className="text-xs text-gray-500">
+            <p className="font-display font-bold text-xs text-foreground truncate">{selectedFile.name}</p>
+            <p className="text-xs text-muted-foreground">
               {formatFileSize(selectedFile.size)}
             </p>
           </div>
@@ -176,7 +176,7 @@ export function AssetUpload<T extends Asset>({
         <div className="flex gap-2">
           <button
             onClick={handleUpload}
-            className="flex-1 bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors text-xs font-medium"
+            className="flex-1 bg-primary text-primary-foreground px-3 py-1.5 rounded-full hover:bg-primary/90 transition-all duration-300 text-xs font-display font-bold hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-lg"
           >
             Upload
           </button>
@@ -189,7 +189,7 @@ export function AssetUpload<T extends Asset>({
               setPreviewUrl(null);
               clearError();
             }}
-            className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-xs"
+            className="px-3 py-1.5 border-2 border-border rounded-full hover:bg-secondary transition-all duration-300 text-xs font-display font-bold text-foreground"
           >
             Cancel
           </button>
@@ -200,9 +200,9 @@ export function AssetUpload<T extends Asset>({
 
   // Initial state - drop zone
   return (
-    <div className="bg-white rounded-lg border p-2">
+    <div className="bg-card rounded-xl border-2 border-border p-2 shadow-sm">
       {error && (
-        <div className="mb-2 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+        <div className="mb-2 p-1.5 bg-destructive/10 border border-destructive/50 rounded-lg text-xs text-destructive">
           {error}
         </div>
       )}
@@ -214,16 +214,19 @@ export function AssetUpload<T extends Asset>({
         onDrop={handleDrop}
         className={`
           border-2 border-dashed rounded-lg p-2 text-center cursor-pointer
-          transition-colors
-          ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+          transition-all duration-300
+          ${dragActive 
+            ? 'border-primary bg-primary/10 scale-[1.02]' 
+            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+          }
         `}
         onClick={() => document.getElementById(`${assetType}-file-input`)?.click()}
       >
         <div className="flex items-center justify-center gap-2">
-          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p className="text-xs font-medium text-gray-700">
+          <p className="text-xs font-display font-bold text-foreground">
             Drop or click to upload
           </p>
         </div>

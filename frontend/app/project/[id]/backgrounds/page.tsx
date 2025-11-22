@@ -12,17 +12,16 @@ import { listBackgroundAssets } from '@/lib/api/background';
 import type { BackgroundGenerationRequest } from '@/types/background.types';
 import { STEPS } from '@/lib/steps';
 
-// Cheeky loading phrases that rotate
+// Background-specific loading phrases that rotate
 const LOADING_PHRASES = [
-  "Crafting your perfect mood... ✨",
-  "Gathering inspiration just for you... 🎨",
-  "Setting the vibe... 🌈",
-  "Curating your mood board masterpiece... 🎭",
-  "Hang tight, creativity in progress... 🚀",
-  "Brewing some visual magic... ☕",
-  "Channeling your aesthetic... 🔮",
-  "Weaving together your vision... 🧵",
-  "Polishing every pixel... 💎",
+  "Painting beautiful backgrounds... 🎨",
+  "Setting the perfect scene... 🖼️",
+  "Curating stunning environments... ✨",
+  "Crafting visual backdrops... 🌆",
+  "Designing your backgrounds... 🎭",
+  "Almost ready with your images... 🚀",
+  "Creating atmospheric scenes... 🌈",
+  "Polishing background details... 💎",
   "Almost there, promise! ⏳"
 ];
 
@@ -245,27 +244,27 @@ export default function BackgroundsPage() {
           {/* Content area - hidden when loading */}
           {!isBackgroundLoading && (
             <div className="flex-1 min-h-0 w-full flex justify-center animate-slideUp animation-delay-100 overflow-visible">
-              <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 overflow-visible">
+              <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col flex-1 min-h-0 overflow-visible">
                 <Suspense fallback={<StepSkeleton />}>
                   {/* Error display */}
                   {backgroundError && (
-                    <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-4">
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-3">
                       <p className="text-[10px] font-medium text-destructive">{backgroundError}</p>
                     </div>
                   )}
 
                   {/* Description text - centered */}
                   {backgroundAssets.length > 0 && (
-                    <div className="text-center mb-4 animate-fadeIn">
+                    <div className="text-center mb-3 flex-shrink-0 animate-fadeIn">
                       <p className="text-[10px] sm:text-xs text-muted-foreground">
                         Choose one or more background images to use in your scenes. These will be available when creating scenes.
                       </p>
                     </div>
                   )}
 
-                  {/* Gallery */}
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    <div className="flex-1 min-h-0 overflow-auto">
+                  {/* Gallery - takes up remaining space */}
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-6 sm:pt-8">
                       <BackgroundGallery
                         backgrounds={backgroundAssets}
                         selectedIds={selectedBackgroundIds}
@@ -274,9 +273,9 @@ export default function BackgroundsPage() {
                       />
                     </div>
 
-                    {/* Continue button */}
+                    {/* Continue button - positioned lower with less spacing */}
                     {backgroundAssets.length > 0 && (
-                      <div className="flex justify-end mt-4 flex-shrink-0 animate-slideUp animation-delay-200">
+                      <div className="flex justify-end mt-3 mb-2 flex-shrink-0 animate-slideUp animation-delay-200">
                         <button
                           onClick={handleContinue}
                           disabled={!canContinue || isBackgroundLoading}
