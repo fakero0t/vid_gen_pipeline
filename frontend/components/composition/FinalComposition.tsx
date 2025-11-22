@@ -4,16 +4,15 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
-import { useAudioGeneration } from '@/hooks/useAudioGeneration';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import type { CompositionRequest, VideoClipInput } from '@/types/composition.types';
-import type { AudioGenerationRequest } from '@/types/audio.types';
 
 interface FinalCompositionProps {
   onBack: () => void;
 }
 
-type ProcessingPhase = 'idle' | 'audio' | 'composition' | 'complete';
+type ProcessingPhase = 'idle' | 'composition' | 'complete';
 
 export function FinalComposition({ onBack }: FinalCompositionProps) {
   const {
@@ -35,17 +34,9 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
     clearError: clearCompositionError,
   } = useVideoComposition();
 
-  const {
-    generateAudio,
-    isLoading: isGeneratingAudio,
-    error: audioError,
-    clearError: clearAudioError,
-  } = useAudioGeneration();
-
   const [hasStarted, setHasStarted] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<ProcessingPhase>('idle');
   const [phaseProgress, setPhaseProgress] = useState({
-    audio: 0,
     composition: 0,
   });
 
@@ -73,62 +64,28 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
     setHasStarted(true);
 
     try {
-      // Phase 1: Generate Audio (if not already generated)
-      let finalAudioUrl = audioUrl;
-      
-      if (!audioUrl && creativeBrief && selectedMoodId && moods.length > 0) {
-        console.log('🎵 Starting audio generation...');
-        setCurrentPhase('audio');
-        setPhaseProgress({ audio: 0, composition: 0 });
-
-        const selectedMood = moods.find((m) => m.id === selectedMoodId);
-        
-        if (selectedMood) {
-          // Simulate progress for audio generation
-          const audioProgressInterval = setInterval(() => {
-            setPhaseProgress((prev) => ({
-              ...prev,
-              audio: Math.min(prev.audio + 10, 90),
-            }));
-          }, 500);
-
-          const audioRequest: AudioGenerationRequest = {
-            mood_name: selectedMood.name,
-            mood_description: selectedMood.aesthetic_direction || '',
-            emotional_tone: creativeBrief.emotional_tone || [],
-            aesthetic_direction: selectedMood.aesthetic_direction || '',
-            style_keywords: selectedMood.style_keywords || [],
-            duration: 30,
-          };
-
-          finalAudioUrl = await generateAudio(audioRequest);
-          clearInterval(audioProgressInterval);
-          setPhaseProgress((prev) => ({ ...prev, audio: 100 }));
-          
-          if (!finalAudioUrl) {
-            console.warn('⚠️ Audio generation failed, continuing without audio');
-          } else {
-            console.log('✅ Audio generation complete');
-          }
-        }
-      }
-
-      // Phase 2: Compose Video
+      // Use audio from storyboard (generated earlier in mood step or storyboard page)
       console.log('🎬 Starting video composition...');
+      console.log('🎵 Audio URL from store:', audioUrl);
       setCurrentPhase('composition');
 
       const request: CompositionRequest = {
         clips: clips,  // Use the clips we prepared from storyboard scenes
-        audio_url: finalAudioUrl || undefined,
+        audio_url: audioUrl || undefined,  // Use audio from storyboard
         include_crossfade: false,
         optimize_size: true,
         target_size_mb: 50,
       };
 
-      console.log(`🎬 Composing ${request.clips.length} clips${request.audio_url ? ' with audio' : ''}`);
+      console.log(`🎬 Composing ${request.clips.length} clips${request.audio_url ? ' with audio' : ' without audio'}`);
+      if (request.audio_url) {
+        console.log('🎵 Audio URL being used:', request.audio_url);
+      } else {
+        console.warn('⚠️ No audio URL found - video will be composed without audio');
+      }
 
       await composeVideo(request);
-      setCurrentPhase('complete');
+      // Don't set phase to 'complete' here - wait for jobStatus to update
       
     } catch (error) {
       console.error('❌ Composition process failed:', error);
@@ -138,7 +95,16 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
 
   const isComplete = jobStatus?.status === 'completed';
   const isFailed = jobStatus?.status === 'failed';
-  const error = compositionError || audioError;
+  const error = compositionError;
+
+  // Update phase based on actual job status
+  useEffect(() => {
+    if (isComplete) {
+      setCurrentPhase('complete');
+    } else if (isComposing || (jobStatus && !isComplete && !isFailed)) {
+      setCurrentPhase('composition');
+    }
+  }, [isComplete, isComposing, jobStatus, isFailed]);
 
   // Update phase progress based on composition progress
   useEffect(() => {
@@ -184,7 +150,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
       </div>
 
       {/* Not Started */}
-      {!hasStarted && !isComposing && !isGeneratingAudio && !jobStatus && (
+      {!hasStarted && !isComposing && !jobStatus && (
         <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 text-center space-y-4">
           <div className="text-4xl">🎥</div>
           <h3 className="text-xl font-semibold">Ready to Compose Final Video</h3>
@@ -199,45 +165,27 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
       )}
 
       {/* In Progress */}
-      {(hasStarted || isGeneratingAudio || isComposing || (jobStatus && !isComplete && !isFailed)) && (
+      {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && (
         <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 space-y-6">
           <div className="text-center space-y-6">
             {/* Phase Indicator */}
-            <div className="text-4xl animate-pulse">
-              {currentPhase === 'audio' && '🎵'}
-              {currentPhase === 'composition' && '🎬'}
-              {currentPhase === 'complete' && '✅'}
+            <div className="flex justify-center">
+              {currentPhase === 'composition' && (
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              )}
+              {currentPhase === 'complete' && (
+                <div className="text-4xl">✅</div>
+              )}
             </div>
 
             {/* Phase Description */}
             <h3 className="text-xl font-semibold">
-              {currentPhase === 'audio' && 'Generating Background Music...'}
               {currentPhase === 'composition' && (jobStatus?.current_step || 'Composing Video...')}
               {currentPhase === 'complete' && 'Processing Complete!'}
             </h3>
 
-            {/* Multi-Phase Progress */}
+            {/* Progress */}
             <div className="space-y-4 max-w-md mx-auto">
-              {/* Audio Phase */}
-              {(currentPhase === 'audio' || phaseProgress.audio > 0) && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Audio Generation</span>
-                    <span className="font-medium">
-                      {phaseProgress.audio === 100 ? '✓' : `${phaseProgress.audio}%`}
-                    </span>
-                  </div>
-                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ease-out ${
-                        phaseProgress.audio === 100 ? 'bg-green-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${phaseProgress.audio}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Composition Phase */}
               {(currentPhase === 'composition' || phaseProgress.composition > 0) && (
                 <div className="space-y-2">
@@ -349,14 +297,9 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             <span className="text-2xl">⚠️</span>
             <div className="flex-1">
               <h4 className="font-semibold text-red-900 dark:text-red-100 mb-1">
-                {currentPhase === 'audio' ? 'Audio Generation Failed' : 'Composition Failed'}
+                Composition Failed
               </h4>
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              {currentPhase === 'audio' && (
-                <p className="text-xs text-red-700 dark:text-red-300 mt-2">
-                  Don't worry! You can continue without audio or retry audio generation.
-                </p>
-              )}
             </div>
           </div>
           <div className="flex gap-2 mt-4">
@@ -364,7 +307,6 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
               variant="outline" 
               size="sm" 
               onClick={() => {
-                clearAudioError();
                 clearCompositionError();
               }}
             >
@@ -373,36 +315,6 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             <Button size="sm" onClick={handleStartComposition}>
               Retry
             </Button>
-            {currentPhase === 'audio' && (
-              <Button 
-                size="sm" 
-                variant="secondary"
-                onClick={async () => {
-                  clearAudioError();
-                  setCurrentPhase('composition');
-                  // Continue without audio
-                  const videoScenes = scenes.filter(scene => 
-                    scene.state === 'video' && 
-                    scene.video_url && 
-                    scene.generation_status.video === 'complete'
-                  );
-                  
-                  const request: CompositionRequest = {
-                    clips: videoScenes.map((scene, index) => ({
-                        scene_number: index + 1,
-                        video_url: scene.video_url!,
-                        duration: scene.video_duration,
-                      })),
-                    include_crossfade: false,
-                    optimize_size: true,
-                    target_size_mb: 50,
-                  };
-                  await composeVideo(request);
-                }}
-              >
-                Continue Without Audio
-              </Button>
-            )}
           </div>
         </div>
       )}

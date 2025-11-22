@@ -75,6 +75,9 @@ function ScenesPageContent() {
     regenerateImage,
     updateDuration,
     regenerateVideo,
+    addScene,
+    removeScene,
+    reorderScenes,
   } = useStoryboard();
 
   // Session recovery
@@ -297,6 +300,60 @@ function ScenesPageContent() {
     }
   };
 
+  const handleAddScene = async () => {
+    try {
+      await addScene();
+      addToast({
+        type: 'success',
+        message: 'Scene added successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add scene';
+      addToast({
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleRemoveScene = async (sceneId: string) => {
+    try {
+      await removeScene(sceneId);
+      addToast({
+        type: 'success',
+        message: 'Scene removed successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove scene';
+      addToast({
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleReorderScenes = async (newOrder: string[]) => {
+    try {
+      await reorderScenes(newOrder);
+      addToast({
+        type: 'success',
+        message: 'Scenes reordered successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reorder scenes';
+      addToast({
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
+    }
+  };
+
   const handleRegenerateAll = async () => {
     try {
       await regenerateAllScenes();
@@ -494,6 +551,9 @@ function ScenesPageContent() {
           onRegenerateImage={handleRegenerateImage}
           onUpdateDuration={handleUpdateDuration}
           onRegenerateVideo={handleRegenerateVideo}
+          onAddScene={handleAddScene}
+          onRemoveScene={handleRemoveScene}
+          onReorderScenes={handleReorderScenes}
           isLoading={isSaving || isRegeneratingAll}
         />
       </div>

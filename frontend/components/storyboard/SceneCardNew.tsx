@@ -261,7 +261,7 @@ export function SceneCardNew({
               <input
                 type="range"
                 min="1"
-                max="10"
+                max="8"
                 step="0.1"
                 value={duration}
                 onChange={(e) => {

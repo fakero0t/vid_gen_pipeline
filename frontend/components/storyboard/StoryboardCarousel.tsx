@@ -23,6 +23,10 @@ interface StoryboardCarouselProps {
   onRegenerateImage: (sceneId: string) => Promise<void>;
   onUpdateDuration: (sceneId: string, newDuration: number) => Promise<void>;
   onRegenerateVideo: (sceneId: string) => Promise<void>;
+  // Scene management actions
+  onAddScene?: () => Promise<void>;
+  onRemoveScene?: (sceneId: string) => Promise<void>;
+  onReorderScenes?: (newOrder: string[]) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -39,9 +43,13 @@ export function StoryboardCarousel({
   onRegenerateImage,
   onUpdateDuration,
   onRegenerateVideo,
+  onAddScene,
+  onRemoveScene,
+  onReorderScenes,
   isLoading = false,
 }: StoryboardCarouselProps) {
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
+  const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
 
   // Get audio URL and mood data from app store
   const { audioUrl, creativeBrief, moods, selectedMoodId } = useAppStore();
@@ -70,9 +78,48 @@ export function StoryboardCarousel({
     };
   }, [audioUrl]);
 
+  // Initialize current scene ID on mount
+  useEffect(() => {
+    if (storyboard.scene_order.length > 0 && !currentSceneId) {
+      const initialSceneId = storyboard.scene_order[currentSceneIndex];
+      setCurrentSceneId(initialSceneId);
+    }
+  }, [storyboard.scene_order, currentSceneIndex, currentSceneId]);
+
+  // Track current scene by ID and adjust index when scenes change
+  useEffect(() => {
+    if (storyboard.scene_order.length > 0) {
+      if (currentSceneId) {
+        const newIndex = storyboard.scene_order.indexOf(currentSceneId);
+        if (newIndex !== -1 && newIndex !== currentSceneIndex) {
+          setCurrentSceneIndex(newIndex);
+        } else if (newIndex === -1) {
+          // Current scene was deleted, stay on same position (scene 5 becomes scene 4)
+          const adjustedIndex = Math.min(currentSceneIndex, storyboard.scene_order.length - 1);
+          if (adjustedIndex >= 0 && adjustedIndex < storyboard.scene_order.length) {
+            setCurrentSceneIndex(adjustedIndex);
+            setCurrentSceneId(storyboard.scene_order[adjustedIndex]);
+          }
+        }
+      } else {
+        // No current scene ID set, use current index
+        if (currentSceneIndex >= 0 && currentSceneIndex < storyboard.scene_order.length) {
+          setCurrentSceneId(storyboard.scene_order[currentSceneIndex]);
+        }
+      }
+    }
+  }, [storyboard.scene_order, currentSceneId, currentSceneIndex]);
+
   // Get current scene based on scene_order
-  const currentSceneId = storyboard.scene_order[currentSceneIndex];
-  const currentScene = scenes.find(s => s.id === currentSceneId);
+  const currentSceneIdFromOrder = storyboard.scene_order[currentSceneIndex];
+  const currentScene = scenes.find(s => s.id === currentSceneIdFromOrder);
+  
+  // Check if any scene is generating
+  const isAnySceneGenerating = scenes.some(
+    (scene) =>
+      scene.generation_status.image === 'generating' ||
+      scene.generation_status.video === 'generating'
+  );
 
   // Calculate readiness for final video generation
   const allScenesReady = scenes.every(scene => scene.state === 'video' && scene.generation_status.video === 'complete');
@@ -81,7 +128,47 @@ export function StoryboardCarousel({
 
   // Handle timeline click to navigate to scene
   const handleTimelineClick = (index: number) => {
-    setCurrentSceneIndex(index);
+    if (index >= 0 && index < storyboard.scene_order.length) {
+      setCurrentSceneIndex(index);
+      setCurrentSceneId(storyboard.scene_order[index]);
+    }
+  };
+
+  // Handle add scene
+  const handleAddScene = async () => {
+    if (onAddScene) {
+      try {
+        await onAddScene();
+        // New scene will be added at the end, navigate to it after state updates
+        // The useEffect will handle the navigation when storyboard.scene_order updates
+      } catch (error) {
+        console.error('Failed to add scene:', error);
+      }
+    }
+  };
+
+  // Handle remove scene
+  const handleRemoveScene = async (sceneId: string) => {
+    if (onRemoveScene) {
+      try {
+        await onRemoveScene(sceneId);
+        // Index adjustment is handled by useEffect above
+      } catch (error) {
+        console.error('Failed to remove scene:', error);
+      }
+    }
+  };
+
+  // Handle reorder scenes
+  const handleReorderScenes = async (newOrder: string[]) => {
+    if (onReorderScenes) {
+      try {
+        await onReorderScenes(newOrder);
+        // Index adjustment is handled by useEffect above
+      } catch (error) {
+        console.error('Failed to reorder scenes:', error);
+      }
+    }
   };
 
 
@@ -134,6 +221,10 @@ export function StoryboardCarousel({
               sceneOrder={storyboard.scene_order}
               currentSceneIndex={currentSceneIndex}
               onSceneClick={handleTimelineClick}
+              onAddScene={onAddScene ? handleAddScene : undefined}
+              onRemoveScene={onRemoveScene ? handleRemoveScene : undefined}
+              onReorderScenes={onReorderScenes ? handleReorderScenes : undefined}
+              isGenerating={isAnySceneGenerating}
             />
           </div>
 
@@ -213,24 +304,37 @@ export function StoryboardCarousel({
               const scene = scenes.find(s => s.id === sceneId);
               if (!scene) return null;
 
+              // Show placeholder for generating scenes (newly added)
+              const isGeneratingScene = scene.text === 'Generating...' && 
+                (scene.generation_status.image === 'generating' || scene.id.startsWith('temp-'));
+
               return (
                 <div
                   key={scene.id}
                   className="w-full h-full flex-shrink-0 overflow-y-auto"
                   style={{ minWidth: '100%' }}
                 >
-                  <SceneCardNew
-                    scene={scene}
-                    sceneNumber={storyboard.scene_order.indexOf(scene.id) + 1}
-                    onApproveText={() => onApproveText(scene.id)}
-                    onRegenerateText={() => onRegenerateText(scene.id)}
-                    onEditText={(newText) => onEditText(scene.id, newText)}
-                    onApproveImage={() => onApproveImage(scene.id)}
-                    onRegenerateImage={() => onRegenerateImage(scene.id)}
-                    onUpdateDuration={(newDuration) => onUpdateDuration(scene.id, newDuration)}
-                    onRegenerateVideo={() => onRegenerateVideo(scene.id)}
-                    isLoading={isLoading}
-                  />
+                  {isGeneratingScene ? (
+                    <div className="w-full h-full flex items-center justify-center bg-card border border-border rounded-lg p-8">
+                      <div className="text-center space-y-4">
+                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="text-muted-foreground">Generating scene...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <SceneCardNew
+                      scene={scene}
+                      sceneNumber={storyboard.scene_order.indexOf(scene.id) + 1}
+                      onApproveText={() => onApproveText(scene.id)}
+                      onRegenerateText={() => onRegenerateText(scene.id)}
+                      onEditText={(newText) => onEditText(scene.id, newText)}
+                      onApproveImage={() => onApproveImage(scene.id)}
+                      onRegenerateImage={() => onRegenerateImage(scene.id)}
+                      onUpdateDuration={(newDuration) => onUpdateDuration(scene.id, newDuration)}
+                      onRegenerateVideo={() => onRegenerateVideo(scene.id)}
+                      isLoading={isLoading}
+                    />
+                  )}
                 </div>
               );
             })}

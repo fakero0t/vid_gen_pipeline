@@ -113,7 +113,7 @@ export interface SceneImageGenerateRequest {
  * Request payload for duration update
  */
 export interface SceneDurationUpdateRequest {
-  duration: number; // 1-10 seconds
+  duration: number; // 1-8 seconds
 }
 
 /**

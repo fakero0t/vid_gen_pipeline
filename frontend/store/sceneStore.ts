@@ -44,6 +44,12 @@ interface SceneState {
   updateDuration: (sceneId: string, newDuration: number) => Promise<void>;
   regenerateVideo: (sceneId: string) => Promise<void>;
   
+  // Actions - Scene management
+  addScene: (position?: number) => Promise<void>;
+  removeScene: (sceneId: string) => Promise<void>;
+  reorderScenes: (newOrder: string[]) => Promise<void>;
+  isAnySceneGenerating: () => boolean;
+  
   // Actions - Product compositing
   enableProductComposite: (sceneId: string, productId: string) => Promise<void>;
   disableProductComposite: (sceneId: string) => Promise<void>;
@@ -909,6 +915,245 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
       // Set error
       setError: (error) => set({ error }),
+
+      // Check if any scene is generating
+      isAnySceneGenerating: () => {
+        const { scenes } = get();
+        return scenes.some(
+          (scene) =>
+            scene.generation_status.image === 'generating' ||
+            scene.generation_status.video === 'generating'
+        );
+      },
+
+      // Add a new scene
+      addScene: async (position?: number) => {
+        const { storyboard, currentSceneIndex } = get();
+        if (!storyboard) {
+          throw new Error('No storyboard loaded');
+        }
+
+        // Validate max scenes
+        if (storyboard.scene_order.length >= 20) {
+          throw new Error('Maximum 20 scenes allowed');
+        }
+
+        // Check if any scene is generating
+        if (get().isAnySceneGenerating()) {
+          throw new Error('Cannot add scene while scenes are generating');
+        }
+
+        // Store original state for rollback
+        const originalStoryboard = { ...storyboard };
+        const originalScenes = [...get().scenes];
+        const originalIndex = currentSceneIndex;
+
+        set({ isSaving: true, error: null });
+
+        try {
+          // Optimistically add placeholder scene
+          const placeholderScene: StoryboardScene = {
+            id: `temp-${Date.now()}`,
+            storyboard_id: storyboard.storyboard_id,
+            state: 'text',
+            text: 'Generating...',
+            style_prompt: '',
+            video_duration: 5.0,
+            generation_status: {
+              image: 'generating',
+              video: 'pending',
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          const newSceneOrder = [...storyboard.scene_order];
+          if (position === undefined || position >= newSceneOrder.length) {
+            newSceneOrder.push(placeholderScene.id);
+          } else {
+            newSceneOrder.splice(position, 0, placeholderScene.id);
+          }
+
+          set({
+            storyboard: { ...storyboard, scene_order: newSceneOrder },
+            scenes: [...get().scenes, placeholderScene],
+          });
+
+          // Call API
+          const { storyboard: updatedStoryboard, scenes: updatedScenes } =
+            await retryOperation(
+              () => storyboardAPI.addScene(storyboard.storyboard_id, position),
+              {
+                maxRetries: 2,
+                operationName: 'Add Scene',
+              }
+            );
+
+          // Find current scene ID to maintain position
+          const currentSceneId = originalStoryboard.scene_order[originalIndex];
+
+          // Update state with real data
+          set({
+            storyboard: updatedStoryboard,
+            scenes: updatedScenes,
+            isSaving: false,
+          });
+
+          // Adjust current scene index if needed
+          const newIndex = updatedStoryboard.scene_order.indexOf(currentSceneId);
+          if (newIndex !== -1) {
+            set({ currentSceneIndex: newIndex });
+          }
+        } catch (error) {
+          // Rollback on error
+          set({
+            storyboard: originalStoryboard,
+            scenes: originalScenes,
+            currentSceneIndex: originalIndex,
+            error: error instanceof Error ? error.message : 'Failed to add scene',
+            isSaving: false,
+          });
+          throw error;
+        }
+      },
+
+      // Remove a scene
+      removeScene: async (sceneId: string) => {
+        const { storyboard, scenes, currentSceneIndex } = get();
+        if (!storyboard) {
+          throw new Error('No storyboard loaded');
+        }
+
+        // Validate min scenes
+        if (storyboard.scene_order.length <= 3) {
+          throw new Error('Minimum 3 scenes required');
+        }
+
+        // Check if any scene is generating
+        if (get().isAnySceneGenerating()) {
+          throw new Error('Cannot remove scene while scenes are generating');
+        }
+
+        // Store original state for rollback
+        const originalStoryboard = { ...storyboard };
+        const originalScenes = [...scenes];
+        const originalIndex = currentSceneIndex;
+        const currentSceneId = storyboard.scene_order[currentSceneIndex];
+
+        set({ isSaving: true, error: null });
+
+        try {
+          // Optimistically remove scene
+          const newSceneOrder = storyboard.scene_order.filter(
+            (id) => id !== sceneId
+          );
+          const newScenes = scenes.filter((scene) => scene.id !== sceneId);
+
+          set({
+            storyboard: { ...storyboard, scene_order: newSceneOrder },
+            scenes: newScenes,
+          });
+
+          // Call API
+          const { storyboard: updatedStoryboard, scenes: updatedScenes } =
+            await retryOperation(
+              () => storyboardAPI.removeScene(storyboard.storyboard_id, sceneId),
+              {
+                maxRetries: 2,
+                operationName: 'Remove Scene',
+              }
+            );
+
+          // Find current scene ID in new order (stay on same position)
+          let newIndex = currentSceneIndex;
+          if (currentSceneId === sceneId) {
+            // If we deleted the current scene, stay at same position (scene 5 becomes scene 4)
+            newIndex = Math.min(currentSceneIndex, updatedStoryboard.scene_order.length - 1);
+          } else {
+            // Find the current scene in the new order
+            const foundIndex = updatedStoryboard.scene_order.indexOf(currentSceneId);
+            if (foundIndex !== -1) {
+              newIndex = foundIndex;
+            }
+          }
+
+          // Update state
+          set({
+            storyboard: updatedStoryboard,
+            scenes: updatedScenes,
+            currentSceneIndex: newIndex,
+            isSaving: false,
+          });
+        } catch (error) {
+          // Rollback on error
+          set({
+            storyboard: originalStoryboard,
+            scenes: originalScenes,
+            currentSceneIndex: originalIndex,
+            error: error instanceof Error ? error.message : 'Failed to remove scene',
+            isSaving: false,
+          });
+          throw error;
+        }
+      },
+
+      // Reorder scenes
+      reorderScenes: async (newOrder: string[]) => {
+        const { storyboard, currentSceneIndex } = get();
+        if (!storyboard) {
+          throw new Error('No storyboard loaded');
+        }
+
+        // Check if any scene is generating
+        if (get().isAnySceneGenerating()) {
+          throw new Error('Cannot reorder scenes while scenes are generating');
+        }
+
+        // Store original state for rollback
+        const originalStoryboard = { ...storyboard };
+        const originalIndex = currentSceneIndex;
+        const currentSceneId = storyboard.scene_order[currentSceneIndex];
+
+        set({ isSaving: true, error: null });
+
+        try {
+          // Optimistically update order
+          set({
+            storyboard: { ...storyboard, scene_order: newOrder },
+          });
+
+          // Call API
+          const { storyboard: updatedStoryboard, scenes: updatedScenes } =
+            await retryOperation(
+              () => storyboardAPI.reorderScenes(storyboard.storyboard_id, newOrder),
+              {
+                maxRetries: 2,
+                operationName: 'Reorder Scenes',
+              }
+            );
+
+          // Find current scene ID in new order
+          const newIndex = updatedStoryboard.scene_order.indexOf(currentSceneId);
+          const adjustedIndex = newIndex !== -1 ? newIndex : 0;
+
+          // Update state
+          set({
+            storyboard: updatedStoryboard,
+            scenes: updatedScenes,
+            currentSceneIndex: adjustedIndex,
+            isSaving: false,
+          });
+        } catch (error) {
+          // Rollback on error
+          set({
+            storyboard: originalStoryboard,
+            currentSceneIndex: originalIndex,
+            error: error instanceof Error ? error.message : 'Failed to reorder scenes',
+            isSaving: false,
+          });
+          throw error;
+        }
+      },
 
   // Reset state
   reset: () => {

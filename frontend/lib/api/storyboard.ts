@@ -340,3 +340,53 @@ export function createSSEConnection(
 export function closeSSEConnection(eventSource: EventSource): void {
   eventSource.close();
 }
+
+/**
+ * 14. Add a new scene to the storyboard
+ * POST /api/storyboards/{storyboard_id}/scenes
+ */
+export async function addScene(
+  storyboardId: string,
+  position?: number
+): Promise<{ storyboard: Storyboard; scenes: StoryboardScene[] }> {
+  return apiRequest<{ storyboard: Storyboard; scenes: StoryboardScene[] }>(
+    `/api/storyboards/${storyboardId}/scenes`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ position: position ?? null }),
+    }
+  );
+}
+
+/**
+ * 15. Remove a scene from the storyboard
+ * DELETE /api/storyboards/{storyboard_id}/scenes/{scene_id}
+ */
+export async function removeScene(
+  storyboardId: string,
+  sceneId: string
+): Promise<{ storyboard: Storyboard; scenes: StoryboardScene[] }> {
+  return apiRequest<{ storyboard: Storyboard; scenes: StoryboardScene[] }>(
+    `/api/storyboards/${storyboardId}/scenes/${sceneId}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
+/**
+ * 16. Reorder scenes in the storyboard
+ * PUT /api/storyboards/{storyboard_id}/scenes/reorder
+ */
+export async function reorderScenes(
+  storyboardId: string,
+  sceneOrder: string[]
+): Promise<{ storyboard: Storyboard; scenes: StoryboardScene[] }> {
+  return apiRequest<{ storyboard: Storyboard; scenes: StoryboardScene[] }>(
+    `/api/storyboards/${storyboardId}/scenes/reorder`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ scene_order: sceneOrder }),
+    }
+  );
+}

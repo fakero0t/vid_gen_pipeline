@@ -1208,7 +1208,7 @@ class ReplicateVideoService:
 
         Args:
             image_url: URL of the seed image (can be relative path or full URL)
-            duration_seconds: Target duration in seconds (2-12 seconds for Seedance, 3-10 for others)
+            duration_seconds: Target duration in seconds (2-12 seconds for Seedance, 3-8 for others)
             fps: Frames per second (default: 8, unused for Seedance/MiniMax)
             motion_bucket_id: Amount of motion (unused, kept for compatibility)
             cond_aug: Conditioning augmentation (unused, kept for compatibility)
@@ -1252,9 +1252,9 @@ class ReplicateVideoService:
             
             # Seedance supports image-to-video with prompts
             # Required parameters: image, prompt
-            # Optional parameters: duration (3-10s), resolution (480p/720p/1080p), aspect_ratio (16:9 for landscape)
-            # Clamp duration to valid range (3-10 seconds)
-            clamped_duration = min(max(int(duration_seconds), 3), 10)
+            # Optional parameters: duration (3-8s), resolution (480p/720p/1080p), aspect_ratio (16:9 for landscape)
+            # Clamp duration to valid range (3-8 seconds)
+            clamped_duration = min(max(int(duration_seconds), 3), 8)
             
             # Set resolution based on environment
             if settings.is_development():
@@ -1265,7 +1265,7 @@ class ReplicateVideoService:
             input_params = {
                 "image": full_image_url,
                 "prompt": video_prompt,  # Use scene description
-                "duration": clamped_duration,  # Seedance supports 3-10 seconds
+                "duration": clamped_duration,  # Seedance supports 3-8 seconds
                 "resolution": resolution,  # 480p, 720p, or 1080p
                 "aspect_ratio": "16:9"  # Landscape format (1080p)
             }

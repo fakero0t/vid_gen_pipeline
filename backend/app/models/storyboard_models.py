@@ -39,7 +39,7 @@ class StoryboardScene(BaseModel):
     image_url: Optional[str] = Field(default=None, description="URL of generated image")
     seed_image_urls: Optional[List[str]] = Field(default=None, description="Alternative seed images for regeneration")
     video_url: Optional[str] = Field(default=None, description="URL of generated video")
-    video_duration: float = Field(default=5.0, description="Video duration in seconds", ge=1.0, le=10.0)
+    video_duration: float = Field(default=5.0, description="Video duration in seconds", ge=1.0, le=8.0)
     
     # Product compositing (for product mode)
     use_product_composite: bool = Field(default=False, description="Whether to composite product into scene")
@@ -84,7 +84,7 @@ class Storyboard(BaseModel):
     # Content
     creative_brief: str = Field(..., description="Original creative brief text")
     selected_mood: dict = Field(..., description="Selected mood data (mood name, keywords, etc.)")
-    scene_order: List[str] = Field(..., description="Ordered list of scene IDs", min_length=5, max_length=7)
+    scene_order: List[str] = Field(..., description="Ordered list of scene IDs", min_length=3, max_length=20)
 
     # Metadata
     total_duration: float = Field(default=30.0, description="Total video duration target in seconds")
@@ -149,7 +149,7 @@ class SceneTextGenerateRequest(BaseModel):
 
 class SceneDurationUpdateRequest(BaseModel):
     """Request to update scene duration."""
-    duration: float = Field(..., description="New duration in seconds", ge=1.0, le=10.0)
+    duration: float = Field(..., description="New duration in seconds", ge=1.0, le=8.0)
 
 
 class SceneUpdateResponse(BaseModel):

@@ -1,5 +1,5 @@
 """Service layer for storyboard operations."""
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 from app.models.storyboard_models import (
     Storyboard,
     StoryboardScene,
@@ -208,7 +208,7 @@ Example format:
             scenes.append(scene)
 
         # Create storyboard with scene_order already populated
-        # (Pydantic validation requires scene_order to have at least 5 items)
+        # (Pydantic validation requires scene_order to have at least 3 items)
         storyboard = Storyboard(
             storyboard_id=storyboard_id,
             project_id=request.project_id,
@@ -331,6 +331,165 @@ Example format:
         # Save
         updated_scene = db.update_scene(scene_id, scene)
         return updated_scene
+
+    def _recalculate_total_duration(self, storyboard_id: str) -> float:
+        """Recalculate total_duration as sum of all scene durations."""
+        scenes = db.get_scenes_by_storyboard(storyboard_id)
+        return sum(scene.video_duration for scene in scenes)
+
+    async def add_scene(
+        self,
+        storyboard_id: str,
+        position: Optional[int] = None
+    ) -> tuple[Storyboard, List[StoryboardScene]]:
+        """
+        Add a new scene to the storyboard.
+        
+        Args:
+            storyboard_id: Storyboard ID
+            position: Position to insert scene (None = end)
+            
+        Returns:
+            (storyboard, scenes) tuple
+        """
+        storyboard = db.get_storyboard(storyboard_id)
+        if not storyboard:
+            raise ValueError(f"Storyboard {storyboard_id} not found")
+        
+        # Validate max scenes
+        if len(storyboard.scene_order) >= 20:
+            raise ValueError("Maximum 20 scenes allowed")
+        
+        # Use storyboard's creative_brief (stored as string) and selected_mood for generation
+        # The creative_brief is stored as a formatted string, so we'll use it directly
+        # Generate new scene text using AI (similar to regenerate_scene_text)
+        new_scenes = await self.generate_scene_texts(
+            creative_brief=storyboard.creative_brief,  # Pass as string
+            selected_mood=storyboard.selected_mood,
+            num_scenes=1
+        )
+        
+        if not new_scenes:
+            raise ValueError("Failed to generate new scene")
+        
+        scene_data = new_scenes[0]
+        
+        # Create new scene
+        new_scene = StoryboardScene(
+            storyboard_id=storyboard_id,
+            state="text",
+            text=scene_data["text"],
+            style_prompt=scene_data["style_prompt"],
+            video_duration=scene_data["duration"],
+            generation_status=SceneGenerationStatus(
+                image="pending",
+                video="pending"
+            )
+        )
+        
+        # Insert into scene_order
+        if position is None or position >= len(storyboard.scene_order):
+            storyboard.scene_order.append(new_scene.id)
+        else:
+            storyboard.scene_order.insert(position, new_scene.id)
+        
+        # Recalculate total_duration
+        storyboard.total_duration = self._recalculate_total_duration(storyboard_id)
+        
+        # Save scene and update storyboard
+        db.create_scene(new_scene)
+        db.update_storyboard(storyboard_id, storyboard)
+        
+        # Get all scenes in order
+        _, scenes = await self.get_storyboard_with_scenes(storyboard_id)
+        
+        return storyboard, scenes
+
+    async def remove_scene(
+        self,
+        storyboard_id: str,
+        scene_id: str
+    ) -> tuple[Storyboard, List[StoryboardScene]]:
+        """
+        Remove a scene from the storyboard.
+        
+        Args:
+            storyboard_id: Storyboard ID
+            scene_id: Scene ID to remove
+            
+        Returns:
+            (storyboard, scenes) tuple
+        """
+        storyboard = db.get_storyboard(storyboard_id)
+        if not storyboard:
+            raise ValueError(f"Storyboard {storyboard_id} not found")
+        
+        # Validate minimum scenes
+        if len(storyboard.scene_order) <= 3:
+            raise ValueError("Minimum 3 scenes required")
+        
+        # Validate scene exists and belongs to storyboard
+        if scene_id not in storyboard.scene_order:
+            raise ValueError(f"Scene {scene_id} not found in storyboard")
+        
+        scene = db.get_scene(scene_id)
+        if not scene or scene.storyboard_id != storyboard_id:
+            raise ValueError(f"Scene {scene_id} does not belong to storyboard")
+        
+        # Remove from scene_order
+        storyboard.scene_order.remove(scene_id)
+        
+        # Recalculate total_duration
+        storyboard.total_duration = self._recalculate_total_duration(storyboard_id)
+        
+        # Delete scene and update storyboard
+        db.delete_scene(scene_id)
+        db.update_storyboard(storyboard_id, storyboard)
+        
+        # Get all scenes in order
+        _, scenes = await self.get_storyboard_with_scenes(storyboard_id)
+        
+        return storyboard, scenes
+
+    async def reorder_scenes(
+        self,
+        storyboard_id: str,
+        new_scene_order: List[str]
+    ) -> tuple[Storyboard, List[StoryboardScene]]:
+        """
+        Reorder scenes in the storyboard.
+        
+        Args:
+            storyboard_id: Storyboard ID
+            new_scene_order: New ordered list of scene IDs
+            
+        Returns:
+            (storyboard, scenes) tuple
+        """
+        storyboard = db.get_storyboard(storyboard_id)
+        if not storyboard:
+            raise ValueError(f"Storyboard {storyboard_id} not found")
+        
+        # Validate all scene IDs exist and belong to storyboard
+        all_scenes = db.get_scenes_by_storyboard(storyboard_id)
+        scene_ids = {scene.id for scene in all_scenes}
+        
+        if set(new_scene_order) != scene_ids:
+            raise ValueError("Scene order contains invalid or missing scene IDs")
+        
+        if len(new_scene_order) != len(storyboard.scene_order):
+            raise ValueError("Scene order length mismatch")
+        
+        # Update scene_order
+        storyboard.scene_order = new_scene_order
+        
+        # Update storyboard
+        db.update_storyboard(storyboard_id, storyboard)
+        
+        # Get all scenes in order
+        _, scenes = await self.get_storyboard_with_scenes(storyboard_id)
+        
+        return storyboard, scenes
 
 
 # Global service instance

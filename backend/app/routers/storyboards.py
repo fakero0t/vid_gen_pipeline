@@ -1,8 +1,8 @@
 """API router for storyboard operations."""
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
-from typing import AsyncGenerator
-from pydantic import BaseModel
+from typing import AsyncGenerator, List, Optional
+from pydantic import BaseModel, Field
 from app.models.storyboard_models import (
     StoryboardInitializeRequest,
     StoryboardInitializeResponse,
@@ -262,6 +262,108 @@ async def update_scene_duration(storyboard_id: str, scene_id: str, request: Scen
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update scene duration: {str(e)}"
+        )
+
+
+# ============================================================================
+# Scene Management Endpoints (Add, Remove, Reorder)
+# ============================================================================
+
+class AddSceneRequest(BaseModel):
+    """Request to add a new scene."""
+    position: Optional[int] = Field(None, description="Position to insert scene (None = end)")
+
+
+class ReorderScenesRequest(BaseModel):
+    """Request to reorder scenes."""
+    scene_order: List[str] = Field(..., description="New ordered list of scene IDs")
+
+
+@router.post("/{storyboard_id}/scenes", response_model=StoryboardGetResponse)
+async def add_scene(storyboard_id: str, request: AddSceneRequest):
+    """
+    Add a new scene to the storyboard.
+    
+    Auto-generates AI text using the storyboard's creative brief and mood.
+    Scene is added at the specified position (default: end).
+    """
+    try:
+        storyboard, scenes = await storyboard_service.add_scene(
+            storyboard_id=storyboard_id,
+            position=request.position
+        )
+        
+        return StoryboardGetResponse(
+            storyboard=storyboard,
+            scenes=scenes
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add scene: {str(e)}"
+        )
+
+
+@router.delete("/{storyboard_id}/scenes/{scene_id}", response_model=StoryboardGetResponse)
+async def remove_scene(storyboard_id: str, scene_id: str):
+    """
+    Remove a scene from the storyboard.
+    
+    Validates minimum 3 scenes before deletion.
+    """
+    try:
+        storyboard, scenes = await storyboard_service.remove_scene(
+            storyboard_id=storyboard_id,
+            scene_id=scene_id
+        )
+        
+        return StoryboardGetResponse(
+            storyboard=storyboard,
+            scenes=scenes
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove scene: {str(e)}"
+        )
+
+
+@router.put("/{storyboard_id}/scenes/reorder", response_model=StoryboardGetResponse)
+async def reorder_scenes(storyboard_id: str, request: ReorderScenesRequest):
+    """
+    Reorder scenes in the storyboard.
+    
+    Validates all scene IDs exist and belong to the storyboard.
+    """
+    try:
+        storyboard, scenes = await storyboard_service.reorder_scenes(
+            storyboard_id=storyboard_id,
+            new_scene_order=request.scene_order
+        )
+        
+        return StoryboardGetResponse(
+            storyboard=storyboard,
+            scenes=scenes
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reorder scenes: {str(e)}"
         )
 
 
@@ -1212,8 +1314,8 @@ async def generate_video_task(scene_id: str):
                 print(f"[Video Generation] WARNING: Local file not found at {local_file_path}")
         
         # Prepare input parameters for Seedance
-        # Clamp duration to valid range (3-10 seconds)
-        clamped_duration = min(max(int(scene.video_duration), 3), 10)
+        # Clamp duration to valid range (3-8 seconds)
+        clamped_duration = min(max(int(scene.video_duration), 3), 8)
         
         # Set resolution based on environment
         if settings.is_development():
