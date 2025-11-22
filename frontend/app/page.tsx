@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 
 /**
  * Root page - redirects based on authentication status
@@ -13,7 +13,7 @@ import { useAuth } from '@clerk/nextjs';
  */
 export default function Home() {
   const router = useRouter();
-  const { isLoaded, userId } = useAuth();
+  const { isLoaded, userId } = useFirebaseAuth();
 
   useEffect(() => {
     if (!isLoaded) return; // Wait for auth to load

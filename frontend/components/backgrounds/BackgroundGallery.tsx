@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { BackgroundAssetStatus } from '@/types/background.types';
 import { getBackgroundImageUrl } from '@/lib/api/background';
@@ -22,7 +22,7 @@ export function BackgroundGallery({
   isLoading = false,
   className = '',
 }: BackgroundGalleryProps) {
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   // Loading state is now handled by the page component with LoadingPhrases
   if (isLoading) {
     return null;

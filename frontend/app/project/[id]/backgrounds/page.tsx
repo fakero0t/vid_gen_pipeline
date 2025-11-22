@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration';
 import { useAppStore } from '@/store/appStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -89,7 +89,7 @@ function LoadingPhrases() {
 export default function BackgroundsPage() {
   const router = useRouter();
   const params = useParams();
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const projectId = params.id as string;
   const {
     creativeBrief,

@@ -1,7 +1,8 @@
 "use client";
 
-import { useUser, useClerk } from "@clerk/nextjs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useFirebaseAuth } from "@/lib/firebase/AuthContext";
+import { signOut } from "@/lib/firebase/auth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,39 +17,46 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 /**
- * Custom avatar dropdown component for authenticated users
- * Shows user profile image/initials with dropdown menu for account actions
+ * User Avatar component with dropdown menu
+ * Shows user's initials and provides navigation and sign-out functionality
  */
 export function UserAvatar() {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { user } = useFirebaseAuth();
   const router = useRouter();
 
-  // Show nothing while loading
-  if (!isLoaded || !user) {
-    return null;
-  }
-
-  // Get user initials from name or email
-  const getInitials = () => {
-    if (user.firstName || user.lastName) {
-      const first = user.firstName?.charAt(0).toUpperCase() || "";
-      const last = user.lastName?.charAt(0).toUpperCase() || "";
-      return `${first}${last}` || user.emailAddresses[0]?.emailAddress?.charAt(0).toUpperCase() || "U";
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/sign-in");
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
-    return user.emailAddresses[0]?.emailAddress?.charAt(0).toUpperCase() || "U";
+  };
+
+  // Get user initials from display name or email
+  const getInitials = () => {
+    if (user?.displayName) {
+      const names = user.displayName.split(" ");
+      return names
+        .map((name) => name[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "U";
+  };
+
+  // Get display name or email
+  const getDisplayName = () => {
+    return user?.displayName || user?.email || "User";
   };
 
   const initials = getInitials();
-  const displayName = user.firstName && user.lastName
-    ? `${user.firstName} ${user.lastName}`
-    : user.firstName || user.lastName || user.emailAddresses[0]?.emailAddress || "User";
-  const email = user.emailAddresses[0]?.emailAddress || "";
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
+  const displayName = getDisplayName();
+  const email = user?.email || "";
 
   return (
     <DropdownMenu>
@@ -64,7 +72,6 @@ export function UserAvatar() {
           aria-label="User menu"
         >
           <Avatar className="h-9 w-9 border-2 border-[rgb(255,81,1)]/30">
-            <AvatarImage src={user.imageUrl} alt={displayName} />
             <AvatarFallback className="bg-[rgb(255,81,1)] text-[rgb(196,230,43)] text-xs font-display font-bold">
               {initials}
             </AvatarFallback>
@@ -123,7 +130,6 @@ export function UserAvatar() {
         <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           onClick={handleSignOut}
-          variant="destructive"
           className={cn(
             "cursor-pointer rounded-lg mx-1 my-0.5",
             "transition-all duration-200",
@@ -137,4 +143,3 @@ export function UserAvatar() {
     </DropdownMenu>
   );
 }
-

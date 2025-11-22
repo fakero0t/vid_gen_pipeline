@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useFirebaseAuth } from "@/lib/firebase/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/auth/UserAvatar";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  * Shows back button on mood and scenes pages
  */
 export function Navbar() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useFirebaseAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { getCurrentProject } = useProjectStore();
@@ -54,7 +54,7 @@ export function Navbar() {
     return "";
   };
 
-  // Show loading skeleton while Clerk is checking auth status
+  // Show loading skeleton while Firebase is checking auth status
   if (!isLoaded) {
     return <AuthLoadingSkeleton />;
   }
@@ -131,4 +131,3 @@ export function Navbar() {
     </nav>
   );
 }
-

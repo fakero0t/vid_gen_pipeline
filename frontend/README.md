@@ -50,7 +50,7 @@ Three specialized stores manage different aspects of the application:
 ### User Flow
 
 ```
-Authentication (Clerk)
+Authentication (Firebase)
     ↓
 Projects Dashboard (/projects)
     ↓
@@ -84,7 +84,7 @@ Create/Select Project
 ```
 frontend/
 ├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout with Clerk provider
+│   ├── layout.tsx                # Root layout with Firebase Auth provider
 │   ├── page.tsx                  # Landing page (redirects to /projects)
 │   ├── projects/                 # Projects dashboard
 │   │   └── page.tsx              # Project list, create, manage
@@ -93,8 +93,8 @@ frontend/
 │   │   ├── mood/                 # Step 2: Mood Selection
 │   │   ├── scenes/               # Step 3: Scene Storyboard
 │   │   └── final/                # Step 4: Final Composition
-│   ├── sign-in/                  # Clerk sign-in
-│   ├── sign-up/                  # Clerk sign-up
+│   ├── sign-in/                  # Firebase sign-in
+│   ├── sign-up/                  # Firebase sign-up
 │   └── api/                      # API routes
 │       └── chat/                 # OpenAI chat endpoint
 │
@@ -155,11 +155,11 @@ frontend/
 - Per-scene state management
 - Error handling with automatic retry
 
-### 3. Authentication (Clerk)
-- Social login (Google, GitHub, etc.)
-- Session management
-- Protected routes with middleware
-- User avatar and profile
+### 3. Authentication (Firebase)
+- Email/password authentication
+- Session management with automatic token refresh
+- Protected routes with client-side guards
+- User profile management
 
 ### 4. Responsive Design
 - Mobile-first approach
@@ -194,13 +194,14 @@ OPENAI_API_KEY=your_openai_api_key_here
 # FastAPI Backend URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# Clerk Authentication (get from clerk.dev)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/projects
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/projects
+# Firebase Authentication
+# Get these from Firebase Console > Project Settings > General > Your apps
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 ```
 
 ### Development
@@ -242,7 +243,7 @@ pnpm type-check
 
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
-- **Authentication**: Clerk
+- **Authentication**: Firebase Auth
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS v4
 - **State Management**: Zustand

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { layoutClasses } from '@/lib/layout';
 import { cn, formatDistanceToNow } from '@/lib/utils';
 import { useProjectStore } from '@/store/projectStore';
@@ -26,7 +27,7 @@ import type { CharacterAssetStatus } from '@/types/character.types';
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const { projects, getProjectMetadata, createProject, deleteProject, renameProject, duplicateProject } = useProjectStore();
   const [isMounted, setIsMounted] = useState(false);
   const [projectMetadata, setProjectMetadata] = useState<ReturnType<typeof getProjectMetadata>>([]);
@@ -227,10 +228,11 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className={cn(layoutClasses.fullScreen, 'flex flex-col pt-[calc(3.5rem+1.5rem)]')}>
-      <main className={cn(layoutClasses.scrollableContainer, 'flex-1 p-3 sm:p-4')}>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6 animate-fadeIn">
+    <AuthGuard>
+      <div className={cn(layoutClasses.fullScreen, 'flex flex-col pt-[calc(3.5rem+1.5rem)]')}>
+        <main className={cn(layoutClasses.scrollableContainer, 'flex-1 p-3 sm:p-4')}>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6 animate-fadeIn">
             <div className="space-y-1">
               <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">
                 Your <span className="text-gradient">Projects</span>
@@ -570,5 +572,6 @@ export default function ProjectsPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

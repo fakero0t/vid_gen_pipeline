@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { layoutClasses } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { BrandAssetUpload } from '@/components/brand/BrandAssetUpload';
@@ -11,7 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 
 /**
  * Protected brand assets page - brand asset management interface
- * This route is protected by Clerk middleware
+ * This route is protected by AuthGuard
  */
 function BrandAssetsPageContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -91,18 +92,20 @@ function BrandAssetsPageContent() {
 
 export default function BrandAssetsPage() {
   return (
-    <Suspense fallback={
-      <div className={cn(layoutClasses.fullScreen, "flex flex-col pt-16")}>
-        <main className="flex-1 flex flex-col overflow-hidden p-6">
-          <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading...</p>
+    <AuthGuard>
+      <Suspense fallback={
+        <div className={cn(layoutClasses.fullScreen, "flex flex-col pt-16")}>
+          <main className="flex-1 flex flex-col overflow-hidden p-6">
+            <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
-    }>
-      <BrandAssetsPageContent />
-    </Suspense>
+          </main>
+        </div>
+      }>
+        <BrandAssetsPageContent />
+      </Suspense>
+    </AuthGuard>
   );
 }
