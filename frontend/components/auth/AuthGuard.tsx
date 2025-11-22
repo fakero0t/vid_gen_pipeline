@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useFirebaseAuth } from "@/lib/firebase/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -10,7 +10,7 @@ import { useEffect } from "react";
  * Shows loading state while checking auth
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isLoaded, userId } = useAuth();
+  const { isLoaded, userId } = useFirebaseAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -43,4 +43,3 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // User is authenticated, render children
   return <>{children}</>;
 }
-

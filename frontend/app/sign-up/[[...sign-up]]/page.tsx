@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSignUp, useAuth } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, type SignUpFormData } from "@/lib/auth/validation";
+import { signUp } from "@/lib/firebase/auth";
+import { useFirebaseAuth } from "@/lib/firebase/AuthContext";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { ErrorDisplay } from "@/components/auth/ErrorDisplay";
@@ -14,19 +15,19 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { layoutClasses } from "@/lib/layout";
 import { cn } from "@/lib/utils";
+import { FirebaseError } from "firebase/app";
+import { updateProfile } from "firebase/auth";
 
 /**
- * Custom sign-up page with name, email, and password registration
- * Uses Clerk's built-in redirect handling via setActive() redirectUrl parameter
- * to eliminate race conditions and simplify the auth flow
+ * Custom sign-up page with name, email, and password registration using Firebase
+ * Handles callback URL preservation after auth
  * Basic auth flow - no email verification required
  */
 export default function SignUpPage() {
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const { userId } = useAuth();
+  const { isLoaded, userId, user } = useFirebaseAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [clerkError, setClerkError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Get callback URL from query params or default to /projects
@@ -57,42 +58,47 @@ export default function SignUpPage() {
     );
   }
 
+  const getFirebaseErrorMessage = (error: FirebaseError): string => {
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        return "An account with this email already exists";
+      case "auth/weak-password":
+        return "Password is too weak. Please use a stronger password";
+      case "auth/invalid-email":
+        return "Invalid email address";
+      case "auth/operation-not-allowed":
+        return "Email/password accounts are not enabled";
+      default:
+        return error.message || "An error occurred during sign-up";
+    }
+  };
+
   const onSubmit = async (data: SignUpFormData) => {
     if (!isLoaded) return;
 
     setIsLoading(true);
-    setClerkError(null);
+    setAuthError(null);
 
     try {
-      const result = await signUp.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        emailAddress: data.email,
-        password: data.password,
-      });
-
-      // Since we're using basic auth (no email verification),
-      // we can immediately set the session as active
-      if (result.status === "complete") {
-        // Use setActive with redirectUrl to let Clerk handle redirect automatically
-        // This eliminates race conditions by ensuring session is established before redirect
-        await setActive({ 
-          session: result.createdSessionId,
-          redirectUrl: callbackUrl 
+      const result = await signUp(data.email, data.password);
+      
+      // Set user display name (combines firstName and lastName)
+      if (result.user) {
+        await updateProfile(result.user, {
+          displayName: `${data.firstName} ${data.lastName}`,
         });
-        // No need for manual router.push() - Clerk handles redirect via redirectUrl
-      } else {
-        // Handle additional verification steps if needed
-        setClerkError("Sign-up incomplete. Please try again.");
-        setIsLoading(false);
       }
+
+      // Auth state will be updated by onIdTokenChanged listener in AuthContext
+      // Router will redirect via useEffect above
     } catch (err: any) {
-      // Handle setActive errors specifically
-      const errorMessage = err.errors?.[0]?.message || err.message || "An error occurred during sign-up";
-      setClerkError(errorMessage);
+      const errorMessage = err instanceof Error && "code" in err
+        ? getFirebaseErrorMessage(err as FirebaseError)
+        : "An error occurred during sign-up";
+      
+      setAuthError(errorMessage);
       setIsLoading(false);
     }
-    // Note: Don't set isLoading to false if setActive succeeds - Clerk will redirect
   };
 
   return (
@@ -111,7 +117,7 @@ export default function SignUpPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <ErrorDisplay error={clerkError} className="mb-4" />
+            <ErrorDisplay error={authError} className="mb-4" />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -188,4 +194,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-

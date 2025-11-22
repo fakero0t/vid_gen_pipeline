@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
-import { ClerkProvider } from "@clerk/nextjs";
+import { AuthProvider } from "@/lib/firebase/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { layoutClasses } from "@/lib/layout";
 
@@ -33,21 +33,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/projects"
-      signUpFallbackRedirectUrl="/projects"
-    >
-      <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-        <body
-          className={`antialiased font-sans ${layoutClasses.fullScreen}`}
-        >
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body
+        className={`antialiased font-sans ${layoutClasses.fullScreen}`}
+      >
+        <AuthProvider>
           <PerformanceMonitor />
           <Navbar />
           {children}
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

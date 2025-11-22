@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import type { AssetStatus } from '@/types/asset.types';
 
 interface AssetListProps {
@@ -26,7 +26,7 @@ export function AssetList({
   deleteFn,
   getImageUrl,
 }: AssetListProps) {
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const [assets, setAssets] = useState<AssetStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

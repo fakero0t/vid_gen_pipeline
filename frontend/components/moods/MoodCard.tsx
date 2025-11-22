@@ -96,64 +96,43 @@ export function MoodCard({ mood, isSelected, onSelect, isLoading = false }: Mood
         </div>
       )}
 
-      {/* Image grid - Takes up almost all space */}
+      {/* Single image - Takes up almost all space */}
       <div className="flex-1 min-h-0 p-2 overflow-hidden">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2 h-full">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-muted rounded-lg animate-pulse"
-              />
-            ))}
-          </div>
+          <div className="w-full h-full bg-muted rounded-lg animate-pulse" />
         ) : successfulImages.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 h-full">
-            {successfulImages.slice(0, 4).map((image, idx) => (
-              <div
-                key={`${image.url}-${idx}`}
-                className="relative rounded-lg overflow-hidden bg-muted"
-              >
-                <Image
-                  src={image.url}
-                  alt={`${mood.name} mood image ${idx + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="50vw"
-                  unoptimized
-                  onError={(e) => {
-                    console.error(`Failed to load image ${idx + 1} for ${mood.name}:`, image.url);
-                  }}
-                />
-              </div>
-            ))}
+          <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted">
+            <Image
+              src={successfulImages[0].url}
+              alt={`${mood.name} mood image`}
+              fill
+              className="object-cover"
+              sizes="100vw"
+              unoptimized
+              onError={(e) => {
+                console.error(`Failed to load image for ${mood.name}:`, successfulImages[0].url);
+              }}
+            />
           </div>
         ) : mood.images.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 h-full">
-            {mood.images.slice(0, 4).map((image, idx) => (
-              <div
-                key={idx}
-                className="relative rounded-lg overflow-hidden bg-muted"
-              >
-                {image.url ? (
-                  <Image
-                    src={image.url}
-                    alt={`${mood.name} mood image ${idx + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="50vw"
-                    unoptimized
-                    onError={(e) => {
-                      console.error(`Failed to load image ${idx + 1}:`, image.url);
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[9px] text-muted-foreground">
-                    {image.success ? 'Loading...' : 'Failed'}
-                  </div>
-                )}
+          <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted">
+            {mood.images[0].url ? (
+              <Image
+                src={mood.images[0].url}
+                alt={`${mood.name} mood image`}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                unoptimized
+                onError={(e) => {
+                  console.error(`Failed to load image:`, mood.images[0].url);
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[9px] text-muted-foreground">
+                {mood.images[0].success ? 'Loading...' : 'Failed'}
               </div>
-            ))}
+            )}
           </div>
         ) : (
           <div className="bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-[10px] h-full">

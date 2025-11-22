@@ -111,13 +111,13 @@ The application follows a streamlined 4-step workflow within projects:
    > 
    > **Expected generation time:**
    > - **Dev**: ~10-20 seconds for 3 images (3 moods × 1 image) at lower quality
-   > - **Prod**: ~3-6 minutes for 12 images (3 moods × 4 images) at full quality
+   > - **Prod**: ~1-2 minutes for 3 images (3 moods × 1 image) at full quality
    > 
    > **To test with higher quality in dev mode**, adjust these settings:
    > 
    > 1. **Images Per Mood** - Edit `backend/app/routers/moods.py` (line 67):
    >    ```python
-   >    images_per_mood = 2  # Or 4 for full prod-like experience
+   >    images_per_mood = 1  # Default is 1 image per mood
    >    ```
    > 
    > 2. **Image Resolution** - Edit `backend/app/routers/moods.py` (lines 75-76):

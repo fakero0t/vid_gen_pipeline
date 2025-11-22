@@ -1,18 +1,17 @@
-import { auth } from "@clerk/nextjs/server";
+import { getIdToken as getFirebaseIdToken } from "@/lib/firebase/auth";
+import { getCurrentUser } from "@/lib/firebase/auth";
 
 /**
- * Backend authentication helper functions
- * Future-ready for when backend endpoints require authentication
+ * Backend authentication helper functions using Firebase Auth
  */
 
 /**
- * Get the Clerk session token for authenticated requests
+ * Get the Firebase ID token for authenticated requests
  * Use this when making API calls to your backend
  */
 export async function getSessionToken(): Promise<string | null> {
   try {
-    const { getToken } = await auth();
-    return await getToken();
+    return await getFirebaseIdToken();
   } catch (error) {
     console.error("Error getting session token:", error);
     return null;
@@ -20,7 +19,7 @@ export async function getSessionToken(): Promise<string | null> {
 }
 
 /**
- * Create an authenticated fetch function that includes the Clerk session token
+ * Create an authenticated fetch function that includes the Firebase ID token
  * in the Authorization header
  *
  * @example
@@ -54,12 +53,12 @@ export async function authenticatedFetch(
 
 /**
  * Check if the current user is authenticated
- * Useful for server-side checks
+ * Useful for client-side checks
  */
-export async function isAuthenticated(): Promise<boolean> {
+export function isAuthenticated(): boolean {
   try {
-    const { userId } = await auth();
-    return !!userId;
+    const user = getCurrentUser();
+    return !!user;
   } catch (error) {
     console.error("Error checking authentication:", error);
     return false;
@@ -70,13 +69,12 @@ export async function isAuthenticated(): Promise<boolean> {
  * Get the current user ID
  * Returns null if not authenticated
  */
-export async function getCurrentUserId(): Promise<string | null> {
+export function getCurrentUserId(): string | null {
   try {
-    const { userId } = await auth();
-    return userId;
+    const user = getCurrentUser();
+    return user?.uid || null;
   } catch (error) {
     console.error("Error getting user ID:", error);
     return null;
   }
 }
-

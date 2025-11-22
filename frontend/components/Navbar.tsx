@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useFirebaseAuth } from "@/lib/firebase/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/auth/UserAvatar";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  * Shows back button on mood and scenes pages
  */
 export function Navbar() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useFirebaseAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { getCurrentProject } = useProjectStore();
@@ -54,7 +54,7 @@ export function Navbar() {
     return "";
   };
 
-  // Show loading skeleton while Clerk is checking auth status
+  // Show loading skeleton while Firebase is checking auth status
   if (!isLoaded) {
     return <AuthLoadingSkeleton />;
   }
@@ -70,7 +70,15 @@ export function Navbar() {
     >
       {/* Logo/Brand - left side */}
       <div className="flex items-center flex-1">
-        <h1 className="font-display text-lg font-bold tracking-tight">
+        <h1 
+          className="font-display text-lg font-bold tracking-tight"
+          style={{
+            background: 'linear-gradient(90deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           AI Video Pipeline
         </h1>
         {/* Back button - shown on mood, scenes, and backgrounds pages */}
@@ -100,15 +108,7 @@ export function Navbar() {
       {/* Project Name - center */}
       {currentProject && (
         <div className="flex items-center justify-center flex-1">
-          <h2 
-            className="font-display text-sm sm:text-base font-bold lowercase truncate max-w-[200px] sm:max-w-[300px]"
-            style={{
-              background: 'linear-gradient(90deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
+          <h2 className="font-display text-sm sm:text-base font-bold lowercase truncate max-w-[200px] sm:max-w-[300px] text-foreground">
             {currentProject.name.toLowerCase()}
           </h2>
         </div>
@@ -131,4 +131,3 @@ export function Navbar() {
     </nav>
   );
 }
-

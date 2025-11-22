@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import type { AssetStatus } from '@/types/asset.types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,7 @@ export function AssetSelectionStep({
   assets,
   getImageUrl,
 }: AssetSelectionStepProps) {
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const assetTypeLabel = assetType === 'brand' ? 'Brand' : 'Character';
   const isRequired = true; // Both are required
   const hasSelection = selectedIds.length > 0;

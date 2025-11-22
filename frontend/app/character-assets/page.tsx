@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { layoutClasses } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { CharacterAssetUpload } from '@/components/character/CharacterAssetUpload';
@@ -11,7 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 
 /**
  * Protected character assets page - character asset management interface
- * This route is protected by Clerk middleware
+ * This route is protected by AuthGuard
  */
 function CharacterAssetsPageContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -91,19 +92,21 @@ function CharacterAssetsPageContent() {
 
 export default function CharacterAssetsPage() {
   return (
-    <Suspense fallback={
-      <div className={cn(layoutClasses.fullScreen, "flex flex-col pt-16")}>
-        <main className="flex-1 flex flex-col overflow-hidden p-6">
-          <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading...</p>
+    <AuthGuard>
+      <Suspense fallback={
+        <div className={cn(layoutClasses.fullScreen, "flex flex-col pt-16")}>
+          <main className="flex-1 flex flex-col overflow-hidden p-6">
+            <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
-    }>
-      <CharacterAssetsPageContent />
-    </Suspense>
+          </main>
+        </div>
+      }>
+        <CharacterAssetsPageContent />
+      </Suspense>
+    </AuthGuard>
   );
 }
 

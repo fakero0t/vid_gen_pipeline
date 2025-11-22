@@ -69,22 +69,14 @@ export default function MoodPage() {
     });
   };
 
-  // Auto-generate or regenerate moods when brief changes
+  // Auto-generate moods only if no moods exist (first time)
+  // Do NOT regenerate when navigating back - only regenerate when regenerate button is clicked
   useEffect(() => {
     if (!creativeBrief || isMoodLoading) return;
 
-    const currentBriefHash = getBriefHash(creativeBrief);
-    const lastBriefHash = lastBriefRef.current;
-
-    // Regenerate if:
-    // 1. No moods exist (first time)
-    // 2. Brief hash changed (brief was updated)
-    // 3. Moods exist but we don't have a hash (component remounted - regenerate to be safe)
-    const shouldRegenerate = 
-      moods.length === 0 || // No moods yet
-      (currentBriefHash !== lastBriefHash && currentBriefHash !== ''); // Brief changed
-
-    if (shouldRegenerate) {
+    // Only generate if no moods exist (first time)
+    // Do not regenerate when navigating back from backgrounds page
+    if (moods.length === 0) {
       const request: MoodGenerationRequest = {
         product_name: creativeBrief.product_name || 'Product',
         target_audience: creativeBrief.target_audience || 'General Audience',
@@ -93,15 +85,8 @@ export default function MoodPage() {
         key_messages: creativeBrief.key_messages || [],
       };
 
-      // Clear existing moods and selection when regenerating
-      if (moods.length > 0) {
-        const { setMoods } = useAppStore.getState();
-        setMoods([]);
-        useAppStore.setState({ selectedMoodId: null });
-      }
-
       generateMoodsFromBrief(request);
-      lastBriefRef.current = currentBriefHash;
+      lastBriefRef.current = getBriefHash(creativeBrief);
     }
   }, [creativeBrief, isMoodLoading, moods.length, generateMoodsFromBrief]);
 

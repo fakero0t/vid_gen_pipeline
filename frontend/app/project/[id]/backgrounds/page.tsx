@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration';
 import { useAppStore } from '@/store/appStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -89,7 +89,7 @@ function LoadingPhrases() {
 export default function BackgroundsPage() {
   const router = useRouter();
   const params = useParams();
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const projectId = params.id as string;
   const {
     creativeBrief,
@@ -223,10 +223,10 @@ export default function BackgroundsPage() {
 
   return (
     <div className="min-h-screen pt-[calc(3.5rem+1.5rem)] pb-4 sm:pb-6 flex flex-col">
-      <main className="flex-1 flex flex-col animate-fadeIn overflow-visible">
+      <main className="flex-1 flex flex-col animate-fadeIn overflow-visible relative">
         <div className="flex-1 flex flex-col min-h-0 w-full">
           {/* Top bar with Title */}
-          <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2">
+          <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2 flex-shrink-0">
             <div className="w-full max-w-7xl flex items-center justify-center">
               {/* Title - centered */}
               <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
@@ -235,32 +235,35 @@ export default function BackgroundsPage() {
             </div>
           </div>
 
-          {/* Mood Board Component - centered, full width available, overflow allowed */}
-          <div className="flex-1 min-h-0 w-full flex justify-center animate-slideUp animation-delay-100 overflow-visible">
-            <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 overflow-visible">
-              <Suspense fallback={<StepSkeleton />}>
-                {/* Error display */}
-                {backgroundError && (
-                  <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-4">
-                    <p className="text-[10px] font-medium text-destructive">{backgroundError}</p>
-                  </div>
-                )}
+          {/* Loading state - absolutely positioned to center on screen */}
+          {isBackgroundLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <LoadingPhrases />
+            </div>
+          )}
 
-                {/* Description text - centered */}
-                {!isBackgroundLoading && backgroundAssets.length > 0 && (
-                  <div className="text-center mb-4 animate-fadeIn">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Choose one or more background images to use in your scenes. These will be available when creating scenes.
-                    </p>
-                  </div>
-                )}
+          {/* Content area - hidden when loading */}
+          {!isBackgroundLoading && (
+            <div className="flex-1 min-h-0 w-full flex justify-center animate-slideUp animation-delay-100 overflow-visible">
+              <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 overflow-visible">
+                <Suspense fallback={<StepSkeleton />}>
+                  {/* Error display */}
+                  {backgroundError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-1.5 animate-slideUp flex-shrink-0 mb-4">
+                      <p className="text-[10px] font-medium text-destructive">{backgroundError}</p>
+                    </div>
+                  )}
 
-                {/* Loading or Gallery */}
-                {isBackgroundLoading ? (
-                  <div className="flex-1 min-h-0">
-                    <LoadingPhrases />
-                  </div>
-                ) : (
+                  {/* Description text - centered */}
+                  {backgroundAssets.length > 0 && (
+                    <div className="text-center mb-4 animate-fadeIn">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Choose one or more background images to use in your scenes. These will be available when creating scenes.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Gallery */}
                   <div className="flex-1 min-h-0 flex flex-col">
                     <div className="flex-1 min-h-0 overflow-auto">
                       <BackgroundGallery
@@ -284,10 +287,10 @@ export default function BackgroundsPage() {
                       </div>
                     )}
                   </div>
-                )}
-              </Suspense>
+                </Suspense>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

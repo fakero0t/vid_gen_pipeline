@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useAuth } from '@clerk/nextjs';
+import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import { getBrandAssetImageUrl } from '@/lib/api/brand';
 import { getCharacterAssetImageUrl } from '@/lib/api/character';
 import { getBackgroundImageUrl } from '@/lib/api/background';
@@ -12,7 +12,7 @@ interface SceneAssetDisplayProps {
 }
 
 export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
-  const { userId } = useAuth();
+  const { userId } = useFirebaseAuth();
   const hasBrandAsset = !!scene.brand_asset_id;
   const hasCharacterAsset = !!scene.character_asset_id;
   const hasBackgroundAsset = !!scene.background_asset_id;
