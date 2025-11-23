@@ -27,7 +27,7 @@ function FinalPageContent() {
             <div className="w-full max-w-7xl flex items-center justify-center">
               {/* Title - centered */}
               <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
-                Step 5: <span className="text-gradient">Final Video Composition</span>
+                <span className="text-gradient">Final Video Composition</span>
               </h2>
             </div>
           </div>

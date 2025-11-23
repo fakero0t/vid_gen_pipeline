@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
@@ -84,6 +85,7 @@ function LoadingPhrases() {
 }
 
 export function FinalComposition({ onBack }: FinalCompositionProps) {
+  const router = useRouter();
   const {
     audioUrl,
     finalVideo,
@@ -211,28 +213,6 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             Composing your final video with music and transitions
           </p>
-        </div>
-      )}
-
-      {/* Progress bar at top center */}
-      {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && (
-        <div className="w-full max-w-2xl mx-auto">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Video Composition</span>
-              <span className="font-medium">
-                {phaseProgress.composition === 100 ? '✓' : `${Math.round(phaseProgress.composition)}%`}
-              </span>
-            </div>
-            <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ease-out ${
-                  phaseProgress.composition === 100 ? 'bg-green-500' : 'bg-primary'
-                }`}
-                style={{ width: `${phaseProgress.composition}%` }}
-              />
-            </div>
-          </div>
       </div>
       )}
 
@@ -252,20 +232,9 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
       )}
 
       {/* In Progress - Loading Animation */}
-      {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && (
-        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 min-h-[400px] flex items-center justify-center relative">
+      {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && !(isComplete && finalVideo && jobStatus?.video_url) && (
+        <div className="min-h-[400px] flex items-center justify-center relative">
           <LoadingPhrases />
-            {/* Additional Details */}
-            {jobStatus && currentPhase === 'composition' && (
-            <div className="absolute bottom-4 left-0 right-0 text-center">
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Total clips: {jobStatus.total_clips}</p>
-                {jobStatus.file_size_mb && (
-                  <p>Current size: {jobStatus.file_size_mb.toFixed(2)} MB</p>
-                )}
-              </div>
-              </div>
-            )}
         </div>
       )}
 
@@ -324,7 +293,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
                 Download Video
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => router.push('/projects')}
               className="text-xs px-4 py-2 rounded-full border-2 border-[rgb(255,81,1)] text-[rgb(255,81,1)] hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 font-display font-bold"
             >
                 Create Another Video
