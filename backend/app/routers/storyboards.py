@@ -803,6 +803,13 @@ async def disable_background_asset(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable background asset: {str(e)}"
         )
+
+
+@router.delete("/{storyboard_id}/scenes/{scene_id}/character-asset")
+async def disable_character_asset(
+    storyboard_id: str,
+    scene_id: str
+):
     """
     Disable character asset for a scene.
     

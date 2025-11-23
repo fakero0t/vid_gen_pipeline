@@ -88,8 +88,12 @@ export const useSceneStore = create<SceneState>((set, get) => ({
       initializeStoryboard: async (creativeBrief, selectedMood, projectId, brandAssetIds, characterAssetIds) => {
         // Prevent duplicate initialization calls
         const currentState = get();
-        if (currentState.isLoading || currentState.storyboard) {
-          console.log('[StoryboardStore] Skipping duplicate initializeStoryboard call (already loading or storyboard exists)');
+        if (currentState.isLoading) {
+          console.log('[StoryboardStore] Skipping duplicate initializeStoryboard call (already loading)');
+          return;
+        }
+        if (currentState.storyboard) {
+          console.log('[StoryboardStore] Skipping duplicate initializeStoryboard call (storyboard already exists)');
           return;
         }
 
@@ -256,7 +260,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
       // Approve text and generate image
       approveText: async (sceneId) => {
         console.log('[Store] approveText called for scene:', sceneId);
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           console.log('[Store] Current storyboard:', storyboard?.storyboard_id);
@@ -273,12 +277,10 @@ export const useSceneStore = create<SceneState>((set, get) => ({
           );
           console.log('[Store] generateSceneImage returned:', updatedScene);
           get().updateScene(sceneId, updatedScene);
-          set({ isSaving: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to generate image';
           set({
             error: errorMessage,
-            isSaving: false,
           });
           throw new StoryboardError(
             errorMessage,
@@ -294,7 +296,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
         const { storyboard } = get();
         if (!storyboard) return;
 
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const updatedScene = await retryOperation(
             () => storyboardAPI.generateSceneText(storyboard.storyboard_id, sceneId, storyboard.creative_brief),
@@ -304,12 +306,10 @@ export const useSceneStore = create<SceneState>((set, get) => ({
             }
           );
           get().updateScene(sceneId, updatedScene);
-          set({ isSaving: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to regenerate text';
           set({
             error: errorMessage,
-            isSaving: false,
           });
           throw new StoryboardError(
             errorMessage,
@@ -322,7 +322,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
       // Edit text
       editText: async (sceneId, newText) => {
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           if (!storyboard) {
@@ -336,14 +336,12 @@ export const useSceneStore = create<SceneState>((set, get) => ({
             }
           );
           get().updateScene(sceneId, updatedScene);
-          set({ isSaving: false });
         } catch (error) {
           // Extract error message using the helper function
           const errorMessage = extractErrorMessage(error, 'Failed to update text');
           
           set({
             error: errorMessage,
-            isSaving: false,
           });
           throw new StoryboardError(
             errorMessage,
@@ -356,7 +354,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
       // Approve image and generate video
       approveImage: async (sceneId) => {
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           if (!storyboard) {
@@ -364,14 +362,12 @@ export const useSceneStore = create<SceneState>((set, get) => ({
           }
           await storyboardAPI.generateSceneVideo(storyboard.storyboard_id, sceneId);
           // SSE will handle the update
-          set({ isSaving: false });
         } catch (error) {
           // Check if error is due to sensitive content
           if (isSensitiveContentError(error)) {
             const errorMessage = 'Your input prompt contains sensitive content. Please modify the scene description and try again.';
             set({
               error: errorMessage,
-              isSaving: false,
             });
             // Update scene with error message
             const scene = get().scenes.find(s => s.id === sceneId);
@@ -393,14 +389,13 @@ export const useSceneStore = create<SceneState>((set, get) => ({
           }
           set({
             error: error instanceof Error ? error.message : 'Failed to generate video',
-            isSaving: false,
           });
         }
       },
 
       // Regenerate image
       regenerateImage: async (sceneId) => {
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           if (!storyboard) {
@@ -414,12 +409,10 @@ export const useSceneStore = create<SceneState>((set, get) => ({
             }
           );
           get().updateScene(sceneId, updatedScene);
-          set({ isSaving: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to regenerate image';
           set({
             error: errorMessage,
-            isSaving: false,
           });
           throw new StoryboardError(
             errorMessage,
@@ -432,7 +425,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
       // Update duration
       updateDuration: async (sceneId, newDuration) => {
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           if (!storyboard) {
@@ -446,12 +439,10 @@ export const useSceneStore = create<SceneState>((set, get) => ({
             }
           );
           get().updateScene(sceneId, updatedScene);
-          set({ isSaving: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to update duration';
           set({
             error: errorMessage,
-            isSaving: false,
           });
           throw new StoryboardError(
             errorMessage,
@@ -464,7 +455,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
       // Regenerate video
       regenerateVideo: async (sceneId) => {
-        set({ isSaving: true, error: null });
+        set({ error: null });
         try {
           const storyboard = get().storyboard;
           if (!storyboard) {
@@ -480,7 +471,6 @@ export const useSceneStore = create<SceneState>((set, get) => ({
             try {
               await storyboardAPI.regenerateSceneVideo(storyboard.storyboard_id, sceneId);
               // SSE will handle the update
-              set({ isSaving: false });
               return; // Success
             } catch (error) {
               lastError = error;
@@ -504,7 +494,6 @@ export const useSceneStore = create<SceneState>((set, get) => ({
           const errorMessage = error instanceof Error ? error.message : 'Failed to regenerate video';
           set({
             error: errorMessage,
-            isSaving: false,
           });
           // Update scene with error if it's a sensitive content error after retries
           if (isSensitiveContentError(error)) {

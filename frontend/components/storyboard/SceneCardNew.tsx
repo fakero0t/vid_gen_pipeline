@@ -8,7 +8,6 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { config } from '@/lib/config';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
-import { SceneAssetDisplay } from './SceneAssetDisplay';
 import { SceneAssetToggleSection } from './SceneAssetToggleSection';
 
 interface SceneCardNewProps {
@@ -95,17 +94,27 @@ export function SceneCardNew({
   };
 
   // Handle regenerate image with warning if video exists
-  const handleRegenerateImageClick = () => {
+  const handleRegenerateImageClick = async () => {
     if (scene.state === 'video' && scene.video_url) {
       setShowRegenerateImageConfirm(true);
       return;
     }
-    onRegenerateImage();
+    try {
+      await onRegenerateImage();
+    } catch (error) {
+      console.error('Failed to regenerate image:', error);
+      // Error is handled by the store and displayed in the error alert
+    }
   };
 
-  const handleConfirmRegenerateImage = () => {
+  const handleConfirmRegenerateImage = async () => {
     setShowRegenerateImageConfirm(false);
-    onRegenerateImage();
+    try {
+      await onRegenerateImage();
+    } catch (error) {
+      console.error('Failed to regenerate image:', error);
+      // Error is handled by the store and displayed in the error alert
+    }
   };
 
   const isGeneratingImage = scene.generation_status.image === 'generating';
@@ -137,9 +146,6 @@ export function SceneCardNew({
             <div className="w-2/3 flex-shrink-0 flex flex-col h-full min-w-0 gap-2 justify-between overflow-visible">
               <div className="flex-1 min-h-0 overflow-visible">
                 <SceneAssetToggleSection scene={scene} />
-              </div>
-              <div className="flex-shrink-0">
-                <SceneAssetDisplay scene={scene} />
               </div>
               
               {/* Product Toggle */}
@@ -320,7 +326,7 @@ export function SceneCardNew({
 
               {/* Actions */}
               <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -446,7 +452,7 @@ export function SceneCardNew({
 
               {/* Actions */}
               <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
