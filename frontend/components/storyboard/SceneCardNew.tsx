@@ -185,21 +185,20 @@ export function SceneCardNew({
                 ) : (
                   <>
                     <p className="text-base leading-relaxed flex-1 min-h-0 overflow-y-auto pr-2">{scene.text}</p>
-                    <div className="flex gap-1.5 flex-shrink-0 pt-2">
-                      <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading} className="flex-1 h-8 text-xs">
-                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerate
-                      </Button>
-                    </div>
                   </>
                 )}
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 pt-4 flex-shrink-0">
-                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="sm" className="w-full h-9 text-xs">
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading} className="w-3/5 h-[32px] text-xs px-3">
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Regenerate
+                </Button>
+
+                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="sm" className="w-3/5 h-[32px] text-xs px-3">
                   {isGeneratingImage ? (
                     <>
                       <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -289,9 +288,9 @@ export function SceneCardNew({
               {/* Duration configuration */}
               <div className="space-y-2 pt-4 flex-shrink-0">
                 <div className="flex justify-center">
-                  <div className="w-1/2 flex items-center justify-between">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                  <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  <div className="w-3/5 flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                  <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
                   </div>
                 </div>
                 <div className="flex justify-center">
@@ -313,22 +312,22 @@ export function SceneCardNew({
                     const newValue = parseFloat((e.target as HTMLInputElement).value);
                     handleDurationChange(newValue);
                   }}
-                    className="w-1/2 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
                   disabled={isLoading}
                 />
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-row gap-2 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="flex-1 h-9 text-xs">
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Regenerate Image
                 </Button>
 
-                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="sm" className="flex-1 h-9 text-xs">
+                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="sm" className="w-3/5 h-[32px] text-xs px-3">
                   {isGeneratingVideo ? (
                     <>
                       <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -415,9 +414,9 @@ export function SceneCardNew({
               {/* Duration configuration */}
               <div className="space-y-2 pt-4 flex-shrink-0">
                 <div className="flex justify-center">
-                  <div className="w-1/2 flex items-center justify-between">
-                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                    <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  <div className="w-3/5 flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                    <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
                   </div>
                 </div>
                 <div className="flex justify-center">
@@ -439,21 +438,21 @@ export function SceneCardNew({
                       const newValue = parseFloat((e.target as HTMLInputElement).value);
                       handleDurationChange(newValue);
                     }}
-                    className="w-1/2 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
                     disabled={isLoading}
                   />
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-row gap-2 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="flex-1 h-9 text-xs">
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Regenerate Image
                 </Button>
-                <Button size="sm" variant="outline" onClick={onRegenerateVideo} disabled={isLoading || isGeneratingVideo} className="flex-1 h-9 text-xs">
+                <Button size="sm" variant="outline" onClick={onRegenerateVideo} disabled={isLoading || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>

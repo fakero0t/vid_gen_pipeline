@@ -511,8 +511,7 @@ function ScenesPageContent() {
 
   // Handle preview all scenes
   const handlePreviewAll = () => {
-    // Preview modal is now part of StoryboardCarousel
-    console.log('Preview all scenes');
+    setIsPreviewOpen(true);
   };
 
   // Handle generate final video

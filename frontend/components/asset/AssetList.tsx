@@ -158,13 +158,13 @@ export function AssetList({
                   key={asset.asset_id}
                   className="border rounded-lg p-3 hover:shadow-md transition-shadow"
                 >
-                  <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded overflow-hidden">
+                  <div className="relative w-full aspect-square mb-3 rounded overflow-hidden">
                     {asset.public_url && (
                       <Image
                         src={asset.public_url}
                         alt={asset.metadata.filename || `${assetType} asset`}
                         fill
-                        className="object-cover rounded"
+                        className="object-cover"
                       />
                     )}
                   </div>

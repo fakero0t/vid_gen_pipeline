@@ -222,13 +222,13 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                   )}
                   onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
                 >
-                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 aspect-square bg-muted rounded overflow-hidden">
+                  <div className="relative w-[72px] h-[72px] sm:w-[96px] sm:h-[96px] md:w-[120px] md:h-[120px] aspect-square rounded overflow-hidden">
                     {imageUrl && (
                       <Image
                         src={imageUrl}
                         alt={asset.metadata?.filename || `${label} asset`}
                         fill
-                        className="object-cover rounded"
+                        className="object-cover"
                       />
                     )}
                   </div>

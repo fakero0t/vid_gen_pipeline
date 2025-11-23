@@ -81,20 +81,20 @@ export function AssetSelectionStep({
             <div
               key={asset.asset_id}
               className={cn(
-                'border-2 rounded-lg p-3 cursor-pointer transition-all',
+                'border-2 rounded-lg p-2 cursor-pointer transition-all',
                 isSelected
                   ? 'border-primary shadow-md'
                   : 'border-border hover:border-primary/50 hover:shadow-sm'
               )}
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
-              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden">
+              <div className="relative w-full aspect-square mb-2 rounded overflow-hidden max-w-[75%] mx-auto">
                 {asset.public_url && (
                   <Image
                     src={asset.public_url}
                     alt={asset.metadata.filename || `${assetTypeLabel} asset`}
                     fill
-                    className="object-cover rounded"
+                    className="object-cover"
                   />
                 )}
               </div>
