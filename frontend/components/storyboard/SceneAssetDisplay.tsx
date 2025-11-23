@@ -86,7 +86,7 @@ export function SceneAssetDisplay({ scene }: SceneAssetDisplayProps) {
         {usedAssets.map((asset) => (
           <div key={asset.id} className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">{asset.label}</span>
-            <div className="border-2 rounded-lg p-1.5 border-primary shadow-sm">
+            <div className="rounded-lg p-1.5">
               <div className="relative w-16 h-16 bg-muted rounded overflow-hidden">
                 {asset.imageUrl && (
                   <Image

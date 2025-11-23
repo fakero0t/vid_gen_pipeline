@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,6 +22,68 @@ export function BackgroundGallery({
   className = '',
 }: BackgroundGalleryProps) {
   const { userId } = useFirebaseAuth();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [maxImageSize, setMaxImageSize] = useState<number | null>(null);
+  const gap = 16; // gap-4 = 1rem = 16px
+
+  useEffect(() => {
+    const updateLayout = () => {
+      if (!containerRef.current) return;
+
+      const width = window.innerWidth;
+      let columns = 3;
+      if (width < 640) {
+        columns = 1;
+      } else if (width < 1024) {
+        columns = 2;
+      }
+
+      // Calculate available height
+      const container = containerRef.current;
+      const containerHeight = container.clientHeight;
+      const containerWidth = container.clientWidth;
+      const padding = 16; // px-2 = 0.5rem = 8px on each side
+      const availableWidth = containerWidth - (padding * 2);
+      
+      // Calculate rows needed
+      const rows = Math.ceil(backgrounds.length / columns);
+      
+      // Calculate max image size based on height
+      // Available height = containerHeight
+      // Total gap height = (rows - 1) * gap
+      // Max image height = (containerHeight - (rows - 1) * gap) / rows
+      const availableHeight = containerHeight;
+      const totalGapHeight = (rows - 1) * gap;
+      const maxHeight = rows > 0 ? (availableHeight - totalGapHeight) / rows : availableHeight;
+      
+      // Calculate max image size based on width
+      const totalGapWidth = (columns - 1) * gap;
+      const maxWidth = (availableWidth - totalGapWidth) / columns;
+      
+      // Use the smaller of the two to ensure it fits both dimensions
+      const size = Math.min(maxHeight, maxWidth);
+      setMaxImageSize(Math.max(150, size)); // Minimum 150px
+    };
+
+    // Small delay to ensure container is rendered
+    const timeoutId = setTimeout(updateLayout, 0);
+    window.addEventListener('resize', updateLayout);
+    
+    // Use ResizeObserver to watch for container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      setTimeout(updateLayout, 0);
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateLayout);
+      resizeObserver.disconnect();
+    };
+  }, [backgrounds.length]);
+
   // Loading state is now handled by the page component with LoadingPhrases
   if (isLoading) {
     return null;
@@ -35,8 +97,13 @@ export function BackgroundGallery({
     );
   }
 
+  const imageSize = maxImageSize ? `${maxImageSize}px` : '200px';
+
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`} style={{ gridAutoRows: 'minmax(250px, 1fr)' }}>
+    <div 
+      ref={containerRef}
+      className={`flex flex-wrap gap-4 justify-center items-center content-center h-full w-full overflow-hidden px-2 ${className}`}
+    >
       {backgrounds.map((background) => {
         const isSelected = selectedIds.includes(background.asset_id);
         
@@ -44,13 +111,21 @@ export function BackgroundGallery({
           <div
             key={background.asset_id}
             className={`
-              relative rounded-xl overflow-hidden border-2 transition-all
+              relative aspect-square rounded-xl overflow-hidden border-2 transition-all flex-shrink-0
               ${isSelected 
                 ? 'border-primary ring-2 ring-primary/20' 
                 : 'border-border hover:border-primary/50'
               }
               cursor-pointer group
             `}
+            style={{
+              width: imageSize,
+              height: imageSize,
+              maxWidth: imageSize,
+              maxHeight: imageSize,
+              minWidth: '150px',
+              minHeight: '150px'
+            }}
             onClick={() => onSelect(background.asset_id, !isSelected)}
           >
             {background.public_url && (

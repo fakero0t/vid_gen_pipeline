@@ -197,66 +197,53 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     isToggling: boolean;
     label: string;
   }) => {
-    if (isLoading) {
-      return (
-        <div className="space-y-1">
-          <h5 className="text-xs font-semibold text-foreground">{label}</h5>
-          <div className="text-xs text-muted-foreground">Loading...</div>
-        </div>
-      );
-    }
-
-    if (assets.length === 0) {
-      return (
-        <div className="space-y-1">
-          <h5 className="text-xs font-semibold text-foreground">{label}</h5>
-          <div className="text-xs text-muted-foreground italic">No assets available</div>
-        </div>
-      );
-    }
-
+    // Always render the same structure to maintain consistent layout
     return (
-      <div className="space-y-1">
-        <h5 className="text-xs font-semibold text-foreground">{label}</h5>
-        <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
-            {assets.map((asset) => {
+      <div className="flex items-center gap-2 min-h-[3rem]">
+        <h5 className="text-xs font-semibold text-foreground whitespace-nowrap w-28 flex-shrink-0">{label}</h5>
+        <div className="flex flex-wrap gap-2 flex-1 items-center min-h-[3rem]">
+          {isLoading ? (
+            <div className="text-xs text-muted-foreground">Loading...</div>
+          ) : assets.length === 0 ? (
+            <div className="text-xs text-muted-foreground italic">No assets available</div>
+          ) : (
+            assets.map((asset) => {
               const isSelected = selectedId === asset.asset_id;
               const imageUrl = asset.public_thumbnail_url || asset.public_url || '';
               return (
-              <div
+                <div
                   key={asset.asset_id}
-                className={cn(
-                  'border-2 rounded p-1 cursor-pointer transition-all',
-                  isSelected
-                    ? 'border-primary shadow-sm'
-                    : 'border-border hover:border-primary/50 hover:shadow-sm',
-                  isToggling && 'opacity-50 cursor-not-allowed'
-                )}
-                onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
-                >
-                <div className="relative w-full aspect-square bg-muted rounded overflow-hidden">
-                  {imageUrl && (
-                    <Image
-                      src={imageUrl}
-                      alt={asset.metadata?.filename || `${label} asset`}
-                      fill
-                      className="object-cover rounded"
-                    />
+                  className={cn(
+                    'border-2 rounded p-1.5 cursor-pointer transition-all flex-shrink-0',
+                    isSelected
+                      ? 'border-primary shadow-sm'
+                      : 'border-border hover:border-primary/50 hover:shadow-sm',
+                    isToggling && 'opacity-50 cursor-not-allowed'
                   )}
+                  onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
+                >
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 aspect-square bg-muted rounded overflow-hidden">
+                    {imageUrl && (
+                      <Image
+                        src={imageUrl}
+                        alt={asset.metadata?.filename || `${label} asset`}
+                        fill
+                        className="object-cover rounded"
+                      />
+                    )}
                   </div>
-              </div>
+                </div>
               );
-            })}
+            })
+          )}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2 bg-muted/50 rounded-lg border min-w-[400px] h-full overflow-y-auto">
-      <h4 className="text-xs font-semibold text-foreground flex-shrink-0">Assets</h4>
-      
-      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-visible">
+    <div className="flex flex-col gap-2 p-2 bg-muted/50 rounded-lg border min-w-[400px] h-full overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
       {/* Brand Asset Grid */}
       {projectBrandAssetIds.length > 0 && (
         <AssetGrid

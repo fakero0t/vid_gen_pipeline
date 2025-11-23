@@ -18,19 +18,30 @@ function FinalPageContent() {
   const projectId = params.id as string;
   const { setCurrentStep } = useAppStore();
 
-  const handleBack = () => {
-    // Navigate back to scenes
-    setCurrentStep(STEPS.SCENES);
-    router.push(`/project/${projectId}/scenes`);
-  };
-
   return (
-    <div className="pt-[calc(3.5rem+1.5rem)] flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
-      <div className="w-full max-w-6xl animate-slideUp">
+    <div className="h-screen pt-[calc(3.5rem+1.5rem)] flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col animate-fadeIn overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          {/* Top bar with Title */}
+          <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-2 flex-shrink-0">
+            <div className="w-full max-w-7xl flex items-center justify-center">
+              {/* Title - centered */}
+              <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
+                Step 5: <span className="text-gradient">Final Video Composition</span>
+              </h2>
+            </div>
+          </div>
+
+          {/* Content area - centered vertically when video is complete */}
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center animate-slideUp animation-delay-100 overflow-hidden">
+            <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center overflow-hidden">
         <Suspense fallback={<StepSkeleton />}>
-          <LazyComponents.FinalComposition onBack={handleBack} />
+                <LazyComponents.FinalComposition />
         </Suspense>
       </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

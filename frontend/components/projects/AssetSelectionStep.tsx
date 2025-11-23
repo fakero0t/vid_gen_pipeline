@@ -88,7 +88,7 @@ export function AssetSelectionStep({
               )}
               onClick={() => handleToggleAsset(asset.asset_id)}
             >
-              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden min-h-[200px]">
+              <div className="relative w-full aspect-square mb-2 bg-muted rounded overflow-hidden">
                 {asset.public_url && (
                   <Image
                     src={asset.public_url}

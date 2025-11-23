@@ -41,13 +41,13 @@ const getSceneColor = (state: SceneState, generationStatus: GenerationStatus | u
 
   switch (state) {
     case 'text':
-      return 'hsl(220, 10%, 40%)'; // Gray
+      return 'hsl(25, 80%, 70%)'; // Light orange
     case 'image':
-      return 'hsl(45, 90%, 60%)'; // Yellow
+      return 'hsl(25, 85%, 55%)'; // Medium orange
     case 'video':
-      return 'hsl(140, 70%, 50%)'; // Green
+      return 'rgb(255, 81, 1)'; // Bright orange (app primary color)
     default:
-      return 'hsl(220, 10%, 40%)'; // Default gray
+      return 'hsl(25, 80%, 70%)'; // Default light orange
   }
 };
 
@@ -139,7 +139,7 @@ function SortableSceneButton({
       <button
         onClick={onClick}
         className={`
-          w-8 h-8 rounded-md border-2 transition-colors duration-200 flex items-center justify-center relative flex-shrink-0
+          min-w-[4rem] h-8 px-2 rounded-md border-2 transition-colors duration-200 flex items-center justify-center relative flex-shrink-0
           hover:ring-2 hover:ring-primary/30 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
           ${isActive ? 'border-primary shadow-md ring-2 ring-primary/20' : 'border-transparent'}
           ${isSceneGenerating ? 'animate-pulse' : ''}
@@ -151,9 +151,9 @@ function SortableSceneButton({
         aria-current={isActive ? 'true' : undefined}
         title={`Scene ${index + 1}: ${getSceneLabel(scene.state)}${hasError ? ' (Error)' : ''}`}
       >
-        {/* Scene number - compact */}
-        <span className="text-xs font-bold text-white drop-shadow-sm">
-          {index + 1}
+        {/* Scene number - with "Scene" prefix */}
+        <span className="text-xs font-bold text-white drop-shadow-sm whitespace-nowrap">
+          Scene {index + 1}
         </span>
         
         {/* Error indicator - small dot */}
@@ -182,7 +182,7 @@ function SortableSceneButton({
             }}
             role="button"
             tabIndex={0}
-            className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1"
+            className="absolute -top-1 -right-1 w-4 h-4 bg-[rgb(255,81,1)] hover:bg-[rgb(255,100,20)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(255,81,1)]/50 focus:ring-offset-1"
             aria-label={`Delete scene ${index + 1}`}
             title={`Delete scene ${index + 1}`}
           >

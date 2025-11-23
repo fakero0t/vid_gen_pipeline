@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
@@ -9,10 +9,79 @@ import { Loader2 } from 'lucide-react';
 import type { CompositionRequest, VideoClipInput } from '@/types/composition.types';
 
 interface FinalCompositionProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 type ProcessingPhase = 'idle' | 'composition' | 'complete';
+
+// Video composition-specific loading phrases that rotate
+const LOADING_PHRASES = [
+  "Composing video with transitions... 🎬",
+  "Stitching scenes together... 🧵",
+  "Adding smooth crossfades... ✨",
+  "Syncing with background music... 🎵",
+  "Optimizing video quality... 🎞️",
+  "Almost ready with your final video... 🚀",
+  "Polishing the final composition... 💎",
+  "Creating seamless transitions... 🌊",
+  "Almost there, promise! ⏳"
+];
+
+function LoadingPhrases() {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Rotate phrases every 2.5 seconds
+    intervalRef.current = setInterval(() => {
+      setIsVisible(false);
+      
+      // After fade out, change phrase and fade in
+      setTimeout(() => {
+        setCurrentPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+        setIsVisible(true);
+      }, 400); // Match fadeOutDown animation duration
+    }, 2500);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex-shrink-0 w-full h-full flex items-center justify-center">
+      <div className="text-center px-4">
+        <div 
+          className={`
+            text-sm sm:text-base font-display font-bold
+            bg-gradient-to-r from-primary via-primary/80 to-primary
+            bg-clip-text text-transparent
+            ${isVisible ? 'animate-fadeInUp' : 'animate-fadeOutDown'}
+          `}
+        >
+          {LOADING_PHRASES[currentPhraseIndex]}
+        </div>
+        <div className="mt-6 flex justify-center gap-2">
+          {LOADING_PHRASES.map((_, index) => (
+            <div
+              key={index}
+              className={`
+                w-2 h-2 rounded-full transition-all duration-300
+                ${index === currentPhraseIndex 
+                  ? 'bg-primary scale-125 animate-gentleBounce' 
+                  : 'bg-muted-foreground/30'
+                }
+              `}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function FinalComposition({ onBack }: FinalCompositionProps) {
   const {
@@ -136,18 +205,36 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Step 5: Final Video Composition</h2>
-          <p className="text-muted-foreground mt-1">
+      {/* Description text - centered (only show when not complete) */}
+      {!(isComplete && finalVideo) && (
+        <div className="text-center mb-3 flex-shrink-0 animate-fadeIn">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Composing your final video with music and transitions
           </p>
         </div>
-        <Button variant="ghost" onClick={onBack}>
-          ← Back to Video Generation
-        </Button>
+      )}
+
+      {/* Progress bar at top center */}
+      {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && (
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Video Composition</span>
+              <span className="font-medium">
+                {phaseProgress.composition === 100 ? '✓' : `${Math.round(phaseProgress.composition)}%`}
+              </span>
+            </div>
+            <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 ease-out ${
+                  phaseProgress.composition === 100 ? 'bg-green-500' : 'bg-primary'
+                }`}
+                style={{ width: `${phaseProgress.composition}%` }}
+              />
+            </div>
+          </div>
       </div>
+      )}
 
       {/* Not Started */}
       {!hasStarted && !isComposing && !jobStatus && (
@@ -164,79 +251,30 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
         </div>
       )}
 
-      {/* In Progress */}
+      {/* In Progress - Loading Animation */}
       {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && (
-        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 space-y-6">
-          <div className="text-center space-y-6">
-            {/* Phase Indicator */}
-            <div className="flex justify-center">
-              {currentPhase === 'composition' && (
-                <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              )}
-              {currentPhase === 'complete' && (
-                <div className="text-4xl">✅</div>
-              )}
-            </div>
-
-            {/* Phase Description */}
-            <h3 className="text-xl font-semibold">
-              {currentPhase === 'composition' && (jobStatus?.current_step || 'Composing Video...')}
-              {currentPhase === 'complete' && 'Processing Complete!'}
-            </h3>
-
-            {/* Progress */}
-            <div className="space-y-4 max-w-md mx-auto">
-              {/* Composition Phase */}
-              {(currentPhase === 'composition' || phaseProgress.composition > 0) && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Video Composition</span>
-                    <span className="font-medium">
-                      {phaseProgress.composition === 100 ? '✓' : `${phaseProgress.composition}%`}
-                    </span>
-                  </div>
-                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ease-out ${
-                        phaseProgress.composition === 100 ? 'bg-green-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${phaseProgress.composition}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
+        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 min-h-[400px] flex items-center justify-center relative">
+          <LoadingPhrases />
             {/* Additional Details */}
             {jobStatus && currentPhase === 'composition' && (
-              <div className="text-xs text-muted-foreground space-y-1 pt-2">
+            <div className="absolute bottom-4 left-0 right-0 text-center">
+              <div className="text-xs text-muted-foreground space-y-1">
                 <p>Total clips: {jobStatus.total_clips}</p>
                 {jobStatus.file_size_mb && (
                   <p>Current size: {jobStatus.file_size_mb.toFixed(2)} MB</p>
                 )}
               </div>
+              </div>
             )}
-          </div>
         </div>
       )}
 
       {/* Completed */}
       {isComplete && finalVideo && (
-        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 space-y-6">
-          <div className="space-y-6">
-            {/* Success Header */}
-            <div className="text-center space-y-4">
-              <div className="text-6xl">🎉</div>
-              <h3 className="text-2xl font-bold">Your Video is Ready!</h3>
-              <p className="text-muted-foreground">
-                Your 30-second video has been successfully created
-              </p>
-            </div>
-
+        <div className="flex flex-col items-center justify-center space-y-6">
             {/* Video Preview Player */}
             {jobStatus?.video_url && (
-              <div className="max-w-4xl mx-auto space-y-3">
-                <h4 className="text-lg font-semibold text-center">Preview</h4>
+            <div className="w-full max-w-4xl mx-auto">
                 <div className="relative bg-black rounded-lg overflow-hidden shadow-xl aspect-video">
                   <video
                     controls
@@ -253,7 +291,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             )}
 
             {/* Video Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
               {jobStatus?.duration_seconds && (
                 <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                   <div className="text-2xl font-bold">{jobStatus.duration_seconds.toFixed(1)}s</div>
@@ -277,15 +315,20 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
-              <Button onClick={handleDownload} size="lg" className="gap-2">
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={handleDownload}
+              className="text-xs px-4 py-2 rounded-full bg-[rgb(255,81,1)] text-[rgb(196,230,43)] hover:bg-[rgb(255,100,20)] font-bold shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+            >
                 <span>📥</span>
                 Download Video
-              </Button>
-              <Button variant="outline" size="lg" onClick={() => window.location.reload()}>
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-xs px-4 py-2 rounded-full border-2 border-[rgb(255,81,1)] text-[rgb(255,81,1)] hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 font-display font-bold"
+            >
                 Create Another Video
-              </Button>
-            </div>
+            </button>
           </div>
         </div>
       )}
@@ -297,9 +340,13 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             <span className="text-2xl">⚠️</span>
             <div className="flex-1">
               <h4 className="font-semibold text-red-900 dark:text-red-100 mb-1">
-                Composition Failed
+                Video Composition Failed
               </h4>
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              <p className="text-sm text-red-800 dark:text-red-200">
+                {error.includes('composition') || error.includes('video') 
+                  ? error 
+                  : `Failed to compose final video: ${error}`}
+              </p>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
@@ -313,7 +360,29 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
               Dismiss
             </Button>
             <Button size="sm" onClick={handleStartComposition}>
-              Retry
+              Retry Composition
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Failed Status Error */}
+      {isFailed && !error && (
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-900 dark:text-red-100 mb-1">
+                Video Composition Failed
+              </h4>
+              <p className="text-sm text-red-800 dark:text-red-200">
+                The video composition process encountered an error. Please try again.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button size="sm" onClick={handleStartComposition}>
+              Retry Composition
             </Button>
           </div>
         </div>
