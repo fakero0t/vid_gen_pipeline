@@ -340,15 +340,14 @@ class BaseAssetService(Generic[T, S]):
 
     def list_assets(self, user_id: Optional[str] = None) -> List[S]:
         """
-        List all assets of this type from in-memory database.
-        Optionally filter by user_id.
+        List all assets of this type from Firestore database.
+        Optionally filter by user_id (recommended for performance).
         """
         from app.database import db
-        assets_data = db.list_assets_by_type(self.api_prefix)
-
-        # Filter by user_id if provided
-        if user_id:
-            assets_data = [asset for asset in assets_data if asset.get('user_id') == user_id]
+        
+        # Pass user_id to database for efficient querying
+        # This will query users/{user_id}/assets/ directly if user_id is provided
+        assets_data = db.list_assets_by_type(self.api_prefix, user_id=user_id)
 
         logger.info(f"Found {len(assets_data)} assets of type {self.api_prefix} for user {user_id}")
 

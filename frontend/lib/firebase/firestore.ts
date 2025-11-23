@@ -94,3 +94,5 @@ if (typeof window !== 'undefined') {
   initializeFirestore();
 }
 
+
+

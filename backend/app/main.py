@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import moods, scenes, video, audio, composition, storyboards, product, admin, brand, character, backgrounds, whisper
+from app.routers import moods, scenes, video, audio, composition, storyboards, product, admin, brand, character, backgrounds, whisper, webhooks
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +29,7 @@ app.add_middleware(
 
 
 # Include routers
+app.include_router(webhooks.router)  # Webhooks for Replicate callbacks (must be registered first for proper routing)
 app.include_router(storyboards.router)  # Unified Storyboard Interface
 app.include_router(moods.router)
 app.include_router(scenes.router)

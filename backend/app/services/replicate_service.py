@@ -805,6 +805,80 @@ class ReplicateImageService:
         """
         pass
     
+    async def create_prediction_with_webhook(
+        self,
+        model: str,
+        input_params: dict,
+        webhook_url: str
+    ) -> str:
+        """
+        Create a Replicate prediction with webhook callback (non-blocking).
+        
+        Instead of waiting for the prediction to complete, this immediately returns
+        the prediction ID. Replicate will call the webhook URL when the prediction
+        completes, fails, or is canceled.
+        
+        Args:
+            model: Model identifier (e.g., "google/nano-banana-pro")
+            input_params: Model input parameters
+            webhook_url: URL to receive callback when prediction completes
+            
+        Returns:
+            Prediction ID
+        """
+        logger.info(f"Creating prediction with webhook: model={model}")
+        
+        # Create prediction with webhook
+        prediction = await asyncio.to_thread(
+            self.client.predictions.create,
+            model=model,
+            input=input_params,
+            webhook=webhook_url,
+            webhook_events_filter=["completed"]  # Only notify on completion (success, failure, or canceled)
+        )
+        
+        logger.info(f"Prediction created: id={prediction.id}, status={prediction.status}")
+        return prediction.id
+    
+    async def cancel_prediction(self, prediction_id: str) -> bool:
+        """
+        Cancel a running Replicate prediction.
+        
+        Used when regenerating to cancel the old prediction before starting a new one.
+        
+        Args:
+            prediction_id: ID of prediction to cancel
+            
+        Returns:
+            True if canceled successfully, False otherwise
+        """
+        if not prediction_id:
+            return False
+        
+        try:
+            await asyncio.to_thread(
+                self.client.predictions.cancel,
+                prediction_id
+            )
+            logger.info(f"Canceled prediction: {prediction_id}")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to cancel prediction {prediction_id}: {e}")
+            return False
+    
+    async def _image_to_base64_url(self, image_path: str) -> str:
+        """
+        Convert image file to base64 data URL.
+        
+        Args:
+            image_path: Path to image file
+            
+        Returns:
+            Data URL (e.g., "data:image/png;base64,...")
+        """
+        base64_data = await self._image_to_base64(image_path)
+        return f"data:image/png;base64,{base64_data}"
+    
     async def generate_scene_with_kontext_composite(
         self,
         scene_text: str,

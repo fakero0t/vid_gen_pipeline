@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, KeyboardEvent, useEffect, useRef } from 'react';
+import { useState, KeyboardEvent, useEffect, useRef, useCallback } from 'react';
 import { Send, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VisionPromptProps } from '@/types/chat.types';
@@ -25,56 +25,59 @@ export function VisionPrompt({
   // Ref for the textarea to focus it when dictation starts
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Memoize callbacks to prevent recognition object from being recreated
+  const onResult = useCallback((fullTranscript: string) => {
+    if (isDictating) {
+      // Combine preserved manual input with dictation transcript
+      const preserved = inputBeforeDictationRef.current.trim();
+      const dictationText = fullTranscript.trim();
+      setInput(preserved ? `${preserved} ${dictationText}` : dictationText);
+    }
+  }, [isDictating]);
+
+  const onFinalResult = useCallback(() => {
+    // No action needed - transcript state is already updated
+  }, []);
+
   // Speech recognition hook
   const {
     startListening,
     stopListening,
     isListening,
-    transcript,
     isSupported: isSpeechSupported,
     error: speechError,
-  } = useSpeechRecognition(
-    // Interim results - update input in real-time (includes accumulated + interim)
-    (fullTranscript) => {
-      if (isDictating) {
-        // Combine preserved manual input with dictation transcript
-        const preserved = inputBeforeDictationRef.current.trim();
-        const dictationText = fullTranscript.trim();
-        setInput(preserved ? `${preserved} ${dictationText}` : dictationText);
-      }
-    },
-    // Final results - transcript already includes accumulated text
-    () => {
-      // No action needed - transcript state is already updated
-    }
-  );
+  } = useSpeechRecognition(onResult, onFinalResult);
+
+  // Store latest stopListening in ref for cleanup
+  const stopListeningRef = useRef(stopListening);
+  useEffect(() => {
+    stopListeningRef.current = stopListening;
+  }, [stopListening]);
 
   // Handle dictation toggle
   const handleToggleDictation = () => {
     if (isListening) {
       stopListening();
       setIsDictating(false);
-      inputBeforeDictationRef.current = ''; // Clear preserved text
+      inputBeforeDictationRef.current = '';
     } else {
-      // Preserve existing text before starting dictation
       inputBeforeDictationRef.current = input.trim();
       setIsDictating(true);
       startListening();
-      // Focus the textarea when starting dictation
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 0);
     }
   };
 
-  // Stop dictation when component unmounts or when sending
+  // Stop dictation when component unmounts
   useEffect(() => {
     return () => {
-      if (isListening) {
-        stopListening();
-      }
+      // Use ref to get latest stopListening, avoiding cleanup race conditions
+      stopListeningRef.current();
     };
-  }, [isListening, stopListening]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount/unmount
 
   // Restore focus when input becomes enabled again after being disabled
   const prevIsLoadingRef = useRef(isLoading);

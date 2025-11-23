@@ -243,6 +243,52 @@ class FirestoreDatabase:
         
         return scenes
     
+    def get_scene_by_image_prediction_id(self, prediction_id: str) -> Optional[StoryboardScene]:
+        """Get scene by Replicate image prediction ID.
+        
+        Used by webhook handler to find scene when image generation completes.
+        """
+        # Check cache first for performance
+        for scene in self._cache_scenes.values():
+            if scene.replicate_image_prediction_id == prediction_id:
+                return scene
+        
+        # Query Firestore if not in cache
+        query = self._db.collection('scenes').where('replicate_image_prediction_id', '==', prediction_id).limit(1)
+        docs = list(query.stream())
+        
+        if docs:
+            data = docs[0].to_dict()
+            scene = StoryboardScene(**data)
+            # Cache for next time
+            self._cache_scenes[scene.id] = scene
+            return scene
+        
+        return None
+    
+    def get_scene_by_video_prediction_id(self, prediction_id: str) -> Optional[StoryboardScene]:
+        """Get scene by Replicate video prediction ID.
+        
+        Used by webhook handler to find scene when video generation completes.
+        """
+        # Check cache first for performance
+        for scene in self._cache_scenes.values():
+            if scene.replicate_video_prediction_id == prediction_id:
+                return scene
+        
+        # Query Firestore if not in cache
+        query = self._db.collection('scenes').where('replicate_video_prediction_id', '==', prediction_id).limit(1)
+        docs = list(query.stream())
+        
+        if docs:
+            data = docs[0].to_dict()
+            scene = StoryboardScene(**data)
+            # Cache for next time
+            self._cache_scenes[scene.id] = scene
+            return scene
+        
+        return None
+    
     def update_scene(self, scene_id: str, scene: StoryboardScene) -> Optional[StoryboardScene]:
         """Update scene in Firestore and cache.
         
@@ -279,33 +325,150 @@ class FirestoreDatabase:
         
         return True
 
-    # Asset operations (in-memory only for now)
+    # ============================================================================
+    # Asset Operations (Firestore + Cache)
+    # ============================================================================
 
     def create_asset(self, asset_id: str, asset_data: Dict) -> Dict:
-        """Create a new asset (in-memory only).
-
-        Note: Assets are not persisted to Firestore yet, only cached in memory.
-        Files are stored in Firebase Storage.
+        """Create a new asset with Firestore persistence and cache.
+        
+        Write-through cache: Firestore first, then cache.
+        Assets are stored under users/{user_id}/assets/{asset_id} for proper isolation.
         """
+        user_id = asset_data.get('user_id')
+        if not user_id:
+            raise ValueError("user_id is required for asset creation")
+        
+        # Write to Firestore (persistence)
+        doc_ref = self._db.collection('users').document(user_id).collection('assets').document(asset_id)
+        doc_ref.set(asset_data)
+        logger.debug(f"Saved asset to Firestore: {asset_id} for user {user_id}")
+        
+        # Write to cache (speed)
         self._cache_assets[asset_id] = asset_data
         return asset_data
 
     def get_asset(self, asset_id: str) -> Optional[Dict]:
-        """Get an asset by ID (from memory cache only)."""
-        return self._cache_assets.get(asset_id)
+        """Get asset from cache or Firestore.
+        
+        Cache-first read: Check memory, then Firestore.
+        Note: This searches across all users' assets for backward compatibility.
+        For user-specific queries, use list_assets_by_type with user filtering.
+        """
+        # Check cache first (fast)
+        if asset_id in self._cache_assets:
+            return self._cache_assets[asset_id]
+        
+        # Need to search across users since we don't know which user owns this asset
+        # This is inefficient but necessary for backward compatibility
+        # TODO: Consider requiring user_id parameter in future version
+        
+        # Query Firestore across all users (expensive but necessary)
+        # We use collection group query to search all assets collections
+        try:
+            query = self._db.collection_group('assets').where('asset_id', '==', asset_id).limit(1)
+            docs = list(query.stream())
+            
+            if docs:
+                data = docs[0].to_dict()
+                # Cache for next time
+                self._cache_assets[asset_id] = data
+                logger.debug(f"Loaded asset from Firestore: {asset_id}")
+                return data
+        except Exception as e:
+            logger.error(f"Error querying Firestore for asset {asset_id}: {e}")
+        
+        return None
 
-    def list_assets_by_type(self, asset_type: str) -> List[Dict]:
-        """List all assets of a specific type (from memory cache only)."""
-        return [
-            asset for asset in self._cache_assets.values()
-            if asset.get('asset_type') == asset_type
-        ]
+    def list_assets_by_type(self, asset_type: str, user_id: Optional[str] = None) -> List[Dict]:
+        """List all assets of a specific type from Firestore.
+        
+        If user_id is provided, only returns assets for that user (efficient).
+        If user_id is None, searches across all users (less efficient, for backward compatibility).
+        
+        Always loads from Firestore to ensure completeness.
+        """
+        assets = []
+        
+        try:
+            if user_id:
+                # Efficient: Query specific user's assets
+                query = (self._db.collection('users').document(user_id)
+                        .collection('assets')
+                        .where('asset_type', '==', asset_type))
+                docs = query.stream()
+                
+                for doc in docs:
+                    # Check cache first to avoid re-parsing
+                    if doc.id in self._cache_assets:
+                        assets.append(self._cache_assets[doc.id])
+                    else:
+                        data = doc.to_dict()
+                        self._cache_assets[doc.id] = data
+                        assets.append(data)
+                
+                logger.debug(f"Loaded {len(assets)} assets of type {asset_type} for user {user_id}")
+            else:
+                # Less efficient: Search across all users using collection group query
+                query = self._db.collection_group('assets').where('asset_type', '==', asset_type)
+                docs = query.stream()
+                
+                for doc in docs:
+                    # Check cache first to avoid re-parsing
+                    if doc.id in self._cache_assets:
+                        assets.append(self._cache_assets[doc.id])
+                    else:
+                        data = doc.to_dict()
+                        self._cache_assets[doc.id] = data
+                        assets.append(data)
+                
+                logger.debug(f"Loaded {len(assets)} assets of type {asset_type} across all users")
+        
+        except Exception as e:
+            logger.error(f"Error loading assets from Firestore: {e}")
+            # Fallback to cache only
+            assets = [
+                asset for asset in self._cache_assets.values()
+                if asset.get('asset_type') == asset_type
+            ]
+            if user_id:
+                assets = [asset for asset in assets if asset.get('user_id') == user_id]
+        
+        return assets
 
     def delete_asset(self, asset_id: str) -> bool:
-        """Delete an asset (from memory cache only)."""
-        if asset_id not in self._cache_assets:
+        """Delete an asset from Firestore and cache.
+        
+        Note: This does not delete the actual file from Firebase Storage.
+        The caller is responsible for deleting the storage file if needed.
+        """
+        # First, try to get the asset to find its user_id
+        asset = self.get_asset(asset_id)
+        
+        if not asset:
             return False
-        del self._cache_assets[asset_id]
+        
+        user_id = asset.get('user_id')
+        if not user_id:
+            logger.warning(f"Asset {asset_id} has no user_id, cannot delete from Firestore")
+            # Still delete from cache
+            if asset_id in self._cache_assets:
+                del self._cache_assets[asset_id]
+            return True
+        
+        try:
+            # Delete from Firestore
+            doc_ref = self._db.collection('users').document(user_id).collection('assets').document(asset_id)
+            doc_ref.delete()
+            logger.debug(f"Deleted asset from Firestore: {asset_id}")
+        except Exception as e:
+            logger.error(f"Error deleting asset from Firestore: {e}")
+            # Continue to delete from cache anyway
+        
+        # Delete from cache
+        if asset_id in self._cache_assets:
+            del self._cache_assets[asset_id]
+        
         return True
 
 

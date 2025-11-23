@@ -27,6 +27,17 @@ export function useSpeechRecognition(
   const useWebSpeechRef = useRef<boolean>(false);
   // Track accumulated final transcript to append instead of replace
   const accumulatedFinalRef = useRef<string>('');
+  // Track if recognition has actually started (onstart fired)
+  const hasStartedRef = useRef<boolean>(false);
+  // Store callbacks in refs to avoid recreating recognition object
+  const onResultRef = useRef(onResult);
+  const onFinalResultRef = useRef(onFinalResult);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onFinalResultRef.current = onFinalResult;
+  }, [onResult, onFinalResult]);
 
   // Check if Web Speech API is supported (Chrome/Edge)
   const isWebSpeechSupported =
@@ -79,14 +90,14 @@ export function useSpeechRecognition(
       const fullTranscript = accumulatedFinalRef.current.trim() + (interimTranscript ? ' ' + interimTranscript : '');
       setTranscript(fullTranscript);
 
-      // Call onResult with full transcript (accumulated + interim)
-      if (onResult && fullTranscript.trim()) {
-        onResult(fullTranscript.trim());
+      // Call onResult with full transcript (accumulated + interim) using ref
+      if (onResultRef.current && fullTranscript.trim()) {
+        onResultRef.current(fullTranscript.trim());
       }
 
-      // Call onFinalResult only when we have new final results
-      if (onFinalResult && newFinalTranscript.trim()) {
-        onFinalResult(accumulatedFinalRef.current.trim());
+      // Call onFinalResult only when we have new final results using ref
+      if (onFinalResultRef.current && newFinalTranscript.trim()) {
+        onFinalResultRef.current(accumulatedFinalRef.current.trim());
       }
     };
 
@@ -126,27 +137,40 @@ export function useSpeechRecognition(
       setIsListening(false);
     };
 
+    recognition.onstart = () => {
+      hasStartedRef.current = true;
+      setIsListening(true);
+    };
+
     recognition.onend = () => {
+      hasStartedRef.current = false;
       setIsListening(false);
     };
 
     recognitionRef.current = recognition;
-  }, [isWebSpeechSupported, onResult, onFinalResult]);
+  }, [isWebSpeechSupported]); // Removed onResult and onFinalResult from deps - using refs instead
 
   // Start listening with Web Speech API (preferred for real-time)
   const startWebSpeechListening = useCallback(() => {
     if (!recognitionRef.current) return;
-    
+
     try {
       setError(null);
       setTranscript('');
-      accumulatedFinalRef.current = ''; // Reset accumulated transcript
+      accumulatedFinalRef.current = '';
+      hasStartedRef.current = false;
       recognitionRef.current.start();
-      setIsListening(true);
       useWebSpeechRef.current = true;
-    } catch (err) {
+      // Optimistically set listening state to prevent double-clicks
+      setIsListening(true);
+    } catch (err: any) {
+      // If recognition is already started, ignore the error
+      if (err.name === 'InvalidStateError' || (err.message && err.message.includes('already'))) {
+        return;
+      }
       console.error('Error starting Web Speech:', err);
-      // Fall back to Whisper
+      hasStartedRef.current = false;
+      setIsListening(false);
       startWhisperListening();
     }
   }, []);
@@ -208,8 +232,8 @@ export function useSpeechRecognition(
             
             if (data.success && data.transcript) {
               setTranscript(data.transcript);
-              if (onFinalResult) {
-                onFinalResult(data.transcript);
+              if (onFinalResultRef.current) {
+                onFinalResultRef.current(data.transcript);
               }
             }
           } catch (err) {
@@ -245,13 +269,19 @@ export function useSpeechRecognition(
 
   const stopListening = useCallback(() => {
     if (useWebSpeechRef.current && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      if (hasStartedRef.current) {
+        // Recognition has started, call stop and let onend handler update state
+        recognitionRef.current.stop();
+      } else {
+        // Recognition hasn't started yet, manually reset state
+        hasStartedRef.current = false;
+        setIsListening(false);
+      }
     } else if (mediaRecorderRef.current && isListening) {
       mediaRecorderRef.current.stop();
     }
 
-    // Clean up stream
+    // Clean up audio stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;

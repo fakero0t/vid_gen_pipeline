@@ -38,7 +38,8 @@ jobs:
           if [ "$ACTION" = "opened" ]; then
             NOTIFICATION_TYPE="opened"
             HEAD_REF=$(echo '${{ toJson(github.event.pull_request.head.ref) }}' | jq -r .)
-            PR_BODY=$(echo '${{ toJson(github.event.pull_request.body || 'No description provided') }}' | jq -r .)
+            PR_BODY_RAW='${{ toJson(github.event.pull_request.body) }}'
+            PR_BODY=$(echo "$PR_BODY_RAW" | jq -r 'if . == "" or . == null then "No description provided" else . end')
           elif [ "$ACTION" = "closed" ] && [ "$IS_MERGED" = "true" ]; then
             NOTIFICATION_TYPE="merged"
             PR_MERGED_BY_RAW='${{ toJson(github.event.pull_request.merged_by.login || '') }}'

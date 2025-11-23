@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     
     # Backend API Base URL (for generating full URLs for external services)
     API_BASE_URL: str = "http://localhost:8000"
+    
+    # Webhook Configuration (for Replicate async predictions)
+    REPLICATE_WEBHOOK_SECRET: str = ""  # Secret for verifying webhook signatures
 
     # Product Compositing Configuration
     USE_KONTEXT_COMPOSITE: bool = Field(
@@ -77,6 +80,20 @@ class Settings(BaseSettings):
         """Check if running in development mode."""
         return self.ENVIRONMENT.lower() in ("development", "dev", "local")
     
+    def use_webhooks(self) -> bool:
+        """
+        Determine whether to use webhook-based predictions.
+        
+        Returns True in production (scalable, non-blocking)
+        Returns False in development (simple, no ngrok needed)
+        
+        Can be overridden with FORCE_WEBHOOKS=true environment variable
+        for testing webhooks locally with ngrok.
+        """
+        import os
+        force_webhooks = os.getenv("FORCE_WEBHOOKS", "").lower() in ("true", "1", "yes")
+        return force_webhooks or not self.is_development()
+    
     def get_cors_origins(self) -> List[str]:
         """Get CORS origins as a list from comma-separated string."""
         if not self.CORS_ORIGINS:
@@ -86,6 +103,16 @@ class Settings(BaseSettings):
     def get_replicate_token(self) -> str:
         """Get Replicate API token, checking both field names."""
         return self.REPLICATE_API_TOKEN or self.REPLICATE_API_KEY
+    
+    def get_webhook_url(self) -> str:
+        """
+        Get the webhook URL for Replicate callbacks.
+        
+        Returns:
+            Full webhook URL (e.g., https://xxxx.ngrok.io/api/webhooks/replicate)
+        """
+        base_url = self.API_BASE_URL.rstrip("/")
+        return f"{base_url}/api/webhooks/replicate"
     
     def to_full_url(self, path: str) -> str:
         """
