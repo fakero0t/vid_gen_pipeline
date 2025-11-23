@@ -53,6 +53,10 @@ class StoryboardScene(BaseModel):
     # Generation tracking
     generation_status: SceneGenerationStatus = Field(default_factory=SceneGenerationStatus)
     error_message: Optional[str] = Field(default=None, description="Error message if generation fails")
+    
+    # Replicate prediction tracking (for webhook-based async generation)
+    replicate_image_prediction_id: Optional[str] = Field(default=None, description="Replicate prediction ID for image generation")
+    replicate_video_prediction_id: Optional[str] = Field(default=None, description="Replicate prediction ID for video generation")
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

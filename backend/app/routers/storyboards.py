@@ -849,9 +849,9 @@ async def disable_background_asset(
 # ============================================================================
 
 async def generate_image_task(scene_id: str):
-    """Background task to generate image using Replicate."""
+    """Background task to generate image using Replicate with webhooks."""
     print(f"\n{'='*80}")
-    print(f"[Image Generation] 🎨 STARTING IMAGE GENERATION")
+    print(f"[Image Generation] 🎨 STARTING IMAGE GENERATION (WEBHOOK MODE)")
     print(f"{'='*80}")
     print(f"[Image Generation] Scene ID: {scene_id}")
     
@@ -872,6 +872,10 @@ async def generate_image_task(scene_id: str):
         scene.generation_status.image = "generating"
         db.update_scene(scene_id, scene)
         print(f"[Image Generation] Status updated to 'generating'")
+        
+        # Get webhook URL for Replicate callbacks
+        webhook_url = settings.get_webhook_url()
+        print(f"[Image Generation] Webhook URL: {webhook_url}")
 
         # Get Replicate token
         replicate_token = settings.get_replicate_token()
@@ -912,54 +916,24 @@ async def generate_image_task(scene_id: str):
             use_kontext = settings.USE_KONTEXT_COMPOSITE and settings.COMPOSITE_METHOD == "kontext"
             
             if use_kontext:
-                print(f"[Image Generation] Using Kontext composite method")
-                try:
-                    # Try Kontext method with timeout
-                    image_url = await asyncio.wait_for(
-                        replicate_service.generate_scene_with_kontext_composite(
-                            scene_text=scene.text,
-                            style_prompt=scene.style_prompt,
-                            product_image_path=str(product_image_path),
-                            width=1920,
-                            height=1080
-                        ),
-                        timeout=settings.KONTEXT_TIMEOUT_SECONDS
-                    )
-                    print(f"[Image Generation] Kontext composite succeeded")
-                    
-                except asyncio.TimeoutError:
-                    print(f"[Image Generation] Kontext timeout, falling back to PIL")
-                    
-                    # Record fallback
-                    metrics = get_composite_metrics()
-                    metrics.record_fallback()
-                    
-                    image_url = await replicate_service.generate_scene_with_product(
-                        scene_text=scene.text,
-                        style_prompt=scene.style_prompt,
-                        product_image_path=str(product_image_path),
-                        width=1920,
-                        height=1080
-                    )
-                    
-                except Exception as e:
-                    print(f"[Image Generation] Kontext failed: {e}, falling back to PIL")
-                    
-                    # Record fallback
-                    metrics = get_composite_metrics()
-                    metrics.record_fallback()
-                    
-                    # Silent fallback to PIL method
-                    image_url = await replicate_service.generate_scene_with_product(
-                        scene_text=scene.text,
-                        style_prompt=scene.style_prompt,
-                        product_image_path=str(product_image_path),
-                        width=1920,
-                        height=1080
-                    )
+                print(f"[Image Generation] Using Kontext composite method (webhook)")
+                # For now, Kontext composite with webhooks requires breaking down into steps
+                # TODO: Implement webhook-based Kontext composite
+                # For now, fall back to synchronous call
+                logger.warning("Kontext composite not yet implemented with webhooks, using blocking call")
+                image_url = await replicate_service.generate_scene_with_kontext_composite(
+                    scene_text=scene.text,
+                    style_prompt=scene.style_prompt,
+                    product_image_path=str(product_image_path),
+                    width=1920,
+                    height=1080
+                )
+                print(f"[Image Generation] Kontext composite completed")
             else:
-                print(f"[Image Generation] Using PIL composite method")
-                # Use PIL method (existing implementation)
+                print(f"[Image Generation] Using PIL composite method (webhook)")
+                # For PIL composite, also use blocking for now as it requires multiple steps
+                # TODO: Implement webhook-based PIL composite
+                logger.warning("PIL composite not yet implemented with webhooks, using blocking call")
                 image_url = await replicate_service.generate_scene_with_product(
                     scene_text=scene.text,
                     style_prompt=scene.style_prompt,
@@ -967,11 +941,12 @@ async def generate_image_task(scene_id: str):
                     width=1920,
                     height=1080
                 )
+                print(f"[Image Generation] PIL composite completed")
         elif scene.brand_asset_id or scene.character_asset_id or scene.background_asset_id:
-            logger.info("  → Using ASSET-BASED path (nano-banana-pro)")
+            logger.info(f"  → Using ASSET-BASED path (nano-banana-pro, {'webhook' if settings.use_webhooks() else 'blocking'})")
             # Asset-based generation using nano-banana-pro
             logger.info("="*80)
-            logger.info("🎨 ASSET-BASED GENERATION USING google/nano-banana-pro")
+            logger.info(f"🎨 ASSET-BASED GENERATION USING google/nano-banana-pro ({'WEBHOOK' if settings.use_webhooks() else 'BLOCKING'})")
             logger.info("="*80)
             logger.info(f"Scene ID: {scene_id}")
             logger.info(f"Storyboard ID: {scene.storyboard_id}")
@@ -1071,71 +1046,175 @@ async def generate_image_task(scene_id: str):
             
             # Generate image with assets using nano-banana-pro
             # 16:9 aspect ratio, 1K resolution (1920x1080), PNG format
-            logger.info("🚀 Calling generate_scene_with_assets()...")
-            image_url = await replicate_service.generate_scene_with_assets(
-                scene_text=scene.text,
-                style_prompt=scene.style_prompt,
-                brand_asset_image_url=brand_asset_image_url,
-                character_asset_image_url=character_asset_image_url,
-                background_asset_image_url=background_asset_image_url,
-                brand_asset_filename=brand_asset_filename,
-                character_asset_filename=character_asset_filename,
-                background_asset_filename=background_asset_filename,
-                width=1920,
-                height=1080
-            )
-            logger.info("✅ RESULTING IMAGE URL:")
-            logger.info(f"  {image_url}")
-            logger.info("="*80)
+            
+            if settings.use_webhooks():
+                # WEBHOOK MODE: Create prediction and return immediately
+                logger.info("🚀 Creating webhook-based prediction for asset generation...")
+                
+                # Prepare input parameters for nano-banana-pro
+                # Build comprehensive prompt
+                prompt = f"{scene.text}. {scene.style_prompt}. landscape orientation, horizontal composition."
+                
+                # Prepare control images array
+                control_images = []
+                if brand_asset_image_url:
+                    if brand_asset_image_url.startswith("http"):
+                        control_images.append(brand_asset_image_url)
+                    else:
+                        # Convert to base64 if local file
+                        control_images.append(await replicate_service._image_to_base64_url(brand_asset_image_url))
+                
+                if character_asset_image_url:
+                    if character_asset_image_url.startswith("http"):
+                        control_images.append(character_asset_image_url)
+                    else:
+                        control_images.append(await replicate_service._image_to_base64_url(character_asset_image_url))
+                
+                if background_asset_image_url:
+                    if background_asset_image_url.startswith("http"):
+                        control_images.append(background_asset_image_url)
+                    else:
+                        control_images.append(await replicate_service._image_to_base64_url(background_asset_image_url))
+                
+                input_params = {
+                    "prompt": prompt,
+                    "resolution": "1K",
+                    "aspect_ratio": "16:9",
+                    "image_input": control_images,
+                    "output_format": "png",
+                    "safety_filter_level": "block_only_high"
+                }
+                
+                # Create prediction with webhook
+                prediction_id = await replicate_service.create_prediction_with_webhook(
+                    model="google/nano-banana-pro",
+                    input_params=input_params,
+                    webhook_url=webhook_url
+                )
+                
+                # Store prediction ID in scene
+                scene.replicate_image_prediction_id = prediction_id
+                db.update_scene(scene_id, scene)
+                
+                logger.info(f"✅ Prediction created with ID: {prediction_id}")
+                logger.info("   Webhook will be called when generation completes")
+                logger.info("="*80)
+                
+                # Return immediately - webhook will handle completion
+                return
+            
+            else:
+                # BLOCKING MODE: Generate and wait for result (local dev)
+                logger.info("🚀 Generating image with assets (blocking mode for local dev)...")
+                
+                # Use the existing generate_scene_with_assets method (blocking)
+                image_url = await replicate_service.generate_scene_with_assets(
+                    scene_text=scene.text,
+                    style_prompt=scene.style_prompt,
+                    brand_asset_image_url=brand_asset_image_url,
+                    character_asset_image_url=character_asset_image_url,
+                    background_asset_image_url=background_asset_image_url,
+                    brand_asset_filename=brand_asset_filename,
+                    character_asset_filename=character_asset_filename,
+                    background_asset_filename=background_asset_filename,
+                    width=1920,
+                    height=1080
+                )
+                logger.info(f"✅ Image generated: {image_url}")
+                logger.info("="*80)
         
         else:
-            logger.info("  → Using STANDARD path (nano-banana-pro)")
+            logger.info(f"  → Using STANDARD path (nano-banana-pro, {'webhook' if settings.use_webhooks() else 'blocking'})")
             # Standard scene generation using nano-banana-pro (no assets)
-            # Use generate_scene_with_assets with empty control images
             logger.info("="*80)
-            logger.info("🍌 GENERATING SCENE USING google/nano-banana-pro (NO ASSETS)")
+            logger.info(f"🍌 GENERATING SCENE USING google/nano-banana-pro (NO ASSETS, {'WEBHOOK' if settings.use_webhooks() else 'BLOCKING'})")
             logger.info("="*80)
             
             # Initialize replicate service
             replicate_service = get_replicate_service()
             
-            image_url = await replicate_service.generate_scene_with_assets(
-                scene_text=scene.text,
-                style_prompt=scene.style_prompt,
-                brand_asset_image_url=None,
-                character_asset_image_url=None,
-                background_asset_image_url=None,
-                brand_asset_filename=None,
-                character_asset_filename=None,
-                background_asset_filename=None,
-                width=1920,
-                height=1080
-            )
+            if settings.use_webhooks():
+                # WEBHOOK MODE: Create prediction and return immediately
+                logger.info("🚀 Creating webhook-based prediction for standard generation...")
+                
+                # Prepare input parameters for nano-banana-pro
+                prompt = f"{scene.text}. {scene.style_prompt}. landscape orientation, horizontal composition."
+                
+                input_params = {
+                    "prompt": prompt,
+                    "resolution": "1K",
+                    "aspect_ratio": "16:9",
+                    "image_input": [],  # No control images
+                    "output_format": "png",
+                    "safety_filter_level": "block_only_high"
+                }
+                
+                # Create prediction with webhook
+                prediction_id = await replicate_service.create_prediction_with_webhook(
+                    model="google/nano-banana-pro",
+                    input_params=input_params,
+                    webhook_url=webhook_url
+                )
+                
+                # Store prediction ID in scene
+                scene.replicate_image_prediction_id = prediction_id
+                db.update_scene(scene_id, scene)
+                
+                logger.info(f"✅ Prediction created with ID: {prediction_id}")
+                logger.info("   Webhook will be called when generation completes")
+                logger.info("="*80)
+                
+                # Return immediately - webhook will handle completion
+                return
+            
+            else:
+                # BLOCKING MODE: Generate and wait for result (local dev)
+                logger.info("🚀 Generating standard scene (blocking mode for local dev)...")
+                
+                # Use the existing generate_scene_with_assets method with no assets (blocking)
+                image_url = await replicate_service.generate_scene_with_assets(
+                    scene_text=scene.text,
+                    style_prompt=scene.style_prompt,
+                    brand_asset_image_url=None,
+                    character_asset_image_url=None,
+                    background_asset_image_url=None,
+                    brand_asset_filename=None,
+                    character_asset_filename=None,
+                    background_asset_filename=None,
+                    width=1920,
+                    height=1080
+                )
+                logger.info(f"✅ Image generated: {image_url}")
+                logger.info("="*80)
         
-        # Persist image to Firebase Storage (common for both paths)
-        print(f"[Image Generation] Persisting scene image to Firebase Storage...")
-        logger.info("Persisting scene image to Firebase Storage...")
-        image_url = replicate_service.persist_replicate_image(image_url, folder="scenes")
-        
-        # Update scene with result (common for both paths)
-        # Update scene with image URL (now permanent Firebase URL)
-        scene.image_url = image_url
-        scene.generation_status.image = "complete"
-        scene.state = "image"
-        scene.error_message = None
+        # Persist and update scene if we have an image URL
+        # Webhook mode: already returned early (webhook handles completion)
+        # Blocking mode: falls through to here with image_url set
+        if 'image_url' in locals() and image_url:
+            # Persist image to Firebase Storage (common for both paths)
+            print(f"[Image Generation] Persisting scene image to Firebase Storage...")
+            logger.info("Persisting scene image to Firebase Storage...")
+            image_url = replicate_service.persist_replicate_image(image_url, folder="scenes")
+            
+            # Update scene with result (common for both paths)
+            # Update scene with image URL (now permanent Firebase URL)
+            scene.image_url = image_url
+            scene.generation_status.image = "complete"
+            scene.state = "image"
+            scene.error_message = None
 
-        db.update_scene(scene_id, scene)
-        print(f"[Image Generation] Successfully updated scene {scene_id} with image")
-        print(f"[Image Generation] Scene state after update: {scene.state}")
-        print(f"[Image Generation] Scene image_url after update: {scene.image_url}")
-        print(f"[Image Generation] Scene generation_status.image after update: {scene.generation_status.image}")
-        
-        # Verify the scene was saved correctly
-        verified_scene = db.get_scene(scene_id)
-        if verified_scene:
-            print(f"[Image Generation] Verified saved scene: state={verified_scene.state}, image_url={verified_scene.image_url}, status={verified_scene.generation_status.image}")
-        else:
-            print(f"[Image Generation] ERROR: Scene {scene_id} not found after update!")
+            db.update_scene(scene_id, scene)
+            print(f"[Image Generation] Successfully updated scene {scene_id} with image")
+            print(f"[Image Generation] Scene state after update: {scene.state}")
+            print(f"[Image Generation] Scene image_url after update: {scene.image_url}")
+            print(f"[Image Generation] Scene generation_status.image after update: {scene.generation_status.image}")
+            
+            # Verify the scene was saved correctly
+            verified_scene = db.get_scene(scene_id)
+            if verified_scene:
+                print(f"[Image Generation] Verified saved scene: state={verified_scene.state}, image_url={verified_scene.image_url}, status={verified_scene.generation_status.image}")
+            else:
+                print(f"[Image Generation] ERROR: Scene {scene_id} not found after update!")
 
     except Exception as e:
         # Update scene with error
@@ -1203,7 +1282,7 @@ async def regenerate_scene_image(
     """
     Regenerate image for a scene.
 
-    This clears the existing image and starts new generation.
+    This cancels any existing generation, clears the image, and starts new generation.
     """
     try:
         scene = db.get_scene(scene_id)
@@ -1212,6 +1291,14 @@ async def regenerate_scene_image(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Scene {scene_id} not found"
             )
+
+        # Cancel existing prediction if any
+        if scene.replicate_image_prediction_id:
+            print(f"[Image Regeneration] Canceling existing prediction: {scene.replicate_image_prediction_id}")
+            from app.services.replicate_service import get_replicate_service
+            replicate_service = get_replicate_service()
+            await replicate_service.cancel_prediction(scene.replicate_image_prediction_id)
+            scene.replicate_image_prediction_id = None
 
         # Reset image state
         scene.image_url = None
@@ -1243,7 +1330,7 @@ async def regenerate_scene_image(
 async def generate_video_task(scene_id: str):
     """Background task to generate video using Replicate."""
     print(f"\n{'='*80}")
-    print(f"[Video Generation] Starting video generation for scene {scene_id}")
+    print(f"[Video Generation] Starting video generation for scene {scene_id} ({'WEBHOOK' if settings.use_webhooks() else 'BLOCKING'} MODE)")
     print(f"{'='*80}")
     
     try:
@@ -1281,10 +1368,11 @@ async def generate_video_task(scene_id: str):
             db.update_scene(scene_id, scene)
             return
 
-        # Generate video using Replicate (image-to-video model)
+        # Generate video using Replicate with webhook (image-to-video model)
         # Using ByteDance SeeDance-1 Pro Fast - supports longer videos
-        print(f"[Video Generation] Initializing Replicate client")
-        client = replicate.Client(api_token=replicate_token)
+        print(f"[Video Generation] Initializing Replicate service")
+        from app.services.replicate_service import get_replicate_service
+        replicate_service = get_replicate_service()
         
         # Convert relative image URL to full URL for Replicate API
         full_image_url = settings.to_full_url(scene.image_url)
@@ -1336,52 +1424,87 @@ async def generate_video_task(scene_id: str):
             "aspect_ratio": "16:9",  # Landscape format (1080p)
         }
         
-        print(f"[Video Generation] Calling Replicate API:")
-        print(f"  - Model: bytedance/seedance-1-pro-fast")
-        print(f"  - Prompt: {scene.text[:100]}...")
-        print(f"  - Duration: {clamped_duration}s (clamped from {scene.video_duration}s)")
-        print(f"  - Resolution: {resolution}")
-        print(f"  - Aspect Ratio: 16:9")
-        print(f"  - Image: {'base64 data URI' if full_image_url.startswith('data:') else full_image_url[:80]}...")
-        print(f"[Video Generation] Sending request to Replicate...")
-        
-        start_time = asyncio.get_event_loop().time()
-        output = await asyncio.to_thread(
-            client.run,
-            "bytedance/seedance-1-pro-fast",
-            input=input_params
-        )
-        elapsed_time = asyncio.get_event_loop().time() - start_time
-
-        print(f"[Video Generation] ✓ Replicate API call completed in {elapsed_time:.2f}s")
-        print(f"[Video Generation] Output type: {type(output)}")
-        print(f"[Video Generation] Output: {output}")
-
-        # Extract video URL from output
-        # Video output might be a list or a single URL
-        if output:
-            if isinstance(output, list) and len(output) > 0:
-                video_url = str(output[0]) if hasattr(output[0], '__str__') else output[0]
-            else:
-                video_url = str(output) if hasattr(output, '__str__') else output
-
-            print(f"[Video Generation] ✓ Video URL extracted: {video_url[:100]}...")
-
-            # Update scene with video URL
-            scene.video_url = video_url
-            scene.generation_status.video = "complete"
-            scene.state = "video"
-            scene.error_message = None
+        if settings.use_webhooks():
+            # WEBHOOK MODE: Create prediction and return immediately
+            webhook_url = settings.get_webhook_url()
+            print(f"[Video Generation] Webhook URL: {webhook_url}")
+            
+            print(f"[Video Generation] Creating webhook-based prediction:")
+            print(f"  - Model: bytedance/seedance-1-pro-fast")
+            print(f"  - Prompt: {scene.text[:100]}...")
+            print(f"  - Duration: {clamped_duration}s (clamped from {scene.video_duration}s)")
+            print(f"  - Resolution: {resolution}")
+            print(f"  - Aspect Ratio: 16:9")
+            print(f"  - Image: {'base64 data URI' if full_image_url.startswith('data:') else full_image_url[:80]}...")
+            print(f"[Video Generation] Creating prediction with webhook...")
+            
+            # Create prediction with webhook
+            prediction_id = await replicate_service.create_prediction_with_webhook(
+                model="bytedance/seedance-1-pro-fast",
+                input_params=input_params,
+                webhook_url=webhook_url
+            )
+            
+            # Store prediction ID in scene
+            scene.replicate_video_prediction_id = prediction_id
             db.update_scene(scene_id, scene)
             
-            print(f"[Video Generation] ✓ Scene updated successfully")
-            print(f"[Video Generation] Status: {scene.generation_status.video}")
-            print(f"[Video Generation] State: {scene.state}")
+            print(f"[Video Generation] ✓ Prediction created with ID: {prediction_id}")
+            print(f"[Video Generation]    Webhook will be called when generation completes")
+            print(f"[Video Generation] ✓ Video generation started successfully for scene {scene_id}")
+            print(f"{'='*80}\n")
+        
         else:
-            raise Exception("No video generated")
-
-        print(f"[Video Generation] ✓ Video generation completed successfully for scene {scene_id}")
-        print(f"{'='*80}\n")
+            # BLOCKING MODE: Generate and wait for result (local dev)
+            print(f"[Video Generation] Generating video (blocking mode for local dev):")
+            print(f"  - Model: bytedance/seedance-1-pro-fast")
+            print(f"  - Prompt: {scene.text[:100]}...")
+            print(f"  - Duration: {clamped_duration}s (clamped from {scene.video_duration}s)")
+            print(f"  - Resolution: {resolution}")
+            print(f"  - Aspect Ratio: 16:9")
+            print(f"  - Image: {'base64 data URI' if full_image_url.startswith('data:') else full_image_url[:80]}...")
+            print(f"[Video Generation] Calling Replicate API (blocking)...")
+            
+            # Use blocking client.run call
+            import replicate
+            client = replicate.Client(api_token=replicate_token)
+            
+            start_time = asyncio.get_event_loop().time()
+            output = await asyncio.to_thread(
+                client.run,
+                "bytedance/seedance-1-pro-fast",
+                input=input_params
+            )
+            elapsed_time = asyncio.get_event_loop().time() - start_time
+            
+            print(f"[Video Generation] ✓ Replicate API call completed in {elapsed_time:.2f}s")
+            print(f"[Video Generation] Output type: {type(output)}")
+            print(f"[Video Generation] Output: {output}")
+            
+            # Extract video URL from output
+            if output:
+                if isinstance(output, list) and len(output) > 0:
+                    video_url = str(output[0]) if hasattr(output[0], '__str__') else output[0]
+                else:
+                    video_url = str(output) if hasattr(output, '__str__') else output
+                
+                print(f"[Video Generation] ✓ Video URL extracted: {video_url[:100]}...")
+                
+                # Update scene with video URL
+                scene.video_url = video_url
+                scene.generation_status.video = "complete"
+                scene.state = "video"
+                scene.error_message = None
+                db.update_scene(scene_id, scene)
+                
+                print(f"[Video Generation] ✓ Scene updated successfully")
+                print(f"[Video Generation] Status: {scene.generation_status.video}")
+                print(f"[Video Generation] State: {scene.state}")
+            else:
+                raise Exception("No video generated")
+            
+            print(f"[Video Generation] ✓ Video generation completed successfully for scene {scene_id}")
+            print(f"{'='*80}\n")
 
     except Exception as e:
         import traceback
@@ -1456,7 +1579,7 @@ async def regenerate_scene_video(
     """
     Regenerate video for a scene.
 
-    This clears the existing video and starts new generation.
+    This cancels any existing generation, clears the video, and starts new generation.
     """
     try:
         scene = db.get_scene(scene_id)
@@ -1471,6 +1594,14 @@ async def regenerate_scene_video(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot generate video without an image"
             )
+
+        # Cancel existing prediction if any
+        if scene.replicate_video_prediction_id:
+            print(f"[Video Regeneration] Canceling existing prediction: {scene.replicate_video_prediction_id}")
+            from app.services.replicate_service import get_replicate_service
+            replicate_service = get_replicate_service()
+            await replicate_service.cancel_prediction(scene.replicate_video_prediction_id)
+            scene.replicate_video_prediction_id = None
 
         # Reset video state
         scene.video_url = None

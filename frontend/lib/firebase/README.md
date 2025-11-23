@@ -163,3 +163,5 @@ Current status: **PR 1 Complete** - Functions available but not yet integrated i
 - Firebase web SDK should not have CORS issues
 - If you see CORS errors, check that you're using the web config (not service account)
 
+
+
