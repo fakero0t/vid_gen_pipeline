@@ -54,36 +54,18 @@ export default function MoodPage() {
     selectMood,
   } = useMoodGeneration();
 
-  // Track the last brief used for mood generation and prevent duplicate calls
-  const lastBriefRef = useRef<string | null>(null);
-  const isGeneratingRef = useRef(false);
-
-  // Create a hash of the brief to detect changes
-  const getBriefHash = (brief: typeof creativeBrief): string => {
-    if (!brief) return '';
-    return JSON.stringify({
-      product_name: brief.product_name,
-      target_audience: brief.target_audience,
-      emotional_tone: brief.emotional_tone,
-      visual_style_keywords: brief.visual_style_keywords,
-      key_messages: brief.key_messages,
-    });
-  };
+  // Track if we've already initiated generation to prevent duplicates
+  const hasInitiatedGenerationRef = useRef(false);
 
   // Auto-generate moods only if no moods exist (first time)
   // Do NOT regenerate when navigating back - only regenerate when regenerate button is clicked
   useEffect(() => {
-    if (!creativeBrief || isMoodLoading || isGeneratingRef.current) return;
+    if (!creativeBrief || isMoodLoading) return;
 
-    // Only generate if no moods exist (first time)
+    // Only generate if no moods exist (first time) AND we haven't already initiated generation
     // Do not regenerate when navigating back from backgrounds page
-    if (moods.length === 0) {
-      const briefHash = getBriefHash(creativeBrief);
-      
-      // Prevent duplicate calls with the same brief
-      if (lastBriefRef.current === briefHash) {
-        return;
-      }
+    if (moods.length === 0 && !hasInitiatedGenerationRef.current) {
+      hasInitiatedGenerationRef.current = true;
 
       const request: MoodGenerationRequest = {
         product_name: creativeBrief.product_name || 'Product',
@@ -93,12 +75,7 @@ export default function MoodPage() {
         key_messages: creativeBrief.key_messages || [],
       };
 
-      isGeneratingRef.current = true;
-      lastBriefRef.current = briefHash;
-      
-      generateMoodsFromBrief(request).finally(() => {
-        isGeneratingRef.current = false;
-      });
+      generateMoodsFromBrief(request);
     }
   }, [creativeBrief, isMoodLoading, moods.length]); // Removed generateMoodsFromBrief from deps - it's stable via useCallback
 
