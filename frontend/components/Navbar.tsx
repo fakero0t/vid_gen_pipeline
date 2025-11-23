@@ -29,11 +29,12 @@ export function Navbar() {
   const currentProject = isProjectPage ? getCurrentProject() : null;
   const projectId = isProjectPage ? pathname.split("/")[2] : null;
 
-  // Check if we're on chat, mood, scenes, or backgrounds page to show back button
+  // Check if we're on chat, mood, scenes, backgrounds, or final page to show back button
   const isChatPage = pathname?.includes("/chat");
   const isMoodPage = pathname?.includes("/mood");
   const isScenesPage = pathname?.includes("/scenes");
   const isBackgroundsPage = pathname?.includes("/backgrounds");
+  const isFinalPage = pathname?.includes("/final");
 
   const handleBack = () => {
     if (isChatPage) {
@@ -47,6 +48,9 @@ export function Navbar() {
     } else if (isBackgroundsPage && projectId) {
       setCurrentStep(STEPS.MOOD);
       router.push(`/project/${projectId}/mood`);
+    } else if (isFinalPage && projectId) {
+      setCurrentStep(STEPS.SCENES);
+      router.push(`/project/${projectId}/scenes`);
     }
   };
 
@@ -55,6 +59,7 @@ export function Navbar() {
     if (isMoodPage) return "Back to Chat";
     if (isScenesPage) return "Back to Background Selection";
     if (isBackgroundsPage) return "Back to Mood Selection";
+    if (isFinalPage) return "Back to Video Generation";
     return "";
   };
 
@@ -76,7 +81,7 @@ export function Navbar() {
       <div className="flex items-center flex-1">
         <button
           onClick={() => router.push("/projects")}
-          className="font-display text-lg font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
+          className="font-display text-xs sm:text-sm md:text-base lg:text-lg font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
           style={{
             background: 'linear-gradient(90deg, rgb(255, 81, 1) 0%, rgb(255, 200, 50) 50%, rgb(196, 230, 43) 100%)',
             WebkitBackgroundClip: 'text',
@@ -84,10 +89,10 @@ export function Navbar() {
             backgroundClip: 'text',
           }}
         >
-          AI Video Pipeline
+          PipeDream
         </button>
-        {/* Back button - shown on chat, mood, scenes, and backgrounds pages */}
-        {(isChatPage || isMoodPage || isScenesPage || isBackgroundsPage) && (
+        {/* Back button - shown on chat, mood, scenes, backgrounds, and final pages */}
+        {(isChatPage || isMoodPage || isScenesPage || isBackgroundsPage || isFinalPage) && (
           <button
             onClick={handleBack}
             className="ml-6 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-2 flex-shrink-0"

@@ -272,7 +272,7 @@ export default function BackgroundsPage() {
 
                   {/* Gallery - takes up remaining space */}
                   <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-6 sm:pt-8">
+                    <div className="flex-1 min-h-0 overflow-hidden pt-6 sm:pt-8">
                       <BackgroundGallery
                         backgrounds={backgroundAssets}
                         selectedIds={selectedBackgroundIds}

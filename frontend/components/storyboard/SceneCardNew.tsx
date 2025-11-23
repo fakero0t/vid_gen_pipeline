@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import type { StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { config } from '@/lib/config';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
@@ -38,15 +39,22 @@ export function SceneCardNew({
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(scene.text);
   const [duration, setDuration] = useState(scene.video_duration);
+  const [showEditTextConfirm, setShowEditTextConfirm] = useState(false);
+  const [showDurationConfirm, setShowDurationConfirm] = useState(false);
+  const [showRegenerateImageConfirm, setShowRegenerateImageConfirm] = useState(false);
+  const [pendingDuration, setPendingDuration] = useState<number | null>(null);
 
   // Handle text edit with warning
   const handleEditTextClick = () => {
     if (scene.state !== 'text') {
-      const confirmed = window.confirm(
-        'Editing text will erase image and video. This cannot be undone. Are you sure?'
-      );
-      if (!confirmed) return;
+      setShowEditTextConfirm(true);
+      return;
     }
+    setIsEditing(true);
+  };
+
+  const handleConfirmEditText = () => {
+    setShowEditTextConfirm(false);
     setIsEditing(true);
   };
 
@@ -69,13 +77,35 @@ export function SceneCardNew({
   // Handle duration edit with warning
   const handleDurationChange = async (newDuration: number) => {
     if (scene.state === 'video') {
-      const confirmed = window.confirm(
-        'Editing duration will erase video. This cannot be undone. Are you sure?'
-      );
-      if (!confirmed) return;
+      setPendingDuration(newDuration);
+      setShowDurationConfirm(true);
+      return;
     }
     setDuration(newDuration);
     await onUpdateDuration(newDuration);
+  };
+
+  const handleConfirmDurationChange = async () => {
+    setShowDurationConfirm(false);
+    if (pendingDuration !== null) {
+      setDuration(pendingDuration);
+      await onUpdateDuration(pendingDuration);
+      setPendingDuration(null);
+    }
+  };
+
+  // Handle regenerate image with warning if video exists
+  const handleRegenerateImageClick = () => {
+    if (scene.state === 'video' && scene.video_url) {
+      setShowRegenerateImageConfirm(true);
+      return;
+    }
+    onRegenerateImage();
+  };
+
+  const handleConfirmRegenerateImage = () => {
+    setShowRegenerateImageConfirm(false);
+    onRegenerateImage();
   };
 
   const isGeneratingImage = scene.generation_status.image === 'generating';
@@ -100,8 +130,8 @@ export function SceneCardNew({
       )}
 
       <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 space-y-3 overflow-visible">
-        {/* TEXT STATE */}
-        {scene.state === 'text' && (
+        {/* TEXT STATE - only show if not generating image */}
+        {scene.state === 'text' && !isGeneratingImage && (
           <div className="flex-1 min-h-0 flex gap-4 overflow-visible">
             {/* Left: Assets sections - 2/3 width */}
             <div className="w-2/3 flex-shrink-0 flex flex-col h-full min-w-0 gap-2 justify-between overflow-visible">
@@ -155,21 +185,20 @@ export function SceneCardNew({
                 ) : (
                   <>
                     <p className="text-base leading-relaxed flex-1 min-h-0 overflow-y-auto pr-2">{scene.text}</p>
-                    <div className="flex gap-1.5 flex-shrink-0 pt-2">
-                      <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading} className="flex-1 h-8 text-xs">
-                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerate
-                      </Button>
-                    </div>
                   </>
                 )}
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 pt-4 flex-shrink-0">
-                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="sm" className="w-full h-9 text-xs">
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={onRegenerateText} disabled={isLoading} className="w-3/5 h-[32px] text-xs px-3">
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Regenerate
+                </Button>
+
+                <Button onClick={onApproveText} disabled={isLoading || isEditing || isGeneratingImage} size="sm" className="w-3/5 h-[32px] text-xs px-3">
                   {isGeneratingImage ? (
                     <>
                       <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -189,8 +218,8 @@ export function SceneCardNew({
           </div>
         )}
 
-        {/* IMAGE STATE */}
-        {scene.state === 'image' && (
+        {/* IMAGE STATE - show when state is 'image' OR when generating image */}
+        {(scene.state === 'image' || isGeneratingImage) && (
           <div className="flex-1 min-h-0 flex gap-4">
             {/* Left: Image preview - 2/3 width */}
             <div className="w-2/3 flex-shrink-0 relative rounded-lg overflow-hidden flex items-center justify-center">
@@ -259,46 +288,46 @@ export function SceneCardNew({
               {/* Duration configuration */}
               <div className="space-y-2 pt-4 flex-shrink-0">
                 <div className="flex justify-center">
-                  <div className="w-1/2 flex items-center justify-between">
-                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                    <span className="text-sm font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  <div className="w-3/5 flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                  <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  <input
-                    type="range"
-                    min="1"
-                    max="8"
-                    step="0.1"
-                    value={duration}
-                    onChange={(e) => {
-                      const newValue = parseFloat(e.target.value);
-                      setDuration(newValue);
-                    }}
-                    onMouseUp={(e) => {
-                      const newValue = parseFloat((e.target as HTMLInputElement).value);
-                      handleDurationChange(newValue);
-                    }}
-                    onTouchEnd={(e) => {
-                      const newValue = parseFloat((e.target as HTMLInputElement).value);
-                      handleDurationChange(newValue);
-                    }}
-                    className="w-1/2 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
-                    disabled={isLoading}
-                  />
+                <input
+                  type="range"
+                  min="1"
+                  max="8"
+                  step="0.1"
+                  value={duration}
+                  onChange={(e) => {
+                    const newValue = parseFloat(e.target.value);
+                    setDuration(newValue);
+                  }}
+                  onMouseUp={(e) => {
+                    const newValue = parseFloat((e.target as HTMLInputElement).value);
+                    handleDurationChange(newValue);
+                  }}
+                  onTouchEnd={(e) => {
+                    const newValue = parseFloat((e.target as HTMLInputElement).value);
+                    handleDurationChange(newValue);
+                  }}
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                  disabled={isLoading}
+                />
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-row gap-2 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={onRegenerateImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="flex-1 h-9 text-xs">
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Regenerate Image
                 </Button>
 
-                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="sm" className="flex-1 h-9 text-xs">
+                <Button onClick={onApproveImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo} size="sm" className="w-3/5 h-[32px] text-xs px-3">
                   {isGeneratingVideo ? (
                     <>
                       <div className="w-3.5 h-3.5 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -320,14 +349,14 @@ export function SceneCardNew({
 
         {/* VIDEO STATE */}
         {scene.state === 'video' && (
-          <div className="flex-1 min-h-0 flex flex-col space-y-4">
-            {/* Video player */}
-            <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-black border border-border">
+          <div className="flex-1 min-h-0 flex gap-4">
+            {/* Left: Video player - 2/3 width */}
+            <div className="w-2/3 flex-shrink-0 relative rounded-lg overflow-hidden flex items-center justify-center bg-black border border-border">
               {isGeneratingVideo ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-white">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+                <div className="w-full h-full flex flex-col items-center justify-center bg-white dark:bg-zinc-900 text-black dark:text-white">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black dark:border-white mb-4"></div>
                   <p className="text-sm">Generating video...</p>
-                  <p className="text-xs text-white/60 mt-2">This may take up to 2 minutes</p>
+                  <p className="text-xs text-black/60 dark:text-white/60 mt-2">This may take up to 2 minutes</p>
                 </div>
               ) : scene.video_url ? (
                 <video
@@ -345,36 +374,31 @@ export function SceneCardNew({
               )}
             </div>
 
-            {/* Image thumbnail and text below */}
-            <div className="flex-shrink-0 grid grid-cols-[100px_1fr] gap-3">
-              {/* Thumbnail */}
-              {scene.image_url && (
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted border border-border">
-                  <Image
-                    src={scene.image_url}
-                    alt={`Scene ${sceneNumber} thumbnail`}
-                    fill
-                    className="object-cover"
-                    sizes="120px"
-                  />
-                </div>
-              )}
-
-              {/* Text and duration */}
-              <div className="space-y-2">
+            {/* Right: Controls and text - 1/3 width */}
+            <div className="w-1/3 flex-shrink-0 flex flex-col h-full min-w-0 justify-between">
+              {/* Scene Description - takes available space */}
+              <div className="flex-1 min-h-0 flex flex-col space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 flex-shrink-0">
+                  Scene Description
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </Button>
+                </h3>
                 {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="flex-1 min-h-0 flex flex-col space-y-2">
                     <textarea
                       value={editedText}
                       onChange={(e) => setEditedText(e.target.value)}
-                      className="w-full min-h-[120px] p-4 border-2 border-primary rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="flex-1 min-h-0 p-3 text-sm border-2 border-primary rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                       disabled={isLoading}
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveText} disabled={isLoading}>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button size="sm" className="h-8 text-xs px-3" onClick={handleSaveText} disabled={isLoading}>
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
+                      <Button size="sm" variant="outline" className="h-8 text-xs px-3" onClick={() => {
                         setEditedText(scene.text);
                         setIsEditing(false);
                       }} disabled={isLoading}>
@@ -383,47 +407,99 @@ export function SceneCardNew({
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm leading-relaxed flex-1">{scene.text}</p>
-                      <Button size="sm" variant="ghost" onClick={handleEditTextClick} disabled={isLoading} title="Edit text (will erase image/video)">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Duration:</span>
-                      <span className="text-sm font-medium">{scene.video_duration.toFixed(1)}s</span>
-                      <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleDurationChange(duration)} title="Edit duration (will erase video)">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </Button>
-                    </div>
-                  </>
+                  <p className="text-base leading-relaxed flex-1 min-h-0 overflow-y-auto pr-2">{scene.text}</p>
                 )}
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
-              <Button size="sm" variant="outline" onClick={onRegenerateImage} disabled={isLoading || isGeneratingImage || isGeneratingVideo}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Regenerate Image
-              </Button>
-              <Button size="sm" variant="outline" onClick={onRegenerateVideo} disabled={isLoading || isGeneratingVideo}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Regenerate Video
-              </Button>
+              {/* Duration configuration */}
+              <div className="space-y-2 pt-4 flex-shrink-0">
+                <div className="flex justify-center">
+                  <div className="w-3/5 flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
+                    <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <input
+                    type="range"
+                    min="1"
+                    max="8"
+                    step="0.1"
+                    value={duration}
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      setDuration(newValue);
+                    }}
+                    onMouseUp={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    onTouchEnd={(e) => {
+                      const newValue = parseFloat((e.target as HTMLInputElement).value);
+                      handleDurationChange(newValue);
+                    }}
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Regenerate Image
+                </Button>
+                <Button size="sm" variant="outline" onClick={onRegenerateVideo} disabled={isLoading || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Regenerate Video
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        isOpen={showEditTextConfirm}
+        title="Edit Scene Text"
+        message="Editing text will erase image and video. This cannot be undone. Are you sure?"
+        confirmText="Yes, Edit Text"
+        cancelText="Cancel"
+        onConfirm={handleConfirmEditText}
+        onCancel={() => setShowEditTextConfirm(false)}
+        variant="destructive"
+      />
+
+      <ConfirmDialog
+        isOpen={showDurationConfirm}
+        title="Edit Video Duration"
+        message="Editing duration will erase video. This cannot be undone. Are you sure?"
+        confirmText="Yes, Edit Duration"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDurationChange}
+        onCancel={() => {
+          setShowDurationConfirm(false);
+          setPendingDuration(null);
+        }}
+        variant="destructive"
+      />
+
+      <ConfirmDialog
+        isOpen={showRegenerateImageConfirm}
+        title="Regenerate Image"
+        message="Regenerating image will erase video. This cannot be undone. Are you sure?"
+        confirmText="Yes, Regenerate"
+        cancelText="Cancel"
+        onConfirm={handleConfirmRegenerateImage}
+        onCancel={() => setShowRegenerateImageConfirm(false)}
+        variant="destructive"
+      />
     </div>
   );
 }

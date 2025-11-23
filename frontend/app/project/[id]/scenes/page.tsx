@@ -411,11 +411,7 @@ function ScenesPageContent() {
   const handleUpdateDuration = async (sceneId: string, newDuration: number) => {
     try {
       await updateDuration(sceneId, newDuration);
-      addToast({
-        type: 'success',
-        message: 'Duration updated',
-        duration: 3000,
-      });
+      // No success notification - duration updates silently
     } catch (error) {
       addToast({
         type: 'error',
@@ -515,8 +511,7 @@ function ScenesPageContent() {
 
   // Handle preview all scenes
   const handlePreviewAll = () => {
-    // Preview modal is now part of StoryboardCarousel
-    console.log('Preview all scenes');
+    setIsPreviewOpen(true);
   };
 
   // Handle generate final video
@@ -611,99 +606,24 @@ function ScenesPageContent() {
   }
 
   return (
-    <div className="pt-[calc(3.5rem+1rem)] h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden animate-fadeIn">
+    <div className="h-screen flex flex-col overflow-hidden animate-fadeIn">
+      {/* Top bar with Title */}
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 pt-[calc(3.5rem+1rem)] pb-2 flex-shrink-0">
+        <div className="w-full max-w-7xl flex items-center justify-between">
+          {/* Title - centered (spacer on left for balance) */}
+          <div className="flex-1"></div>
+          <h2 className="text-base sm:text-lg font-display font-bold tracking-tight">
+            Generate your <span className="text-gradient">scenes</span>
+          </h2>
+          {/* Spacer for balance */}
+          <div className="flex-1"></div>
+        </div>
+      </div>
+
       {/* Compact header bar */}
       <div className="flex-shrink-0 px-4 sm:px-6 py-2 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Audio Component */}
-          <div className="flex-1 min-w-0 h-9 flex-shrink-0 max-w-md">
-            {audioUrl ? (
-              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-3 py-1.5 h-full">
-                <span className="text-green-600 dark:text-green-400 text-xs flex-shrink-0">✓</span>
-                <audio
-                  ref={audioRef}
-                  controls
-                  src={audioUrl}
-                  className="flex-1 h-7 min-w-0"
-                  preload="metadata"
-                  style={{ accentColor: '#22c55e' }}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs flex-shrink-0"
-                  onClick={handleRegenerateAudio}
-                  disabled={isGeneratingAudio || isLoading || !creativeBrief || !selectedMoodId}
-                  title="Regenerate audio"
-                >
-                  {isGeneratingAudio ? (
-                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-md px-3 py-1.5 h-full">
-                {isGeneratingAudio ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground">Generating audio...</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground">No audio</span>
-                  </>
-                )}
-                {!isGeneratingAudio && creativeBrief && selectedMoodId && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs ml-auto flex-shrink-0"
-                    onClick={handleRegenerateAudio}
-                    disabled={isLoading}
-                  >
-                    Generate
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRegenerateAll}
-              disabled={isSaving || isRegeneratingAll}
-              className="h-7 text-xs px-2"
-            >
-              {isRegeneratingAll ? (
-                <div className="w-3 h-3 border-2 border-[rgb(196,230,43)] border-t-transparent rounded-full animate-spin mr-1" />
-              ) : (
-                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )}
-              Regenerate All
-            </Button>
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => setIsPreviewOpen(true)}
-              disabled={isSaving || isRegeneratingAll || scenes.length === 0}
-              className="h-7 text-xs px-2"
-            >
-              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Preview
-            </Button>
-          </div>
+        <div className="max-w-7xl mx-auto">
+          {/* Empty header bar for spacing */}
         </div>
       </div>
 
@@ -726,8 +646,19 @@ function ScenesPageContent() {
           onRemoveScene={handleRemoveScene}
           onReorderScenes={handleReorderScenes}
           isLoading={isSaving || isRegeneratingAll}
+          audioUrl={audioUrl}
+          isGeneratingAudio={isGeneratingAudio}
+          onRegenerateAudio={handleRegenerateAudio}
+          audioRef={audioRef}
+          canGenerateAudio={!!(creativeBrief && selectedMoodId)}
+          allScenesReady={scenes.every(scene => scene.state === 'video' && scene.generation_status.video === 'complete')}
+          readyCount={scenes.filter(scene => scene.state === 'video' && scene.generation_status.video === 'complete').length}
+          totalScenes={scenes.length}
+          totalVideoDuration={scenes.reduce((total, scene) => total + (scene.video_duration || 0), 0)}
+          isRegeneratingAll={isRegeneratingAll}
         />
       </div>
+
 
       {/* Loading overlay for regenerate all */}
       {isRegeneratingAll && (
