@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useFirebaseAuth } from '@/lib/firebase/AuthContext';
+import { Button } from '@/components/ui/button';
 import type { AssetStatus } from '@/types/asset.types';
 
 interface AssetListProps {
@@ -29,6 +30,8 @@ export function AssetList({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const loadAssets = async () => {
     if (!userId) return;
@@ -50,26 +53,35 @@ export function AssetList({
     }
   }, [refreshTrigger, userId]);
 
-  const handleDelete = async (assetId: string) => {
-    if (!userId) return;
-    if (!confirm(`Are you sure you want to delete this ${assetType} asset?`)) {
-      return;
-    }
+  const handleDeleteClick = (assetId: string) => {
+    setAssetToDelete(assetId);
+    setShowConfirmDialog(true);
+  };
 
-    setDeletingIds(prev => new Set(prev).add(assetId));
+  const handleConfirmDelete = async () => {
+    if (!userId || !assetToDelete) return;
+
+    setDeletingIds(prev => new Set(prev).add(assetToDelete));
+    setShowConfirmDialog(false);
     try {
-      await deleteFn(assetId, userId);
-      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
-      onAssetDeleted?.(assetId);
+      await deleteFn(assetToDelete, userId);
+      setAssets(prev => prev.filter(asset => asset.asset_id !== assetToDelete));
+      onAssetDeleted?.(assetToDelete);
     } catch (err: any) {
-      alert(err.message || `Failed to delete ${assetType} asset`);
+      setError(err.message || `Failed to delete ${assetType} asset`);
     } finally {
       setDeletingIds(prev => {
         const next = new Set(prev);
-        next.delete(assetId);
+        next.delete(assetToDelete);
         return next;
       });
+      setAssetToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirmDialog(false);
+    setAssetToDelete(null);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -129,43 +141,82 @@ export function AssetList({
     );
   }
 
+  const assetToDeleteData = assetToDelete
+    ? assets.find(a => a.asset_id === assetToDelete)
+    : null;
+
   return (
-    <div className="bg-white rounded-lg border p-4 h-full flex flex-col overflow-hidden">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {assets.map((asset) => {
-            const isDeleting = deletingIds.has(asset.asset_id);
-            return (
-              <div
-                key={asset.asset_id}
-                className="border rounded-lg p-3 hover:shadow-md transition-shadow"
-              >
-                <div className="relative w-full aspect-square mb-3 bg-gray-50 rounded min-h-[300px]">
-                  {asset.public_url && (
-                    <Image
-                      src={asset.public_url}
-                      alt={asset.metadata.filename || `${assetType} asset`}
-                      fill
-                      className="object-contain rounded"
-                    />
-                  )}
+    <>
+      <div className="bg-white rounded-lg border p-4 h-full flex flex-col overflow-hidden">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">{title}</h2>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {assets.map((asset) => {
+              const isDeleting = deletingIds.has(asset.asset_id);
+              return (
+                <div
+                  key={asset.asset_id}
+                  className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+                >
+                  <div className="relative w-full aspect-square mb-3 rounded overflow-hidden">
+                    {asset.public_url && (
+                      <Image
+                        src={asset.public_url}
+                        alt={asset.metadata.filename || `${assetType} asset`}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => handleDeleteClick(asset.asset_id)}
+                      disabled={isDeleting}
+                      className="w-full mt-2 px-3 py-1.5 text-xs border-2 border-[rgb(255,81,1)] bg-transparent text-[rgb(255,81,1)] rounded-full hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => handleDelete(asset.asset_id)}
-                    disabled={isDeleting}
-                    className="w-full mt-2 px-3 py-1.5 text-xs border-2 border-[rgb(255,81,1)] bg-transparent text-[rgb(255,81,1)] rounded-full hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isDeleting ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && assetToDelete && assetToDeleteData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelDelete}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Delete {assetType.charAt(0).toUpperCase() + assetType.slice(1)} Asset?</h3>
+            <div className="space-y-2 mb-4">
+              <p className="text-sm text-muted-foreground">
+                {assetToDeleteData.metadata?.filename || `This ${assetType} asset`}
+              </p>
+              <p className="text-sm font-medium" style={{ color: 'rgb(255, 81, 1)' }}>
+                Warning: This action cannot be undone. The asset will be permanently deleted.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelDelete}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmDelete}
+                className="bg-[rgb(255,81,1)] text-white hover:bg-[rgb(255,100,20)]"
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

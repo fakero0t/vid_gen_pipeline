@@ -23,7 +23,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "AI Video Pipeline",
+  title: "PipeDream",
   description: "AI-powered video generation pipeline that turns your product vision into stunning vertical videos",
 };
 
