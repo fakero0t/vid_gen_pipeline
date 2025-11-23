@@ -36,6 +36,8 @@ export interface StoryboardScene {
   seed_image_urls?: string[] | null;
   video_url?: string | null;
   video_duration: number; // Default 5 seconds
+  trim_start_time?: number | null; // Trim start time in seconds
+  trim_end_time?: number | null; // Trim end time in seconds
   generation_status: SceneGenerationStatus;
   error_message?: string | null;
   created_at: string; // ISO timestamp
@@ -152,6 +154,8 @@ export interface PreviewData {
   url?: string | null;
   text?: string | null;
   duration: number;
+  trim_start_time?: number;
+  trim_end_time?: number;
 }
 
 /**

@@ -225,8 +225,45 @@ function ScenesPageContent() {
     }
   }, [error, storyboard, addToast]);
 
+  // Show toast for video generation errors from scenes
+  const shownErrorRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    scenes.forEach((scene) => {
+      // Check if scene has a video error that hasn't been shown yet
+      if (
+        scene.error_message &&
+        scene.generation_status.video === 'error' &&
+        !shownErrorRef.current.has(scene.id)
+      ) {
+        // Mark this error as shown
+        shownErrorRef.current.add(scene.id);
+        
+        // Show toast notification
+        addToast({
+          type: 'error',
+          message: scene.error_message,
+          duration: 5000,
+        });
+      }
+      
+      // Remove from shown errors if error is cleared
+      if (!scene.error_message && shownErrorRef.current.has(scene.id)) {
+        shownErrorRef.current.delete(scene.id);
+      }
+    });
+  }, [scenes, addToast]);
+
   // Track failed storyboard loads to prevent endless retries
   const failedStoryboardIdsRef = useRef<Set<string>>(new Set());
+  const initializationAttemptedRef = useRef<string | null>(null);
+  
+  // Reset initialization attempt tracking when key dependencies change
+  useEffect(() => {
+    const key = `${projectId}-${selectedMoodId}-${creativeBrief?.product_name || ''}`;
+    if (initializationAttemptedRef.current !== key) {
+      initializationAttemptedRef.current = null;
+    }
+  }, [projectId, selectedMoodId, creativeBrief?.product_name]);
   
   // Initialize or load storyboard
   useEffect(() => {
@@ -269,17 +306,28 @@ function ScenesPageContent() {
     } 
     // Only initialize new storyboard if we don't have one and we have the required data
     else if (!storyboard && creativeBrief && selectedMoodId) {
+      const key = `${projectId}-${selectedMoodId}-${creativeBrief?.product_name || ''}`;
+      // Skip if we've already attempted initialization for this combination
+      if (initializationAttemptedRef.current === key) {
+        console.log('[Page] Skipping storyboard initialization - already attempted for this combination');
+        return;
+      }
+      
       const selectedMood = moods.find((m) => m.id === selectedMoodId);
       const project = getCurrentProject();
       if (selectedMood) {
         console.log('[Page] Initializing new storyboard');
+        initializationAttemptedRef.current = key;
         initializeStoryboard(
           creativeBrief, 
           selectedMood, 
           projectId,
           project?.brandAssetIds || null,
           project?.characterAssetIds || null
-        );
+        ).catch((err) => {
+          // Log error but keep the attempt marker to prevent infinite retries
+          console.error('[Page] Storyboard initialization failed:', err);
+        });
       }
     }
   }, [storyboardId, urlStoryboardId, storyboard, creativeBrief, selectedMoodId, moods, isLoading, isRecovering, loadStoryboard, initializeStoryboard, currentProject, projectId]);
@@ -536,33 +584,29 @@ function ScenesPageContent() {
   // Error state
   if (error && !storyboard) {
     return (
-      <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
-        <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6 pt-4 sm:pt-6 md:pt-8">
-          <div className="max-w-md w-full bg-card border border-destructive rounded-lg p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <svg
-                className="w-6 h-6 text-destructive mt-0.5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div>
-                <h3 className="font-semibold text-destructive mb-1">Error Loading Storyboard</h3>
-                <p className="text-sm text-muted-foreground">{error}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push(`/project/${projectId}/chat`)}
-              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+      <div className="h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-destructive"
+              fill="currentColor"
+              viewBox="0 0 20 20"
             >
-              Return to Project
-            </button>
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
           </div>
+          <h3 className="text-lg font-semibold">Error Loading Storyboard</h3>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => router.push(`/project/${projectId}/chat`)}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Return to Project
+          </button>
         </div>
       </div>
     );
@@ -571,35 +615,33 @@ function ScenesPageContent() {
   // No storyboard state
   if (!storyboard || scenes.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)] items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
-        <div className="w-full max-w-7xl space-y-3 sm:space-y-4 md:space-y-6 pt-4 sm:pt-6 md:pt-8">
-          <div className="max-w-md w-full text-center space-y-4">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold">No Storyboard Found</h3>
-            <p className="text-sm text-muted-foreground">
-              Please complete the creative brief and mood selection first.
-            </p>
-            <button
-              onClick={() => router.push(`/project/${projectId}/chat`)}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+      <div className="h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Go to Creative Brief
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+              />
+            </svg>
           </div>
+          <h3 className="text-lg font-semibold">No Storyboard Found</h3>
+          <p className="text-sm text-muted-foreground">
+            Please complete the creative brief and mood selection first.
+          </p>
+          <button
+            onClick={() => router.push(`/project/${projectId}/chat`)}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Go to Creative Brief
+          </button>
         </div>
       </div>
     );
@@ -608,7 +650,7 @@ function ScenesPageContent() {
   return (
     <div className="h-screen flex flex-col overflow-hidden animate-fadeIn">
       {/* Top bar with Title */}
-      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 pt-[calc(3.5rem+1rem)] pb-2 flex-shrink-0">
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 pt-[calc(3.5rem+1rem)] pb-1 flex-shrink-0">
         <div className="w-full max-w-7xl flex items-center justify-between">
           {/* Title - centered (spacer on left for balance) */}
           <div className="flex-1"></div>
@@ -620,12 +662,6 @@ function ScenesPageContent() {
         </div>
       </div>
 
-      {/* Compact header bar */}
-      <div className="flex-shrink-0 px-4 sm:px-6 py-2 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto">
-          {/* Empty header bar for spacing */}
-        </div>
-      </div>
 
       {/* Main content area - fills remaining viewport */}
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -654,7 +690,13 @@ function ScenesPageContent() {
           allScenesReady={scenes.every(scene => scene.state === 'video' && scene.generation_status.video === 'complete')}
           readyCount={scenes.filter(scene => scene.state === 'video' && scene.generation_status.video === 'complete').length}
           totalScenes={scenes.length}
-          totalVideoDuration={scenes.reduce((total, scene) => total + (scene.video_duration || 0), 0)}
+          totalVideoDuration={scenes.reduce((total, scene) => {
+            // Calculate effective duration: trimmed if trim times exist, otherwise original
+            const effectiveDuration = (scene.trim_start_time !== null && scene.trim_end_time !== null)
+              ? scene.trim_end_time - scene.trim_start_time
+              : (scene.video_duration || 0);
+            return total + effectiveDuration;
+          }, 0)}
           isRegeneratingAll={isRegeneratingAll}
         />
       </div>

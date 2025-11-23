@@ -10,6 +10,7 @@ from app.models.storyboard_models import (
     SceneTextUpdateRequest,
     SceneTextGenerateRequest,
     SceneDurationUpdateRequest,
+    SceneTrimUpdateRequest,
     SceneUpdateResponse,
     SSESceneUpdate,
     ErrorResponse,
@@ -803,6 +804,13 @@ async def disable_background_asset(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable background asset: {str(e)}"
         )
+
+
+@router.delete("/{storyboard_id}/scenes/{scene_id}/character-asset")
+async def disable_character_asset(
+    storyboard_id: str,
+    scene_id: str
+):
     """
     Disable character asset for a scene.
     
@@ -1623,6 +1631,105 @@ async def regenerate_scene_video(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start video regeneration: {str(e)}"
+        )
+
+
+@router.post("/{storyboard_id}/scenes/{scene_id}/video/trim", response_model=SceneUpdateResponse)
+async def update_scene_trim(
+    storyboard_id: str,
+    scene_id: str,
+    request: SceneTrimUpdateRequest
+):
+    """
+    Update trim start/end times for a scene video.
+    
+    Validates:
+    - Scene exists and has a video
+    - Trim times are within video duration
+    - trim_end_time > trim_start_time
+    """
+    try:
+        scene = db.get_scene(scene_id)
+        if not scene:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Scene {scene_id} not found"
+            )
+
+        # Validate scene has video
+        if not scene.video_url:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot trim video: scene has no video URL"
+            )
+
+        if scene.generation_status.video != "complete":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot trim video: video generation is not complete"
+            )
+
+        # Validate trim times
+        # If both are None, clear trim (use full video)
+        if request.trim_start_time is None and request.trim_end_time is None:
+            scene.trim_start_time = None
+            scene.trim_end_time = None
+        else:
+            # Both must be provided if one is set
+            if request.trim_start_time is None or request.trim_end_time is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Both trim_start_time and trim_end_time must be provided together, or both must be None"
+                )
+
+            # Validate values
+            if request.trim_start_time < 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="trim_start_time must be >= 0"
+                )
+
+            if request.trim_end_time <= request.trim_start_time:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="trim_end_time must be greater than trim_start_time"
+                )
+
+            # Validate against video duration (use scene.video_duration as max)
+            # Note: This uses the requested duration, not actual video file duration
+            # For more accuracy, we could probe the video file, but that requires downloading it
+            # Allow small tolerance (0.1s) for floating point precision differences between
+            # stored duration and actual video file duration
+            TOLERANCE = 0.1
+            if request.trim_end_time > scene.video_duration + TOLERANCE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"trim_end_time ({request.trim_end_time}s) exceeds video duration ({scene.video_duration}s)"
+                )
+            
+            # Clamp trim_end_time to not exceed video duration to handle precision differences
+            # between stored duration and actual video file duration
+            clamped_trim_end_time = min(request.trim_end_time, scene.video_duration)
+
+            # Update scene with trim times
+            scene.trim_start_time = request.trim_start_time
+            scene.trim_end_time = clamped_trim_end_time
+
+        # Save updated scene
+        updated_scene = db.update_scene(scene_id, scene)
+
+        return SceneUpdateResponse(
+            success=True,
+            scene=updated_scene,
+            message="Video trim times updated successfully"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update trim times: {str(e)}"
         )
 
 

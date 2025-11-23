@@ -242,6 +242,32 @@ export async function regenerateSceneVideo(
 }
 
 /**
+ * 9.5. Update scene video trim times
+ * POST /api/storyboards/{storyboard_id}/scenes/{scene_id}/video/trim
+ */
+export async function updateSceneTrim(
+  storyboardId: string,
+  sceneId: string,
+  trimStartTime: number | null,
+  trimEndTime: number | null
+): Promise<StoryboardScene> {
+  const result = await apiRequest<{ success: boolean; scene: StoryboardScene; message?: string }>(
+    `/api/storyboards/${storyboardId}/scenes/${sceneId}/video/trim`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        trim_start_time: trimStartTime,
+        trim_end_time: trimEndTime,
+      }),
+    }
+  );
+  if (!result.scene) {
+    throw new Error('Invalid response: scene not found');
+  }
+  return result.scene;
+}
+
+/**
  * 10. Get scene status (polling fallback for SSE)
  * GET /api/scenes/{scene_id}/status
  */

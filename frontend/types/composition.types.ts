@@ -20,6 +20,8 @@ export interface VideoClipInput {
   scene_number: number;
   video_url: string;
   duration: number;
+  trim_start_time?: number;
+  trim_end_time?: number;
 }
 
 /**

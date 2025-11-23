@@ -59,11 +59,17 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
         // Additional validation: try to create URL object to ensure it's valid
         try {
           new URL(scene.video_url);
+          // Calculate effective duration: trimmed if trim times exist, otherwise original
+          const effectiveDuration = (scene.trim_start_time !== null && scene.trim_end_time !== null)
+            ? scene.trim_end_time - scene.trim_start_time
+            : scene.video_duration;
           return {
             scene_id: scene.id,
             type: 'video',
             url: scene.video_url,
-            duration: scene.video_duration,
+            duration: effectiveDuration,
+            trim_start_time: scene.trim_start_time ?? undefined,
+            trim_end_time: scene.trim_end_time ?? undefined,
           };
         } catch (e) {
           // Invalid URL format - fall through to image or text
@@ -109,6 +115,10 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
   const startPlayback = () => {
     setIsPlaying(true);
     if (currentPreview.type === 'video' && videoRef.current) {
+      // Set video to trim start time if trim is active
+      if (currentPreview.trim_start_time !== undefined) {
+        videoRef.current.currentTime = currentPreview.trim_start_time;
+      }
       videoRef.current.play();
     } else {
       // For image/text, set timeout for duration
@@ -169,11 +179,19 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
     // Reset video element when scene changes
     if (videoRef.current && preview.type === 'video' && preview.url) {
       videoRef.current.load(); // Force reload of video source
+      // Set to trim start time if trim is active
+      if (preview.trim_start_time !== undefined) {
+        videoRef.current.currentTime = preview.trim_start_time;
+      }
     }
 
     // Auto-play next scene if currently playing
     if (isPlaying) {
       if (preview.type === 'video' && videoRef.current && preview.url) {
+        // Set to trim start time if trim is active
+        if (preview.trim_start_time !== undefined) {
+          videoRef.current.currentTime = preview.trim_start_time;
+        }
         videoRef.current.play().catch((error) => {
           console.error('Video play error:', error);
           setVideoError('Failed to play video');
@@ -211,13 +229,44 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
 
   // Handle video end
   const handleVideoEnded = () => {
-    nextScene();
+    // Only move to next scene if video naturally ended (not trimmed)
+    // For trimmed videos, handleVideoTimeUpdate will handle the transition
+    if (currentPreview.type === 'video' && 
+        currentPreview.trim_end_time !== undefined && 
+        videoRef.current) {
+      // If we have trim times, the time update handler will handle the transition
+      // This is just a fallback for videos that naturally end at trim_end_time
+      const trimEnd = currentPreview.trim_end_time;
+      if (Math.abs(videoRef.current.currentTime - trimEnd) < 0.1) {
+        nextScene();
+      }
+    } else {
+      // No trim times, video naturally ended
+      nextScene();
+    }
   };
 
   // Update progress for video playback
   const handleVideoTimeUpdate = () => {
-    if (videoRef.current) {
-      const percent = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+    if (videoRef.current && currentPreview.type === 'video') {
+      const video = videoRef.current;
+      const trimStart = currentPreview.trim_start_time ?? 0;
+      const trimEnd = currentPreview.trim_end_time ?? video.duration;
+      
+      // Constrain playback to trimmed range
+      if (video.currentTime < trimStart) {
+        video.currentTime = trimStart;
+      } else if (video.currentTime >= trimEnd) {
+        // Reached end of trimmed section, move to next scene
+        video.pause();
+        nextScene();
+        return;
+      }
+      
+      // Calculate progress based on trimmed duration
+      const trimmedDuration = trimEnd - trimStart;
+      const currentTimeInTrim = video.currentTime - trimStart;
+      const percent = (currentTimeInTrim / trimmedDuration) * 100;
       setProgress(percent);
     }
   };
@@ -323,6 +372,16 @@ export function PreviewPlayer({ scenes, sceneOrder, isOpen, onClose }: PreviewPl
                 onLoadedData={() => {
                   // Video loaded successfully
                   setVideoError(null);
+                  // Set to trim start time if trim is active
+                  if (videoRef.current && currentPreview.trim_start_time !== undefined) {
+                    videoRef.current.currentTime = currentPreview.trim_start_time;
+                  }
+                }}
+                onLoadedMetadata={() => {
+                  // Set to trim start time when metadata is loaded
+                  if (videoRef.current && currentPreview.trim_start_time !== undefined) {
+                    videoRef.current.currentTime = currentPreview.trim_start_time;
+                  }
                 }}
                 preload="metadata"
               >

@@ -128,7 +128,11 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
     const clips: VideoClipInput[] = videoScenes.map((scene, index) => ({
       scene_number: index + 1,
       video_url: scene.video_url!,
-      duration: scene.video_duration,
+      duration: scene.trim_end_time && scene.trim_start_time
+        ? scene.trim_end_time - scene.trim_start_time
+        : scene.video_duration,
+      trim_start_time: scene.trim_start_time ?? undefined,
+      trim_end_time: scene.trim_end_time ?? undefined,
     }));
 
     console.log(`📹 Preparing ${clips.length} video clips for composition`);
@@ -207,14 +211,6 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
 
   return (
     <div className="space-y-6">
-      {/* Description text - centered (only show when not complete) */}
-      {!(isComplete && finalVideo) && (
-        <div className="text-center mb-3 flex-shrink-0 animate-fadeIn">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Composing your final video with music and transitions
-          </p>
-      </div>
-      )}
 
       {/* Not Started */}
       {!hasStarted && !isComposing && !jobStatus && (
@@ -233,7 +229,7 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
 
       {/* In Progress - Loading Animation */}
       {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && !(isComplete && finalVideo && jobStatus?.video_url) && (
-        <div className="min-h-[400px] flex items-center justify-center relative">
+        <div className="flex items-center justify-center min-h-[70vh] w-full">
           <LoadingPhrases />
         </div>
       )}

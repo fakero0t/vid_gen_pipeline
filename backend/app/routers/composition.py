@@ -153,7 +153,9 @@ async def _process_composition(job_id: str, request: CompositionRequest):
             {
                 "scene_number": clip.scene_number,
                 "video_url": clip.video_url,
-                "duration": clip.duration
+                "duration": clip.duration,
+                "trim_start_time": clip.trim_start_time,
+                "trim_end_time": clip.trim_end_time
             }
             for clip in request.clips
         ]

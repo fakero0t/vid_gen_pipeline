@@ -54,8 +54,9 @@ export default function MoodPage() {
     selectMood,
   } = useMoodGeneration();
 
-  // Track the last brief used for mood generation
+  // Track the last brief used for mood generation and prevent duplicate calls
   const lastBriefRef = useRef<string | null>(null);
+  const isGeneratingRef = useRef(false);
 
   // Create a hash of the brief to detect changes
   const getBriefHash = (brief: typeof creativeBrief): string => {
@@ -72,11 +73,18 @@ export default function MoodPage() {
   // Auto-generate moods only if no moods exist (first time)
   // Do NOT regenerate when navigating back - only regenerate when regenerate button is clicked
   useEffect(() => {
-    if (!creativeBrief || isMoodLoading) return;
+    if (!creativeBrief || isMoodLoading || isGeneratingRef.current) return;
 
     // Only generate if no moods exist (first time)
     // Do not regenerate when navigating back from backgrounds page
     if (moods.length === 0) {
+      const briefHash = getBriefHash(creativeBrief);
+      
+      // Prevent duplicate calls with the same brief
+      if (lastBriefRef.current === briefHash) {
+        return;
+      }
+
       const request: MoodGenerationRequest = {
         product_name: creativeBrief.product_name || 'Product',
         target_audience: creativeBrief.target_audience || 'General Audience',
@@ -85,10 +93,14 @@ export default function MoodPage() {
         key_messages: creativeBrief.key_messages || [],
       };
 
-      generateMoodsFromBrief(request);
-      lastBriefRef.current = getBriefHash(creativeBrief);
+      isGeneratingRef.current = true;
+      lastBriefRef.current = briefHash;
+      
+      generateMoodsFromBrief(request).finally(() => {
+        isGeneratingRef.current = false;
+      });
     }
-  }, [creativeBrief, isMoodLoading, moods.length, generateMoodsFromBrief]);
+  }, [creativeBrief, isMoodLoading, moods.length]); // Removed generateMoodsFromBrief from deps - it's stable via useCallback
 
   // Auto-select first mood after moods are generated
   useEffect(() => {

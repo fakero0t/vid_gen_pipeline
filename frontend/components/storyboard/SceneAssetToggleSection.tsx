@@ -21,7 +21,10 @@ interface SceneAssetToggleSectionProps {
 export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps) {
   const { userId } = useFirebaseAuth();
   const { getCurrentProject } = useProjectStore();
-  const { enableBrandAsset, disableBrandAsset, enableCharacterAsset, disableCharacterAsset, enableBackgroundAsset, disableBackgroundAsset } = useSceneStore();
+  const { enableBrandAsset, disableBrandAsset, enableCharacterAsset, disableCharacterAsset, enableBackgroundAsset, disableBackgroundAsset, scenes } = useSceneStore();
+  
+  // Get the latest scene from the store to ensure reactivity
+  const currentScene = scenes.find(s => s.id === scene.id) || scene;
   
   const [brandAssets, setBrandAssets] = useState<BrandAssetStatus[]>([]);
   const [characterAssets, setCharacterAssets] = useState<CharacterAssetStatus[]>([]);
@@ -106,15 +109,15 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     try {
       if (checked) {
         // If another brand asset is already selected, it will be replaced
-        await enableBrandAsset(scene.id, assetId);
-        if (scene.image_url) {
+        await enableBrandAsset(currentScene.id, assetId);
+        if (currentScene.image_url) {
           console.log('Scene will be regenerated with brand asset');
         }
       } else {
         // Only disable if this is the currently selected asset
-        if (scene.brand_asset_id === assetId) {
-          await disableBrandAsset(scene.id);
-          if (scene.image_url) {
+        if (currentScene.brand_asset_id === assetId) {
+          await disableBrandAsset(currentScene.id);
+          if (currentScene.image_url) {
             console.log('Scene will be regenerated without brand asset');
           }
         }
@@ -131,15 +134,15 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     try {
       if (checked) {
         // If another character asset is already selected, it will be replaced
-        await enableCharacterAsset(scene.id, assetId);
-        if (scene.image_url) {
+        await enableCharacterAsset(currentScene.id, assetId);
+        if (currentScene.image_url) {
           console.log('Scene will be regenerated with character asset');
         }
       } else {
         // Only disable if this is the currently selected asset
-        if (scene.character_asset_id === assetId) {
-          await disableCharacterAsset(scene.id);
-          if (scene.image_url) {
+        if (currentScene.character_asset_id === assetId) {
+          await disableCharacterAsset(currentScene.id);
+          if (currentScene.image_url) {
             console.log('Scene will be regenerated without character asset');
           }
         }
@@ -156,15 +159,15 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
     try {
       if (checked) {
         // If another background asset is already selected, it will be replaced
-        await enableBackgroundAsset(scene.id, assetId);
-        if (scene.image_url) {
+        await enableBackgroundAsset(currentScene.id, assetId);
+        if (currentScene.image_url) {
           console.log('Scene will be regenerated with background asset');
         }
       } else {
         // Only disable if this is the currently selected asset
-        if (scene.background_asset_id === assetId) {
-          await disableBackgroundAsset(scene.id);
-          if (scene.image_url) {
+        if (currentScene.background_asset_id === assetId) {
+          await disableBackgroundAsset(currentScene.id);
+          if (currentScene.image_url) {
             console.log('Scene will be regenerated without background asset');
           }
         }
@@ -199,13 +202,13 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
   }) => {
     // Always render the same structure to maintain consistent layout
     return (
-      <div className="flex items-center gap-2 min-h-[3rem]">
-        <h5 className="text-xs font-semibold text-foreground whitespace-nowrap w-28 flex-shrink-0">{label}</h5>
-        <div className="flex flex-wrap gap-2 flex-1 items-center min-h-[3rem]">
+      <div className="flex items-center gap-4 min-h-[8rem]">
+        <h5 className="text-base font-semibold text-foreground whitespace-nowrap w-36 flex-shrink-0">{label}</h5>
+        <div className="flex flex-wrap gap-3 flex-1 items-center min-h-[8rem]">
           {isLoading ? (
-            <div className="text-xs text-muted-foreground">Loading...</div>
+            <div className="text-base text-muted-foreground">Loading...</div>
           ) : assets.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">No assets available</div>
+            <div className="text-base text-muted-foreground italic">No assets available</div>
           ) : (
             assets.map((asset) => {
               const isSelected = selectedId === asset.asset_id;
@@ -214,7 +217,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                 <div
                   key={asset.asset_id}
                   className={cn(
-                    'border-2 rounded p-1.5 cursor-pointer transition-all flex-shrink-0',
+                    'border-2 rounded p-2.5 cursor-pointer transition-all flex-shrink-0',
                     isSelected
                       ? 'border-primary shadow-sm'
                       : 'border-border hover:border-primary/50 hover:shadow-sm',
@@ -222,7 +225,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
                   )}
                   onClick={() => !isToggling && onToggle(!isSelected, asset.asset_id)}
                 >
-                  <div className="relative w-[72px] h-[72px] sm:w-[96px] sm:h-[96px] md:w-[120px] md:h-[120px] aspect-square rounded overflow-hidden">
+                  <div className="relative w-28 h-28 aspect-square rounded overflow-hidden bg-muted">
                     {imageUrl && (
                       <Image
                         src={imageUrl}
@@ -242,13 +245,13 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2 bg-muted/50 rounded-lg border min-w-[400px] h-full overflow-hidden">
-      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+    <div className="flex flex-col gap-3 p-3 bg-muted/50 rounded-lg border min-w-[400px] h-full overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
       {/* Brand Asset Grid */}
       {projectBrandAssetIds.length > 0 && (
         <AssetGrid
           assets={brandAssets}
-          selectedId={scene.brand_asset_id ?? null}
+          selectedId={currentScene.brand_asset_id ?? null}
           onToggle={handleBrandToggle}
           isLoading={isLoadingBrand}
           isToggling={isTogglingBrand}
@@ -260,7 +263,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
       {projectCharacterAssetIds.length > 0 && (
         <AssetGrid
           assets={characterAssets}
-          selectedId={scene.character_asset_id ?? null}
+          selectedId={currentScene.character_asset_id ?? null}
           onToggle={handleCharacterToggle}
           isLoading={isLoadingCharacter}
           isToggling={isTogglingCharacter}
@@ -272,7 +275,7 @@ export function SceneAssetToggleSection({ scene }: SceneAssetToggleSectionProps)
       {projectBackgroundAssetIds.length > 0 && (
         <AssetGrid
           assets={backgroundAssets}
-          selectedId={scene.background_asset_id ?? null}
+          selectedId={currentScene.background_asset_id ?? null}
           onToggle={handleBackgroundToggle}
           isLoading={isLoadingBackground}
           isToggling={isTogglingBackground}

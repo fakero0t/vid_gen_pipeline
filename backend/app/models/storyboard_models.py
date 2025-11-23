@@ -41,6 +41,10 @@ class StoryboardScene(BaseModel):
     video_url: Optional[str] = Field(default=None, description="URL of generated video")
     video_duration: float = Field(default=5.0, description="Video duration in seconds", ge=1.0, le=8.0)
     
+    # Video trimming fields
+    trim_start_time: Optional[float] = Field(default=None, description="Trim start time in seconds (0-based)", ge=0)
+    trim_end_time: Optional[float] = Field(default=None, description="Trim end time in seconds (0-based)", ge=0)
+    
     # Product compositing (for product mode)
     use_product_composite: bool = Field(default=False, description="Whether to composite product into scene")
     product_id: Optional[str] = Field(default=None, description="Product ID to composite (if use_product_composite=True)")
@@ -154,6 +158,12 @@ class SceneTextGenerateRequest(BaseModel):
 class SceneDurationUpdateRequest(BaseModel):
     """Request to update scene duration."""
     duration: float = Field(..., description="New duration in seconds", ge=1.0, le=8.0)
+
+
+class SceneTrimUpdateRequest(BaseModel):
+    """Request to update scene video trim times."""
+    trim_start_time: Optional[float] = Field(None, description="Trim start time in seconds", ge=0)
+    trim_end_time: Optional[float] = Field(None, description="Trim end time in seconds", ge=0)
 
 
 class SceneUpdateResponse(BaseModel):

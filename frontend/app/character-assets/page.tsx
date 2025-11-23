@@ -23,14 +23,7 @@ function CharacterAssetsPageContent() {
   const handleUploadComplete = (assetId: string) => {
     // Trigger refresh of the asset list
     setRefreshTrigger(prev => prev + 1);
-    
-    // If redirected from project creation, redirect back after upload
-    if (fromCreateProject) {
-      // Small delay to ensure the asset is visible in the list
-      setTimeout(() => {
-        router.push('/projects');
-      }, 500);
-    }
+    // User stays on the assets page - they can manually navigate back using the "Back to Projects" button if needed
   };
 
   const handleAssetDeleted = (assetId: string) => {

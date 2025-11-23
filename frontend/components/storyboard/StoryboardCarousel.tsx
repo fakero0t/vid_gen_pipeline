@@ -175,7 +175,7 @@ export function StoryboardCarousel({
   return (
     <div className="h-full flex flex-col w-full px-4 sm:px-6">
       {/* Top bar with timeline - compact */}
-      <div className="flex-shrink-0 py-2 border-b border-border">
+      <div className="flex-shrink-0 py-2">
         <div className="flex items-center justify-between gap-4">
           {/* Compact Timeline */}
           <div className="flex-shrink-0">
@@ -358,24 +358,22 @@ export function StoryboardCarousel({
         </div>
         
         {/* Right side: scenes ready and generate final video */}
-        {allScenesReady && (
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">
-              {readyCount}/{totalScenes} scenes ready
-            </span>
-            <Button
-              size="lg"
-              onClick={onGenerateFinalVideo}
-              disabled={!allScenesReady || isLoading}
-              className="h-10 text-sm px-6 bg-[rgb(255,81,1)] text-[rgb(196,230,43)] hover:bg-[rgb(255,100,20)] font-bold shadow-md hover:shadow-lg transition-all"
-            >
-              Generate Final Video
-              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-muted-foreground">
+            {readyCount}/{totalScenes} scenes ready
+          </span>
+          <Button
+            size="lg"
+            onClick={onGenerateFinalVideo}
+            disabled={!allScenesReady || isLoading}
+            className="h-10 text-sm px-6 bg-[rgb(255,81,1)] text-[rgb(196,230,43)] hover:bg-[rgb(255,100,20)] font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Generate Final Video
+            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Button>
+        </div>
       </div>
 
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import type { StoryboardScene } from '@/types/storyboard.types';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { config } from '@/lib/config';
 import { useAppStore } from '@/store/appStore';
 import { useSceneStore } from '@/store/sceneStore';
-import { SceneAssetDisplay } from './SceneAssetDisplay';
 import { SceneAssetToggleSection } from './SceneAssetToggleSection';
+import { VideoTrimmerOverlay } from './VideoTrimmerOverlay';
 
 interface SceneCardNewProps {
   scene: StoryboardScene;
@@ -43,6 +43,25 @@ export function SceneCardNew({
   const [showDurationConfirm, setShowDurationConfirm] = useState(false);
   const [showRegenerateImageConfirm, setShowRegenerateImageConfirm] = useState(false);
   const [pendingDuration, setPendingDuration] = useState<number | null>(null);
+  // Show trimmer by default when video is available
+  const [isTrimming, setIsTrimming] = useState(false);
+  const [localTrimStart, setLocalTrimStart] = useState<number | null>(scene.trim_start_time ?? null);
+  const [localTrimEnd, setLocalTrimEnd] = useState<number | null>(scene.trim_end_time ?? null);
+  const [actualVideoDuration, setActualVideoDuration] = useState<number>(scene.video_duration);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Define derived state values
+  const isGeneratingImage = scene.generation_status.image === 'generating';
+  const isGeneratingVideo = scene.generation_status.video === 'generating';
+
+  // Auto-show trimmer when video is available and complete
+  useEffect(() => {
+    if (scene.state === 'video' && scene.video_url && scene.generation_status.video === 'complete' && !isGeneratingVideo) {
+      setIsTrimming(true);
+    } else {
+      setIsTrimming(false);
+    }
+  }, [scene.state, scene.video_url, scene.generation_status.video, isGeneratingVideo]);
 
   // Handle text edit with warning
   const handleEditTextClick = () => {
@@ -95,40 +114,91 @@ export function SceneCardNew({
   };
 
   // Handle regenerate image with warning if video exists
-  const handleRegenerateImageClick = () => {
+  const handleRegenerateImageClick = async () => {
     if (scene.state === 'video' && scene.video_url) {
       setShowRegenerateImageConfirm(true);
       return;
     }
-    onRegenerateImage();
+    try {
+      await onRegenerateImage();
+    } catch (error) {
+      console.error('Failed to regenerate image:', error);
+      // Error is handled by the store and displayed in the error alert
+    }
   };
 
-  const handleConfirmRegenerateImage = () => {
+  const handleConfirmRegenerateImage = async () => {
     setShowRegenerateImageConfirm(false);
-    onRegenerateImage();
+    try {
+      await onRegenerateImage();
+    } catch (error) {
+      console.error('Failed to regenerate image:', error);
+      // Error is handled by the store and displayed in the error alert
+    }
   };
 
-  const isGeneratingImage = scene.generation_status.image === 'generating';
-  const isGeneratingVideo = scene.generation_status.video === 'generating';
-  const hasError = !!scene.error_message;
+  // Get actual video duration from video element
+  useEffect(() => {
+    if (videoRef.current && scene.video_url) {
+      const video = videoRef.current;
+      const handleLoadedMetadata = () => {
+        setActualVideoDuration(video.duration);
+      };
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      if (video.duration) {
+        setActualVideoDuration(video.duration);
+      }
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    }
+  }, [scene.video_url]);
+
+  // Sync trim times from scene
+  useEffect(() => {
+    setLocalTrimStart(scene.trim_start_time ?? null);
+    setLocalTrimEnd(scene.trim_end_time ?? null);
+  }, [scene.trim_start_time, scene.trim_end_time]);
+
+  // Handle trim change - auto-save immediately
+  const handleTrimChange = async (startTime: number, endTime: number) => {
+    // Clamp endTime to not exceed actual video duration to avoid precision errors
+    const clampedEndTime = Math.min(endTime, actualVideoDuration);
+    
+    setLocalTrimStart(startTime);
+    setLocalTrimEnd(clampedEndTime);
+    
+    // Optimistically update the store immediately so total duration updates in real-time
+    const { updateScene } = useSceneStore.getState();
+    updateScene(scene.id, {
+      trim_start_time: startTime,
+      trim_end_time: clampedEndTime,
+    });
+    
+    // Auto-save trim changes
+    try {
+      const { updateSceneTrim } = useSceneStore.getState();
+      await updateSceneTrim(scene.id, startTime, clampedEndTime);
+    } catch (error) {
+      console.error('Failed to save trim:', error);
+      // Error is handled by store
+      // On error, revert to previous trim times
+      updateScene(scene.id, {
+        trim_start_time: scene.trim_start_time,
+        trim_end_time: scene.trim_end_time,
+      });
+      setLocalTrimStart(scene.trim_start_time ?? null);
+      setLocalTrimEnd(scene.trim_end_time ?? null);
+    }
+  };
+
+  // Calculate effective duration (trimmed or original)
+  const effectiveDuration = (localTrimStart !== null && localTrimEnd !== null)
+    ? localTrimEnd - localTrimStart
+    : scene.video_duration;
 
   return (
     <div className="w-full h-full bg-card border border-border rounded-lg overflow-hidden flex flex-col">
-      {/* Error alert */}
-      {hasError && (
-        <div className="bg-destructive/10 border-b border-destructive px-6 py-3">
-          <div className="flex items-start gap-2">
-            <svg className="w-5 h-5 text-destructive mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <p className="text-sm font-medium text-destructive">Error</p>
-              <p className="text-xs text-destructive/80">{scene.error_message}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 space-y-3 overflow-visible">
         {/* TEXT STATE - only show if not generating image */}
         {scene.state === 'text' && !isGeneratingImage && (
@@ -137,9 +207,6 @@ export function SceneCardNew({
             <div className="w-2/3 flex-shrink-0 flex flex-col h-full min-w-0 gap-2 justify-between overflow-visible">
               <div className="flex-1 min-h-0 overflow-visible">
                 <SceneAssetToggleSection scene={scene} />
-              </div>
-              <div className="flex-shrink-0">
-                <SceneAssetDisplay scene={scene} />
               </div>
               
               {/* Product Toggle */}
@@ -312,15 +379,15 @@ export function SceneCardNew({
                     const newValue = parseFloat((e.target as HTMLInputElement).value);
                     handleDurationChange(newValue);
                   }}
-                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
-                  disabled={isLoading}
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading || isGeneratingImage || isGeneratingVideo}
                 />
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -350,27 +417,43 @@ export function SceneCardNew({
         {/* VIDEO STATE */}
         {scene.state === 'video' && (
           <div className="flex-1 min-h-0 flex gap-4">
-            {/* Left: Video player - 2/3 width */}
-            <div className="w-2/3 flex-shrink-0 relative rounded-lg overflow-hidden flex items-center justify-center bg-black border border-border">
-              {isGeneratingVideo ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-white dark:bg-zinc-900 text-black dark:text-white">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black dark:border-white mb-4"></div>
-                  <p className="text-sm">Generating video...</p>
-                  <p className="text-xs text-black/60 dark:text-white/60 mt-2">This may take up to 2 minutes</p>
-                </div>
-              ) : scene.video_url ? (
-                <video
-                  src={scene.video_url}
-                  controls
-                  className="w-full h-full object-contain"
-                  poster={scene.image_url || undefined}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <p>No video generated</p>
-                </div>
+            {/* Left: Video player with trimmer below - 2/3 width */}
+            <div className="w-2/3 flex-shrink-0 flex flex-col gap-2">
+              {/* Video container - takes most space, trimmer below */}
+              <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden flex items-center justify-center bg-black border border-border">
+                {isGeneratingVideo ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-white dark:bg-zinc-900 text-black dark:text-white">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black dark:border-white mb-4"></div>
+                    <p className="text-sm">Generating video...</p>
+                    <p className="text-xs text-black/60 dark:text-white/60 mt-2">This may take up to 2 minutes</p>
+                  </div>
+                ) : scene.video_url ? (
+                  <video
+                    ref={videoRef}
+                    src={scene.video_url}
+                    controls
+                    className="w-full h-full object-contain"
+                    poster={scene.image_url || undefined}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    <p>No video generated</p>
+                  </div>
+                )}
+              </div>
+              {/* Trimmer below video */}
+              {isTrimming && scene.video_url && (
+                <VideoTrimmerOverlay
+                  videoElement={videoRef.current}
+                  originalDuration={actualVideoDuration}
+                  trimStartTime={localTrimStart}
+                  trimEndTime={localTrimEnd}
+                  onTrimChange={handleTrimChange}
+                  isVisible={isTrimming}
+                  disabled={isLoading}
+                />
               )}
             </div>
 
@@ -416,7 +499,14 @@ export function SceneCardNew({
                 <div className="flex justify-center">
                   <div className="w-3/5 flex items-center justify-between">
                     <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Video Duration</h4>
-                    <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-base font-semibold tabular-nums">{duration.toFixed(1)}s</span>
+                      {localTrimStart !== null && localTrimEnd !== null && (
+                        <span className="text-xs text-primary tabular-nums">
+                          Trimmed: {effectiveDuration.toFixed(1)}s
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-center">
@@ -438,15 +528,15 @@ export function SceneCardNew({
                       const newValue = parseFloat((e.target as HTMLInputElement).value);
                       handleDurationChange(newValue);
                     }}
-                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md"
-                    disabled={isLoading}
+                    className="w-3/5 h-2.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all duration-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading || isGeneratingImage || isGeneratingVideo}
                   />
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex flex-col items-center gap-2.5 pt-4 flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isLoading || isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
+                <Button size="sm" variant="outline" onClick={handleRegenerateImageClick} disabled={isGeneratingImage || isGeneratingVideo} className="w-3/5 h-[32px] text-xs px-3">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>

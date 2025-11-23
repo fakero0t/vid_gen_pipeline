@@ -19,6 +19,8 @@ class VideoClipInput(BaseModel):
     scene_number: int = Field(..., description="Scene number in sequence", ge=1)
     video_url: str = Field(..., description="URL of the video clip")
     duration: float = Field(..., description="Duration in seconds", gt=0)
+    trim_start_time: Optional[float] = Field(None, description="Trim start time in seconds", ge=0)
+    trim_end_time: Optional[float] = Field(None, description="Trim end time in seconds", ge=0)
 
 
 class CompositionRequest(BaseModel):

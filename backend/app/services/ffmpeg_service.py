@@ -120,10 +120,26 @@ class FFmpegCompositionService:
 
         # Check for failures
         video_results = results[:len(video_paths)]
-        successful_videos = [
-            path for path, success in zip(video_paths, video_results)
-            if success is True and path.exists()
-        ]
+        successful_videos = []
+        
+        # Process downloaded videos: apply trimming if needed
+        for idx, (path, success) in enumerate(zip(video_paths, video_results)):
+            if success is True and path.exists():
+                clip = video_clips[idx]
+                trim_start = clip.get("trim_start_time")
+                trim_end = clip.get("trim_end_time")
+                
+                # Apply trimming if trim times are provided
+                if trim_start is not None and trim_end is not None:
+                    print(f"✂️ Trimming clip {idx + 1}: {trim_start:.2f}s to {trim_end:.2f}s")
+                    trimmed_path = await self.trim_video_clip(
+                        path, trim_start, trim_end,
+                        output_path=path.parent / f"trimmed_{path.stem}.mp4"
+                    )
+                    # Use trimmed video instead of original
+                    successful_videos.append(trimmed_path)
+                else:
+                    successful_videos.append(path)
 
         if audio_url and len(results) > len(video_paths):
             audio_success = results[-1]
@@ -131,7 +147,7 @@ class FFmpegCompositionService:
                 print("⚠ Warning: Audio download failed")
                 audio_path = None
 
-        print(f"✓ Downloaded {len(successful_videos)}/{len(video_clips)} video clips")
+        print(f"✓ Downloaded and processed {len(successful_videos)}/{len(video_clips)} video clips")
         if audio_path:
             print(f"✓ Downloaded audio file")
 
@@ -198,6 +214,80 @@ class FFmpegCompositionService:
         except Exception as e:
             print(f"⚠ Warning: Could not probe video for audio: {e}")
             return False
+
+    async def trim_video_clip(
+        self,
+        video_path: Path,
+        start_time: float,
+        end_time: float,
+        output_path: Optional[Path] = None
+    ) -> Path:
+        """
+        Trim a video clip to specified time range.
+
+        Args:
+            video_path: Path to source video
+            start_time: Start time in seconds
+            end_time: End time in seconds
+            output_path: Optional output path (auto-generated if None)
+
+        Returns:
+            Path to trimmed video file
+        """
+        try:
+            # Calculate duration
+            duration = end_time - start_time
+
+            # Generate output path if not provided
+            if not output_path:
+                output_path = video_path.parent / f"trimmed_{video_path.stem}_{start_time:.2f}_{end_time:.2f}.mp4"
+
+            print(f"✂️ Trimming video: {start_time:.2f}s to {end_time:.2f}s (duration: {duration:.2f}s)")
+
+            # Check if video has audio
+            has_audio = self._check_has_audio(video_path)
+
+            # Build FFmpeg command for trimming
+            # Use -ss for start time and -t for duration
+            input_stream = ffmpeg.input(str(video_path), ss=start_time, t=duration)
+
+            if has_audio:
+                # Trim with audio
+                output_stream = ffmpeg.output(
+                    input_stream['v'],
+                    input_stream['a'],
+                    str(output_path),
+                    vcodec='libx264',
+                    acodec='aac',
+                    **{'b:v': '2500k', 'b:a': '128k'}
+                )
+            else:
+                # Trim video only
+                output_stream = ffmpeg.output(
+                    input_stream['v'],
+                    str(output_path),
+                    vcodec='libx264',
+                    **{'b:v': '2500k'}
+                )
+
+            # Run FFmpeg
+            await asyncio.to_thread(
+                lambda: ffmpeg.run(output_stream, overwrite_output=True, quiet=True)
+            )
+
+            if output_path.exists():
+                print(f"✓ Trimmed video saved: {output_path.name}")
+                return output_path
+            else:
+                print(f"✗ Trimmed video file not found: {output_path}")
+                return video_path  # Return original if trim failed
+
+        except Exception as e:
+            print(f"✗ Failed to trim video: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Return original video path if trimming fails
+            return video_path
 
     def create_clip_list_file(self, video_paths: List[Path], output_path: Path) -> Path:
         """
