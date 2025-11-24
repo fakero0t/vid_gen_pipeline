@@ -12,6 +12,7 @@ export interface AudioGenerationRequest {
   aesthetic_direction: string;
   style_keywords?: string[];
   duration?: number; // Default: 30 seconds
+  custom_prompt?: string; // Optional custom prompt to use instead of building from fields
 }
 
 /**

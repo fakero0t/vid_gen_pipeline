@@ -139,7 +139,7 @@ function SortableSceneButton({
       <button
         onClick={onClick}
         className={`
-          min-w-[4rem] h-8 px-2 rounded-md border-2 transition-colors duration-200 flex items-center justify-center relative flex-shrink-0
+          w-[4rem] h-8 px-2 rounded-md border-2 transition-colors duration-200 flex items-center justify-center relative flex-shrink-0
           hover:ring-2 hover:ring-primary/30 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
           ${isActive ? 'border-primary shadow-md ring-2 ring-primary/20' : 'border-transparent'}
           ${isSceneGenerating ? 'animate-pulse' : ''}
@@ -208,9 +208,16 @@ export function SceneTimelineNew({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<{ id: string; index: number } | null>(null);
 
-  // Update local order when sceneOrder prop changes
+  // Update local order only when sceneOrder actually changes (by comparing array contents, not reference)
   React.useEffect(() => {
-    setLocalOrder(sceneOrder);
+    // Only update if the order actually changed (different length or different IDs)
+    setLocalOrder((prevOrder) => {
+      const orderChanged = 
+        prevOrder.length !== sceneOrder.length ||
+        prevOrder.some((id, index) => id !== sceneOrder[index]);
+      
+      return orderChanged ? sceneOrder : prevOrder;
+    });
   }, [sceneOrder]);
 
   const sensors = useSensors(
@@ -324,7 +331,7 @@ export function SceneTimelineNew({
             items={localOrder}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-1 min-w-0 flex-nowrap">
               {localOrder.map((sceneId, index) => {
                 const scene = scenes.find(s => s.id === sceneId);
                 if (!scene) return null;

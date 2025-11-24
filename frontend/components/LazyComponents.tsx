@@ -52,6 +52,12 @@ export const AudioPage = lazy(() =>
   }))
 );
 
+export const AudioGenerationPage = lazy(() =>
+  import('@/components/audio/AudioGenerationPage').then((module) => ({
+    default: module.AudioGenerationPage,
+  }))
+);
+
 // Step 6: Final Composition
 export const FinalComposition = lazy(() =>
   import('@/components/composition/FinalComposition').then((module) => ({

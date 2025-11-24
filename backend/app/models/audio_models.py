@@ -11,6 +11,7 @@ class AudioGenerationRequest(BaseModel):
     aesthetic_direction: str = Field(..., description="Overall aesthetic direction")
     style_keywords: Optional[List[str]] = Field(default=None, description="Optional list of visual style keywords")
     duration: int = Field(default=30, ge=1, description="Duration in seconds (default: 30)")
+    custom_prompt: Optional[str] = Field(default=None, description="Optional custom prompt to use instead of building from fields")
 
 
 class AudioGenerationResponse(BaseModel):

@@ -250,6 +250,72 @@ class AudioGenerationService:
                 "error": f"Music generation error: {error_msg}"
             }
 
+    async def generate_music_with_custom_prompt(
+        self,
+        prompt: str,
+        duration: int = 30,
+        max_retries: int = 2,
+        base_delay: float = 2.0
+    ) -> Dict[str, Any]:
+        """
+        Generate music with a custom prompt and exponential backoff retry logic.
+
+        Args:
+            prompt: Custom prompt string to use for generation
+            duration: Duration in seconds (variable)
+            max_retries: Maximum number of retry attempts
+            base_delay: Base delay in seconds for exponential backoff
+
+        Returns:
+            Dictionary with generation results
+        """
+        last_error = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    print(f"Music generation: Attempt {attempt + 1}/{max_retries + 1}")
+
+                audio_url = await self.generate_music(
+                    prompt=prompt,
+                    duration=duration
+                )
+
+                if audio_url:
+                    if attempt > 0:
+                        print(f"✓ Music generation succeeded after {attempt} retries")
+                    return {
+                        "success": True,
+                        "audio_url": audio_url,
+                        "prompt": prompt,
+                        "duration": duration,
+                        "error": None
+                    }
+
+                last_error = "Music generation returned no output"
+
+            except Exception as e:
+                last_error = str(e)
+                print(f"✗ Music generation attempt {attempt + 1} failed: {last_error}")
+
+                # If last attempt, don't retry
+                if attempt == max_retries:
+                    break
+
+                # Calculate exponential backoff delay
+                delay = base_delay * (2 ** attempt)
+                print(f"⏳ Retrying in {delay:.1f}s...")
+                await asyncio.sleep(delay)
+
+        # All attempts failed
+        return {
+            "success": False,
+            "audio_url": None,
+            "prompt": prompt,
+            "duration": 0,
+            "error": f"Music generation failed after {max_retries + 1} attempts: {last_error}"
+        }
+
     async def generate_music_with_retry(
         self,
         mood_name: str,

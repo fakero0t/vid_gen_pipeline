@@ -51,16 +51,24 @@ async def generate_audio(
         # Get audio service
         service = get_audio_service()
 
-        # Generate music with retry logic
-        result = await service.generate_music_with_retry(
-            mood_name=request.mood_name,
-            mood_description=request.mood_description,
-            emotional_tone=request.emotional_tone,
-            aesthetic_direction=request.aesthetic_direction,
-            style_keywords=request.style_keywords,
-            duration=request.duration,
-            max_retries=2
-        )
+        # Use custom prompt if provided, otherwise build from structured fields
+        if request.custom_prompt:
+            result = await service.generate_music_with_custom_prompt(
+                prompt=request.custom_prompt,
+                duration=request.duration,
+                max_retries=2
+            )
+        else:
+            # Generate music with retry logic
+            result = await service.generate_music_with_retry(
+                mood_name=request.mood_name,
+                mood_description=request.mood_description,
+                emotional_tone=request.emotional_tone,
+                aesthetic_direction=request.aesthetic_direction,
+                style_keywords=request.style_keywords,
+                duration=request.duration,
+                max_retries=2
+            )
 
         # Return response
         return AudioGenerationResponse(

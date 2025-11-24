@@ -287,21 +287,6 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
   return (
     <div className="space-y-6">
 
-      {/* Not Started */}
-      {!hasStarted && !isComposing && !jobStatus && (
-        <div className="bg-white dark:bg-zinc-900 border rounded-lg p-8 text-center space-y-4">
-          <div className="text-4xl">🎥</div>
-          <h3 className="text-xl font-semibold">Ready to Compose Final Video</h3>
-          <p className="text-muted-foreground">
-            We'll stitch together {scenes.filter(s => s.state === 'video' && s.video_url && s.generation_status.video === 'complete').length} scenes
-            with crossfade transitions and background music.
-          </p>
-          <Button onClick={handleStartComposition} size="lg">
-            Start Final Composition
-          </Button>
-        </div>
-      )}
-
       {/* In Progress - Loading Animation */}
       {(hasStarted || isComposing || (jobStatus && !isComplete && !isFailed)) && !(isComplete && finalVideo && jobStatus?.video_url) && (
         <div className="flex items-center justify-center min-h-[70vh] w-full">
@@ -310,12 +295,12 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
       )}
 
       {/* Completed or Rendered Video Ready */}
-      {((isComplete && finalVideo) || (renderedVideoUrl && !audioUrl && !isComposing)) && (
-        <div className="flex flex-col items-center justify-center space-y-6">
-            {/* Video Preview Player */}
+      {((isComplete && finalVideo) || (renderedVideoUrl && !isComposing)) && (
+        <div className="w-full h-full flex flex-col items-center justify-center space-y-4 sm:space-y-6 min-h-0">
+            {/* Video Preview Player - takes up most of the space */}
             {getVideoUrl() && (
-            <div className="w-full max-w-4xl mx-auto">
-                <div className="relative bg-black rounded-lg overflow-hidden shadow-xl aspect-video">
+            <div className="w-full flex-1 min-h-0 flex items-center justify-center px-2 sm:px-4">
+                <div className="relative bg-black rounded-lg overflow-hidden shadow-xl w-full h-full max-h-[70vh] aspect-video">
                   <video
                     controls
                     autoPlay
@@ -331,41 +316,41 @@ export function FinalComposition({ onBack }: FinalCompositionProps) {
             )}
 
             {/* Video Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full max-w-4xl mx-auto px-4 flex-shrink-0">
               {(jobStatus?.duration_seconds || renderedVideoDuration || finalVideo?.duration_seconds) && (
-                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                  <div className="text-2xl font-bold">{(jobStatus?.duration_seconds || renderedVideoDuration || finalVideo?.duration_seconds || 0).toFixed(1)}s</div>
-                  <div className="text-xs text-muted-foreground">Duration</div>
+                <div className="text-center p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold">{(jobStatus?.duration_seconds || renderedVideoDuration || finalVideo?.duration_seconds || 0).toFixed(1)}s</div>
+                  <div className="text-xs text-muted-foreground mt-1">Duration</div>
                 </div>
               )}
               {(jobStatus?.file_size_mb || finalVideo?.file_size_mb) && (
-                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                  <div className="text-2xl font-bold">{(jobStatus?.file_size_mb || finalVideo?.file_size_mb || 0).toFixed(1)} MB</div>
-                  <div className="text-xs text-muted-foreground">File Size</div>
+                <div className="text-center p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold">{(jobStatus?.file_size_mb || finalVideo?.file_size_mb || 0).toFixed(1)} MB</div>
+                  <div className="text-xs text-muted-foreground mt-1">File Size</div>
                 </div>
               )}
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <div className="text-2xl font-bold">{scenes.filter(s => s.state === 'video' && s.video_url).length}</div>
-                <div className="text-xs text-muted-foreground">Scenes</div>
+              <div className="text-center p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold">{scenes.filter(s => s.state === 'video' && s.video_url).length}</div>
+                <div className="text-xs text-muted-foreground mt-1">Scenes</div>
               </div>
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <div className="text-2xl font-bold">16:9</div>
-                <div className="text-xs text-muted-foreground">Aspect Ratio</div>
+              <div className="text-center p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold">16:9</div>
+                <div className="text-xs text-muted-foreground mt-1">Aspect Ratio</div>
               </div>
             </div>
 
             {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 flex-shrink-0 pb-2 sm:pb-4">
             <button
               onClick={handleDownload}
-              className="text-xs px-4 py-2 rounded-full bg-[rgb(255,81,1)] text-[rgb(196,230,43)] hover:bg-[rgb(255,100,20)] font-bold shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+              className="text-sm sm:text-base px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-[rgb(255,81,1)] text-[rgb(196,230,43)] hover:bg-[rgb(255,100,20)] font-bold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
             >
                 <span>📥</span>
                 Download Video
             </button>
             <button
               onClick={() => router.push('/projects')}
-              className="text-xs px-4 py-2 rounded-full border-2 border-[rgb(255,81,1)] text-[rgb(255,81,1)] hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 font-display font-bold"
+              className="text-sm sm:text-base px-6 sm:px-8 py-2.5 sm:py-3 rounded-full border-2 border-[rgb(255,81,1)] text-[rgb(255,81,1)] hover:bg-[rgb(255,81,1)]/10 transition-all duration-300 font-display font-bold"
             >
                 Create Another Video
             </button>
