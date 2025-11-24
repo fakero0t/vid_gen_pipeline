@@ -189,7 +189,7 @@ export function StoryboardCarousel({
             className="flex h-full transition-transform duration-300 ease-in-out"
             style={{ transform: `translateX(-${currentSceneIndex * 100}%)` }}
           >
-            {storyboard.scene_order.map((sceneId) => {
+            {storyboard.scene_order.map((sceneId, index) => {
               const scene = scenes.find(s => s.id === sceneId);
               if (!scene) return null;
 
@@ -213,7 +213,7 @@ export function StoryboardCarousel({
                   ) : (
                     <SceneCardNew
                       scene={scene}
-                      sceneNumber={storyboard.scene_order.indexOf(scene.id) + 1}
+                      sceneNumber={index + 1}
                       onApproveText={() => onApproveText(scene.id)}
                       onRegenerateText={() => onRegenerateText(scene.id)}
                       onEditText={(newText) => onEditText(scene.id, newText)}
@@ -222,6 +222,7 @@ export function StoryboardCarousel({
                       onUpdateDuration={(newDuration) => onUpdateDuration(scene.id, newDuration)}
                       onRegenerateVideo={() => onRegenerateVideo(scene.id)}
                       isLoading={isLoading}
+                      isActive={index === currentSceneIndex}
                     />
                   )}
                 </div>

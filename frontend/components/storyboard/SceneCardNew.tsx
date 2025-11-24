@@ -22,6 +22,7 @@ interface SceneCardNewProps {
   onUpdateDuration: (newDuration: number) => Promise<void>;
   onRegenerateVideo: () => Promise<void>;
   isLoading?: boolean;
+  isActive?: boolean;
 }
 
 export function SceneCardNew({
@@ -35,6 +36,7 @@ export function SceneCardNew({
   onUpdateDuration,
   onRegenerateVideo,
   isLoading = false,
+  isActive = true,
 }: SceneCardNewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(scene.text);
@@ -62,6 +64,16 @@ export function SceneCardNew({
       setIsTrimming(false);
     }
   }, [scene.state, scene.video_url, scene.generation_status.video, isGeneratingVideo]);
+
+  // Reset modal states when scene becomes inactive
+  useEffect(() => {
+    if (!isActive) {
+      setShowEditTextConfirm(false);
+      setShowDurationConfirm(false);
+      setShowRegenerateImageConfirm(false);
+      setPendingDuration(null);
+    }
+  }, [isActive]);
 
   // Handle text edit with warning
   const handleEditTextClick = () => {
@@ -554,9 +566,9 @@ export function SceneCardNew({
         )}
       </div>
 
-      {/* Confirmation Dialogs */}
+      {/* Confirmation Dialogs - render always (fixed positioning), but only allow interaction when active */}
       <ConfirmDialog
-        isOpen={showEditTextConfirm}
+        isOpen={showEditTextConfirm && isActive}
         title="Edit Scene Text"
         message="Editing text will erase image and video. This cannot be undone. Are you sure?"
         confirmText="Yes, Edit Text"
@@ -567,7 +579,7 @@ export function SceneCardNew({
       />
 
       <ConfirmDialog
-        isOpen={showDurationConfirm}
+        isOpen={showDurationConfirm && isActive}
         title="Edit Video Duration"
         message="Editing duration will erase video. This cannot be undone. Are you sure?"
         confirmText="Yes, Edit Duration"
@@ -581,7 +593,7 @@ export function SceneCardNew({
       />
 
       <ConfirmDialog
-        isOpen={showRegenerateImageConfirm}
+        isOpen={showRegenerateImageConfirm && isActive}
         title="Regenerate Image"
         message="Regenerating image will erase video. This cannot be undone. Are you sure?"
         confirmText="Yes, Regenerate"
